@@ -1,0 +1,185 @@
+# ============================================================================
+# EXAMPLE: Todo App — Fullstack task management application
+# ============================================================================
+
+project:
+  name: "todo-app"
+  description: "Fullstack task management application with authentication"
+  type: "fullstack"
+  language: "typescript"
+  version: "0.1.0"
+
+stack:
+  runtime: "bun"
+  framework: "nextjs"
+  database: "postgres"
+  orm: "prisma"
+  auth: "nextauth"
+  styling: "tailwind"
+  testing: "vitest"
+  linting: "biome"
+  package_manager: "bun"
+
+architecture:
+  pattern: "layered"
+  monorepo: false
+
+features:
+  - name: "auth"
+    description: "User registration and login"
+    priority: "must-have"
+    acceptance_criteria:
+      - "A user can register with email/password"
+      - "A user can log in"
+      - "A user can log out"
+      - "Protected routes redirect to /login"
+    api_endpoints:
+      - method: "POST"
+        path: "/api/auth/register"
+        description: "Register a new user"
+      - method: "POST"
+        path: "/api/auth/[...nextauth]"
+        description: "NextAuth endpoints (login, logout, session)"
+    ui_components:
+      - name: "LoginForm"
+        description: "Email/password login form"
+      - name: "RegisterForm"
+        description: "Registration form"
+
+  - name: "todos-crud"
+    description: "Create, read, update, and delete tasks"
+    priority: "must-have"
+    acceptance_criteria:
+      - "A logged-in user can create a task with a title"
+      - "A user can see their task list"
+      - "A user can check/uncheck a task"
+      - "A user can delete a task"
+      - "A user only sees their own tasks"
+    api_endpoints:
+      - method: "GET"
+        path: "/api/todos"
+        description: "List of the logged-in user's tasks"
+      - method: "POST"
+        path: "/api/todos"
+        description: "Create a new task"
+      - method: "PATCH"
+        path: "/api/todos/:id"
+        description: "Update a task (toggle completed, edit title)"
+      - method: "DELETE"
+        path: "/api/todos/:id"
+        description: "Delete a task"
+    ui_components:
+      - name: "TodoList"
+        description: "Task list with checkbox and delete button"
+      - name: "TodoItem"
+        description: "An individual task item"
+      - name: "AddTodoForm"
+        description: "Form to add a task"
+
+  - name: "todo-filters"
+    description: "Filter tasks by status"
+    priority: "should-have"
+    acceptance_criteria:
+      - "Filter by: all, active, completed"
+      - "Display remaining task count"
+    ui_components:
+      - name: "TodoFilters"
+        description: "Filter bar (All, Active, Completed) with counter"
+
+data_model:
+  entities:
+    - name: "User"
+      fields:
+        - name: "id"
+          type: "string"
+          required: true
+          unique: true
+          description: "Auto-generated UUID"
+        - name: "email"
+          type: "string"
+          required: true
+          unique: true
+          description: "User's email"
+        - name: "passwordHash"
+          type: "string"
+          required: true
+          description: "Bcrypt password hash"
+        - name: "name"
+          type: "string"
+          required: false
+          description: "Display name"
+        - name: "createdAt"
+          type: "date"
+          required: true
+          description: "Creation date"
+      relations:
+        - type: "one-to-many"
+          target: "Todo"
+          field: "todos"
+
+    - name: "Todo"
+      fields:
+        - name: "id"
+          type: "string"
+          required: true
+          unique: true
+          description: "Auto-generated UUID"
+        - name: "title"
+          type: "string"
+          required: true
+          description: "Task title"
+        - name: "completed"
+          type: "boolean"
+          required: true
+          description: "Completion status"
+        - name: "createdAt"
+          type: "date"
+          required: true
+          description: "Creation date"
+        - name: "updatedAt"
+          type: "date"
+          required: true
+          description: "Last modification date"
+      relations:
+        - type: "many-to-one"
+          target: "User"
+          field: "userId"
+
+constraints:
+  performance:
+    - "API response time < 200ms"
+    - "First Contentful Paint < 1.5s"
+  security:
+    - "Passwords hashed with bcrypt"
+    - "CSRF protection via NextAuth"
+    - "Server-side input validation"
+  accessibility:
+    - "Full keyboard navigation"
+    - "Labels on all form fields"
+  deployment:
+    target: "vercel"
+    ci_cd: "github-actions"
+
+conventions:
+  naming:
+    files: "kebab-case"
+    functions: "camelCase"
+    components: "PascalCase"
+    variables: "camelCase"
+  git:
+    branch_strategy: "github-flow"
+    commit_format: "conventional-commits"
+  code_style: "biome default"
+
+validation:
+  after_plan: true
+  after_scaffold: true
+  after_implement: true
+  after_test: true
+  after_review: true
+
+context:
+  inspiration: "TodoMVC, Things 3"
+  notes: |
+    Keep the UI simple and clean.
+    Focus on reliability and speed.
