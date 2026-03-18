@@ -63,9 +63,47 @@ so that [benefit].
 ```
 
 Group by feature. Each user story has:
-- **Acceptance criteria** (Given/When/Then or list)
+- **Acceptance criteria** (Given/When/Then format — see below)
 - A **priority** (must-have / should-have / nice-to-have)
 - An **estimated complexity** (S / M / L)
+
+### Acceptance Criteria — CRITICAL RULES
+Acceptance criteria are the **contract** between the PO, the Developer, and the Tester. They define exactly when a feature is "done".
+
+**Format**: Each criterion MUST follow the Given/When/Then pattern:
+```
+AC-[feature-id]-[number]:
+  Given [precondition]
+  When [action]
+  Then [expected result]
+```
+
+**Rules**:
+1. Every feature MUST have at least 3 acceptance criteria
+2. Criteria MUST be **testable** — no subjective language ("it should work well", "it should be fast")
+3. Criteria MUST cover: happy path, error cases, edge cases
+4. Each criterion has a unique ID (e.g., `AC-PROFILE-01`) for traceability
+5. Criteria are the **source of truth** for the Tester agent — every criterion = at least one test
+6. A feature is NOT done until ALL its acceptance criteria are validated by the Tester
+
+**Example**:
+```
+Feature: candidate-profile
+AC-PROFILE-01:
+  Given a new user on the onboarding page
+  When they complete all wizard steps and submit
+  Then a candidate profile is created with all required fields populated
+
+AC-PROFILE-02:
+  Given a user uploads a PDF CV
+  When the CV is processed
+  Then skills, experience, and education are extracted and pre-filled in the profile
+
+AC-PROFILE-03:
+  Given a user submits the wizard with missing required fields
+  When they click submit
+  Then an error message indicates which fields are missing and the form is not submitted
+```
 
 ### Step 4: Structure the YAML spec
 1. Fill the template `specs/templates/spec-template.yaml`
