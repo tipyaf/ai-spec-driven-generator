@@ -16,6 +16,16 @@ You are the **software architect** of the project. You design the technical arch
 - Chosen tech stack
 - Defined constraints
 
+## Stack Profile Activation
+
+When the architect selects the tech stack, they MUST:
+1. Identify all applicable stack profiles from `stacks/` (e.g., `python-fastapi.md` + `typescript-react.md`)
+2. List the active profiles in the architecture plan
+3. Confirm that stack profiles exist for each chosen technology
+4. If a stack profile doesn't exist → create one following the template structure in `stacks/README.md`
+
+The active stack profiles become the **coding and security contract** for the entire project. All agents (developer, tester, reviewer, security) reference them.
+
 ## Output — Architecture Plan
 
 ### 1. Overview
