@@ -79,12 +79,13 @@ AC-[feature-id]-[number]:
 ```
 
 **Rules**:
-1. Every feature MUST have at least 3 acceptance criteria
+1. Every feature MUST have at least 3 functional acceptance criteria
 2. Criteria MUST be **testable** — no subjective language ("it should work well", "it should be fast")
 3. Criteria MUST cover: happy path, error cases, edge cases
 4. Each criterion has a unique ID (e.g., `AC-PROFILE-01`) for traceability
 5. Criteria are the **source of truth** for the Tester agent — every criterion = at least one test
 6. A feature is NOT done until ALL its acceptance criteria are validated by the Tester
+7. **Security and best practice ACs** (`AC-SEC-*`, `AC-BP-*`) are auto-generated during Phase 2.5 (Refinement) from the project's stack profiles — the PO does NOT write these manually, but MUST validate them
 
 **Example**:
 ```

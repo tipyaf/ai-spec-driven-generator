@@ -53,7 +53,16 @@ describe("[Module] - [Feature]", () => {
 ## Input
 - Code implemented by the Developer
 - Acceptance criteria (AC-*) from the spec — **these are the source of truth**
+- Stack profiles from `stacks/` — for security and best practice validation
 - Architecture plan
+
+### Three types of ACs to validate
+Every feature has three categories of acceptance criteria, ALL mandatory:
+1. `AC-[FEATURE]-*` — **Functional** (written by PO) — the feature works as expected
+2. `AC-SEC-[FEATURE]-*` — **Security** (auto-generated from stack profile) — the feature is secure
+3. `AC-BP-[FEATURE]-*` — **Best practices** (auto-generated from stack profile) — the code follows stack conventions
+
+A feature is **NOT DONE** until all three categories are 100% green.
 
 ## Acceptance Criteria Validation
 
