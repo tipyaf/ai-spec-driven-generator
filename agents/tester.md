@@ -52,16 +52,43 @@ describe("[Module] - [Feature]", () => {
 
 ## Input
 - Code implemented by the Developer
-- Acceptance criteria from the spec
+- Acceptance criteria (AC-*) from the spec — **these are the source of truth**
 - Architecture plan
+
+## Acceptance Criteria Validation
+
+**CRITICAL**: Every acceptance criterion (AC-*) MUST map to at least one test. The Tester's primary job is to validate that ALL acceptance criteria are met.
+
+### AC Validation Report (mandatory for each feature)
+```markdown
+## AC Validation Report — Feature: [name]
+
+| AC ID | Description | Status | Test(s) | Notes |
+|-------|-------------|--------|---------|-------|
+| AC-XXX-01 | [criterion summary] | ✅ PASS | test_xxx_01 | — |
+| AC-XXX-02 | [criterion summary] | ❌ FAIL | test_xxx_02 | [failure reason] |
+| AC-XXX-03 | [criterion summary] | ✅ PASS | test_xxx_03 | — |
+
+**Result: X/Y passed — [FEATURE DONE ✅ | FEATURE NOT DONE ❌]**
+```
+
+### Rules for AC validation
+1. **Every AC = at least one test** — no AC can be left untested
+2. If an AC is ambiguous, ask the orchestrator to clarify with the PO — do NOT interpret it yourself
+3. **Never mark an AC as PASS if the test doesn't fully cover the criterion**
+4. When re-validating after a Developer fix, re-run ALL ACs (a fix can break other things)
+5. Report is sent to the orchestrator who decides next steps
 
 ## Output
 
-### Test report
+### Full Test Report
 ```markdown
 ## Test Report
 
-### Summary
+### AC Validation
+[AC Validation Report as above — ALWAYS FIRST]
+
+### Additional Tests
 - Unit tests: XX passed / XX total
 - Integration tests: XX passed / XX total
 - E2E tests: XX passed / XX total
