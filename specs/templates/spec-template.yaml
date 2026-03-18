@@ -1,0 +1,107 @@
+# ============================================================================
+# SPEC TEMPLATE - AI Project Generation Framework
+# ============================================================================
+# This file serves as a template to describe any project.
+# The AI uses this spec as the source of truth to generate code.
+# ============================================================================
+
+# --- METADATA ---
+project:
+  name: ""                        # Project name (kebab-case)
+  description: ""                 # Short description (1-2 sentences)
+  type: ""                        # web-app | api | cli | mobile | library | fullstack | monorepo
+  language: ""                    # typescript | python | go | rust | java | etc.
+  version: "0.1.0"
+
+# --- TECH STACK ---
+stack:
+  runtime: ""                     # node | bun | deno | python | go | etc.
+  framework: ""                   # nextjs | express | fastapi | gin | etc.
+  database: ""                    # postgres | mysql | sqlite | mongodb | none
+  orm: ""                         # prisma | drizzle | sqlalchemy | gorm | none
+  auth: ""                        # nextauth | clerk | custom | none
+  styling: ""                     # tailwind | css-modules | styled-components | none
+  testing: ""                     # vitest | jest | pytest | go-test | none
+  linting: ""                     # eslint | biome | ruff | none
+  package_manager: ""             # npm | pnpm | bun | yarn | pip | cargo | go
+
+# --- ARCHITECTURE ---
+architecture:
+  pattern: ""                     # mvc | clean-architecture | hexagonal | layered | modular
+  directory_structure: |          # Desired folder structure (optional)
+    # Leave empty to use framework convention
+  monorepo: false                 # true if monorepo (turborepo, nx, etc.)
+  monorepo_tool: ""               # turborepo | nx | none
+
+# --- FEATURES ---
+features:
+  - name: ""                      # Feature name
+    description: ""               # What the feature does
+    priority: ""                  # must-have | should-have | nice-to-have
+    acceptance_criteria:           # Acceptance criteria
+      - ""
+    api_endpoints:                 # Related API endpoints (if applicable)
+      - method: ""                 # GET | POST | PUT | DELETE | PATCH
+        path: ""
+        description: ""
+    ui_components:                 # Related UI components (if applicable)
+      - name: ""
+        description: ""
+
+# --- DATA MODEL ---
+data_model:
+  entities:
+    - name: ""                    # Entity name (PascalCase)
+      fields:
+        - name: ""                # Field name
+          type: ""                # string | number | boolean | date | relation
+          required: true
+          unique: false
+          description: ""
+      relations:
+        - type: ""                # one-to-one | one-to-many | many-to-many
+          target: ""              # Target entity
+          field: ""               # Relation field name
+
+# --- CONSTRAINTS & REQUIREMENTS ---
+constraints:
+  performance:
+    - ""                          # E.g., "API response time < 200ms"
+  security:
+    - ""                          # E.g., "JWT authentication required"
+  accessibility:
+    - ""                          # E.g., "WCAG 2.1 AA"
+  browser_support:
+    - ""                          # E.g., "Chrome, Firefox, Safari latest versions"
+  deployment:
+    target: ""                    # vercel | aws | docker | railway | fly.io
+    ci_cd: ""                     # github-actions | gitlab-ci | none
+
+# --- CONVENTIONS ---
+conventions:
+  naming:
+    files: ""                     # kebab-case | camelCase | PascalCase
+    functions: ""                 # camelCase | snake_case
+    components: ""                # PascalCase
+    variables: ""                 # camelCase | snake_case
+  git:
+    branch_strategy: ""           # gitflow | trunk-based | github-flow
+    commit_format: ""             # conventional-commits | free-form
+  code_style: ""                  # Reference to a preset or free description
+
+# --- VALIDATION PHASES ---
+# Defines human validation checkpoints between each phase
+validation:
+  after_plan: true                # Validate architecture plan before coding
+  after_scaffold: true            # Validate file structure before implementing
+  after_implement: true           # Validate implementation before tests
+  after_test: true                # Validate tests before review
+  after_review: true              # Validate review before deployment
+
+# --- ADDITIONAL CONTEXT ---
+context:
+  inspiration: ""                 # Similar projects or sources of inspiration
+  existing_code: ""               # Path to existing code to integrate
+  documentation: ""               # Links to relevant documentation
+  notes: |                        # Free notes for the AI
+    # Add any additional context here

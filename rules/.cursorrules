@@ -1,0 +1,64 @@
+# Cursor Rules — AI Project Generation Framework
+
+## Context
+This project is an AI-powered project generation framework. It uses YAML specs, specialized agents, a phase-based process with human validation, and persistent memory.
+
+## How to use this framework
+
+### Start a new project
+1. The user describes their idea (or provides a YAML spec)
+2. Embody the `orchestrator` agent (read `agents/orchestrator.md`)
+3. Start with Phase 0 (Scoping) if no spec exists
+4. Execute phases one by one, maintain memory
+
+### Resume a project
+1. Read `memory/[project-name].md` to restore context
+2. Resume at the current phase
+
+### Phases (in strict order)
+0. **Scoping** → `agents/product-owner.md` + `prompts/phases/00-scoping.md`
+0.5. **Design** → `agents/ux-ui.md` + `prompts/phases/00.5-design.md`
+1. **Plan** → `agents/architect.md` + `prompts/phases/01-plan.md`
+2. **Scaffold** → `agents/developer.md` + `prompts/phases/02-scaffold.md`
+3. **Implement** → `agents/developer.md` + `prompts/phases/03-implement.md`
+4. **Test** → `agents/tester.md` + `prompts/phases/04-test.md`
+5. **Review** → `agents/reviewer.md` + `prompts/phases/05-review.md`
+6. **Deploy** → `agents/devops.md` + `prompts/phases/06-deploy.md`
+
+### Strict rules
+1. ALWAYS read/update memory (`memory/[project-name].md`)
+2. ALWAYS follow phase order
+3. ALWAYS request validation at checkpoints
+4. ALWAYS generate code in `output/[project-name]/`
+5. NEVER over-engineer — follow the spec only
+6. NEVER invent features not present in the spec
+7. NEVER code before scoping + design + plan are validated
+
+### Framework structure
+```
+agents/              → Definitions of 9 agents (role, rules, output)
+prompts/phases/      → Detailed instructions per phase (0 → 6)
+specs/templates/     → YAML spec templates
+memory/              → Persistent memory per project
+stacks/              → Tech stack definitions
+rules/               → This file + CLAUDE.md
+output/              → Generated projects
+examples/            → Spec examples
+```
+
+### Available agents
+Read files in `agents/` for detailed instructions:
+- orchestrator.md — Coordination + memory
+- product-owner.md — Scoping + spec
+- ux-ui.md — UX/UI design
+- architect.md — Architecture
+- refinement.md — Feature detail/breakdown + tickets
+- developer.md — Code
+- tester.md — Tests
+- reviewer.md — Review
+- devops.md — DevOps
+
+### Memory
+- Template: `memory/memory-template.md`
+- Project file: `memory/[project-name].md`
+- Read at session start, update after each phase
