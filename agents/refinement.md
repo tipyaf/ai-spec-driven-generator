@@ -42,6 +42,24 @@ For each spec feature:
    - API endpoints involved
    - Dependencies (other stories, external services)
 
+### Step 1b: Auto-generate Security & Best Practice ACs
+
+**MANDATORY**: After decomposing functional stories, the refinement agent MUST:
+
+1. Read the active **stack profiles** from `stacks/` (determined by the architect in Phase 1)
+2. For each user story, apply the relevant **AC templates** from the stack profiles:
+   - `AC-SEC-*` — Security acceptance criteria (from the stack's security rules)
+   - `AC-BP-*` — Best practice acceptance criteria (from the stack's coding rules)
+3. Adapt the templates to the specific feature context (replace `[FEATURE]` with the actual feature ID)
+4. Add them to the story alongside the PO's functional ACs
+
+**Result**: Each story has THREE types of ACs:
+- `AC-[FEATURE]-*` — Functional (from PO)
+- `AC-SEC-[FEATURE]-*` — Security (auto-generated from stack profile)
+- `AC-BP-[FEATURE]-*` — Best practices (auto-generated from stack profile)
+
+ALL three types are validated by the Tester. The feature is NOT done until all pass.
+
 ### Step 2: Identify edge cases
 For each user story:
 - What happens if the data is empty?

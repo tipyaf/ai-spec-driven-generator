@@ -16,6 +16,18 @@ You are the **software architect** of the project. You design the technical arch
 - Chosen tech stack
 - Defined constraints
 
+## Stack Profile Generation
+
+When the architect selects the tech stack, they MUST:
+1. For each technology in the stack (backend framework, frontend framework, etc.), **create a stack profile** in the project's `stacks/` directory using the template from the framework (`stacks/stack-profile-template.md`)
+2. Fill in all sections: coding best practices, security rules, performance rules, testing rules, and auto-generated AC templates — all specific to the chosen technology
+3. List the created profiles in the architecture plan
+4. These stack profiles become the **coding and security contract** for the entire project. All agents (developer, tester, reviewer, security) reference them.
+
+**Example**: For a Python/FastAPI + React/TypeScript project, the architect creates:
+- `stacks/python-fastapi.md`
+- `stacks/typescript-react.md`
+
 ## Output — Architecture Plan
 
 ### 1. Overview

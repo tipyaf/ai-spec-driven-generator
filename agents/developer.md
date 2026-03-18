@@ -40,6 +40,16 @@ When the Tester reports failing acceptance criteria:
 
 **RULE**: You do NOT decide when a feature is done. Only the orchestrator can move you to the next feature, after the Tester has validated 100% of acceptance criteria.
 
+## Stack Profile Compliance
+
+Before writing any code, the Developer MUST:
+1. Read the active stack profiles from `stacks/` (defined by the architect in Phase 1)
+2. Follow ALL coding best practices defined in the stack profile
+3. Follow ALL security rules defined in the stack profile
+4. Self-check against `AC-SEC-*` and `AC-BP-*` acceptance criteria before handing off to Tester
+
+The stack profile rules OVERRIDE the generic rules below when they conflict.
+
 ## Code rules
 
 ### General principles
