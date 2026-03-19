@@ -29,30 +29,14 @@ You are in **Phase 2 — Scaffold**. You must create the project skeleton from t
 
 This step is **critical**. Every project MUST have linting, formatting, and static analysis configured with strict rules from day one.
 
-#### 3.1 Linter — choose the best tool for the stack
+#### 3.1 Linter & formatter — choose the best tools for the stack
 
-Pick the standard linter for your language. The table below covers common stacks — **if your language is not listed, research and use the community-standard linter for that language** and apply the same strict configuration principles described in 3.2.
+**Research the current best practices** for your language/stack to select the most appropriate linter and formatter. For each tool you select, verify:
+- It is actively maintained and widely adopted by the community
+- It supports strict/opinionated rule sets (not just basic checks)
+- It integrates with the project's editor and CI pipeline
 
-| Language/Stack | Recommended linter | Formatter | Config file |
-|---|---|---|---|
-| TypeScript/JavaScript | Biome (preferred) or ESLint | Biome (built-in) or Prettier | `biome.json` / `eslint.config.js` |
-| Python | Ruff | Ruff (built-in) or Black | `ruff.toml` / `pyproject.toml` |
-| Rust | Clippy (built-in) | rustfmt (built-in) | `clippy.toml` / `rustfmt.toml` |
-| Go | golangci-lint | gofmt / goimports (built-in) | `.golangci.yml` |
-| Java | Checkstyle or SpotBugs | google-java-format or Spotless | `checkstyle.xml` / `build.gradle` |
-| Kotlin | ktlint or detekt | ktlint (built-in) | `.editorconfig` / `detekt.yml` |
-| C# / .NET | dotnet-format + Roslyn analyzers | dotnet-format (built-in) | `.editorconfig` / `Directory.Build.props` |
-| F# | Fantomas | Fantomas (built-in) | `.editorconfig` / `.fantomasconfig` |
-| Dart / Flutter | dart analyze (built-in) | dart format (built-in) | `analysis_options.yaml` |
-| Swift | SwiftLint | SwiftFormat | `.swiftlint.yml` / `.swiftformat` |
-| Ruby | RuboCop | RuboCop (built-in) | `.rubocop.yml` |
-| PHP | PHPStan + PHP-CS-Fixer | PHP-CS-Fixer (built-in) | `phpstan.neon` / `.php-cs-fixer.php` |
-| Elixir | Credo | mix format (built-in) | `.credo.exs` / `.formatter.exs` |
-| Scala | Scalafix + WartRemover | Scalafmt | `.scalafix.conf` / `.scalafmt.conf` |
-| C / C++ | clang-tidy | clang-format | `.clang-tidy` / `.clang-format` |
-| Zig | zig fmt (built-in) | zig fmt (built-in) | `build.zig` |
-
-> **Not in the table?** Use the most widely adopted linter + formatter for your language. Check the language's official documentation or community best practices. The rules in section 3.2 still apply — adapt them to your linter's terminology.
+Select **one linter** and **one formatter** (or a single tool that does both). If the language has a built-in linter or formatter (e.g., `go vet`, `rustfmt`, `dart analyze`), prefer it over third-party alternatives.
 
 #### 3.2 Linter rules — apply strict best practices
 Configure the linter with **strict rules**, not just defaults. At minimum:
@@ -72,8 +56,8 @@ If the project has a **frontend** (React, Vue, Svelte, etc.), also enable:
 If the project is a **monorepo** with backend + frontend, use **overrides** to disable frontend-only rules (a11y, hooks, etc.) in backend code.
 
 #### 3.3 Formatter
-- Use the linter's built-in formatter if available (Biome, Ruff, rustfmt)
-- Otherwise configure a separate formatter (Prettier, gofmt, etc.)
+- Prefer a tool that handles both linting and formatting if one exists for the language
+- Otherwise configure a separate formatter
 - Define explicit formatting rules: indent style, width, line length, quote style, trailing commas
 
 #### 3.4 Editor configuration
@@ -92,30 +76,13 @@ insert_final_newline = true
 Adjust `indent_size` for the language convention (4 for Python/Rust/Go, 2 for JS/TS/HTML/CSS).
 
 #### 3.5 Pre-commit hooks (optional but recommended)
-If the project uses git, consider setting up pre-commit hooks to enforce lint + format on every commit:
-- **Node.js / TypeScript**: husky + lint-staged
-- **Python**: pre-commit framework (`pre-commit`)
-- **Rust**: cargo-husky
-- **Go**: pre-commit or lefthook
-- **.NET / C#**: husky.net or dotnet-format as a git hook
-- **Dart / Flutter**: `dart_pre_commit` or custom shell hook running `dart analyze && dart format`
-- **Java / Kotlin**: Spotless Gradle plugin with `check` task, or pre-commit
-- **Ruby**: overcommit or lefthook
-- **Multi-language / other**: lefthook (language-agnostic, single YAML config)
+If the project uses git, set up pre-commit hooks to enforce lint + format on every commit. Research the standard pre-commit hook tool for your language/ecosystem.
 
 #### 3.6 Static analysis / compiler strictness
-Enable the strictest compiler/analyzer settings available for the language:
-- **TypeScript**: `strict: true` in `tsconfig.json`
-- **C# / .NET**: `<TreatWarningsAsErrors>true</TreatWarningsAsErrors>`, `<Nullable>enable</Nullable>`, enable Roslyn analyzers
-- **Dart / Flutter**: `strict-casts: true`, `strict-inference: true`, `strict-raw-types: true` in `analysis_options.yaml`
-- **Rust**: `#![deny(warnings)]`, `#![deny(clippy::all)]`
-- **Go**: `go vet`, enable all golangci-lint checks
-- **Java**: `-Xlint:all`, SpotBugs with high effort
-- **Python**: `mypy --strict` or pyright strict mode
-- **Other languages**: enable the equivalent strict/pedantic compiler flags
+Enable the **strictest compiler/analyzer settings** available for the language. Research the recommended strict mode flags for your compiler or type checker and enable them. The goal is to catch as many issues as possible at compile time rather than at runtime.
 
 #### 3.7 Other tools
-1. Testing framework (Vitest, Jest, pytest, cargo test, go test, xUnit, flutter test, etc.)
+1. Testing framework (research the standard testing tool for your language)
 2. Git (`.gitignore`, `.gitattributes`)
 3. Environment (`.env.example` or equivalent)
 
