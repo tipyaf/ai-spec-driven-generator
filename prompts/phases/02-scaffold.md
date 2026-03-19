@@ -130,11 +130,16 @@ Enable the strictest compiler/analyzer settings available for the language:
 3. Configure DB connection (if applicable)
 4. Verify the project starts without errors
 
-### Step 6: Verify code quality
-1. Run the linter — it MUST pass with zero errors
-2. Run the formatter — it MUST produce no changes (code already formatted)
-3. Run the build/compile step — it MUST succeed
-4. Run the dev server — it MUST start without errors
+### Step 6: Code quality gate (MANDATORY)
+Before presenting results to the user, you MUST pass the code quality gate:
+
+1. Run the linter (`lint` command) — **must pass with zero errors**
+2. Run the formatter — **must produce no changes** (all code already formatted)
+3. Run the build/compile step — **must succeed with zero errors**
+4. Run the dev server — **must start without errors**
+5. If any of the above fails: **fix the issues immediately and re-run until all pass**
+
+> **This is a blocking gate.** Do NOT present the scaffold as complete or request user validation until lint, format, build, and dev all pass cleanly. This code quality gate applies to every subsequent phase as well (implement, test, review).
 
 ## Expected deliverable
 - Project that compiles/starts without errors
