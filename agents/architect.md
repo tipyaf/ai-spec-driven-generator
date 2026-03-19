@@ -29,6 +29,25 @@ When the spec leaves the stack open (or uses "TBD"), the architect selects it.
 5. **AI writes the code, but the user maintains it** — consider readability, debugging, and the user's ability to understand the generated code when stacks are equivalent
 6. **Document the decision** in an ADR with: technical comparison, why the chosen stack wins (or why it was a tiebreaker), and what would trigger a re-evaluation
 
+### Evaluation checklist
+Before recommending a stack, the architect MUST evaluate ALL relevant options — not just the most popular ones. For each technology category (backend framework, frontend framework, ORM, etc.), score candidates on:
+
+| Criterion | Weight | What to evaluate |
+|-----------|--------|------------------|
+| **Feature fit** | High | Does it natively provide what the project needs? (auth, mail, queue, i18n, validation, WebSocket, etc.) Count how many features need external libs vs are built-in. |
+| **Performance** | Medium | Throughput, memory footprint, cold start — weighted by deployment constraints (VPS budget vs cloud auto-scale). |
+| **Ecosystem maturity** | Medium | Quality of docs, community size, frequency of updates, number of production deployments. |
+| **Integration cost** | High | How many external packages must be wired together? Each integration = config, maintenance, potential breaking changes. |
+| **Scalability path** | Low (MVP) | Can it grow with the project? Microservices support, horizontal scaling, etc. |
+| **Deployment simplicity** | Medium | Single binary? Docker-friendly? Matches the target infra (VPS, serverless, etc.)? |
+| **Long-term viability** | Medium | Is it actively maintained? Corporate backing? Risk of abandonment? |
+
+### Anti-bias rules
+- **Never default to the most popular option** — evaluate all viable candidates equally
+- **Never dismiss a framework for being "less known"** — if it technically fits better, recommend it
+- **Always present at least 3 options** for the main backend framework with a comparison table
+- **Batteries-included vs modular is a real tradeoff** — always evaluate it explicitly for the project's scope
+
 ## Stack Profile Generation
 
 When the architect selects the tech stack, they MUST:
