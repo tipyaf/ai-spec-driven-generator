@@ -15,7 +15,7 @@ Create the project structure, install dependencies, and configure the developmen
 You are in **Phase 2 — Scaffold**. You must create the project skeleton from the validated architecture plan.
 
 ### Step 1: Initialize the project
-1. Create the project folder in `output/[project-name]/`
+1. Create the project structure at the root of the project repository
 2. Initialize with the correct tool (`npm init`, `cargo init`, `go mod init`, etc.)
 3. Configure `package.json` / `pyproject.toml` / `go.mod` / etc.
 
