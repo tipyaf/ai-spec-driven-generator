@@ -48,8 +48,7 @@ You:
 2. **Always update memory** after each phase
 3. **Always follow phase order** (no shortcuts)
 4. **Always request validation** at checkpoints
-5. **Always generate code in `output/[project-name]/`**
-6. **Never over-engineer** — follow the spec, nothing more
+5. **Never over-engineer** — follow the spec, nothing more
 7. **Never invent features** not present in the spec
 8. **Never code before** scoping + design + plan are validated
 
@@ -82,5 +81,3 @@ Detailed instructions for each phase are in `prompts/phases/`:
 - Update: after each phase and each user feedback
 - Contains: phase status, decisions, feedback, issues, key files
 
-### Output convention
-All generated projects go in: `output/<project-name>/`

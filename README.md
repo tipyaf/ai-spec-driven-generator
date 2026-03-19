@@ -106,9 +106,8 @@ ai-spec-driven-generator/
 │   └── todo-app-spec.yaml
 ├── memory/                  # Memory templates
 │   └── memory-template.md
-├── scripts/                 # Utility scripts
-│   └── init-project.sh      # Project initializer (submodule-based)
-└── output/                  # Default output directory (legacy)
+└── scripts/                 # Utility scripts
+    └── init-project.sh      # Project initializer (submodule-based)
 ```
 
 ## Project structure (after init)
