@@ -37,6 +37,7 @@ You are in **Phase 3 — Implementation**. You must code all project features.
 2. Connect to data (hooks, stores, etc.)
 3. Handle states (loading, error, empty)
 4. Add user interactions
+5. **All visible text MUST use i18n translation keys** — no hardcoded strings in the UI. Add new keys to every supported language file as you go.
 
 #### Step 5: Automated tests (MANDATORY — NOT OPTIONAL)
 Tests are part of the feature, not a separate phase. A feature without tests is not done.
