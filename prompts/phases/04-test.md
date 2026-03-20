@@ -40,7 +40,17 @@ For each critical journey:
 3. Identify uncovered areas
 4. Add tests for critical uncovered areas
 
-### Step 5: Report
+### Step 5: Code quality gate (MANDATORY)
+After writing all tests, you MUST pass the code quality gate:
+
+1. Run the linter (`lint` command) — **must pass with zero errors** (test files included)
+2. Run the formatter — **must produce no changes**
+3. Run the build/compile step — **must succeed**
+4. If any of the above fails: **fix the issues immediately and re-run until all pass**
+
+> **This is a blocking gate.** Test code must meet the same quality standards as production code. Do NOT present results to the user until lint, format, and build all pass cleanly.
+
+### Step 6: Report
 Produce the test report (see format in `agents/tester.md`)
 
 ## Validation criteria
@@ -49,3 +59,5 @@ Produce the test report (see format in `agents/tester.md`)
 - [ ] Each feature's acceptance criteria has a corresponding test
 - [ ] No flaky (unstable) tests
 - [ ] Critical edge cases are covered
+- [ ] **Linter passes with zero errors on all code including tests** (blocking)
+- [ ] **Build/compile succeeds** (blocking)

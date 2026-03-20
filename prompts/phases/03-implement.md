@@ -38,10 +38,19 @@ You are in **Phase 3 — Implementation**. You must code all project features.
 3. Handle states (loading, error, empty)
 4. Add user interactions
 
-#### Step 5: Verification
+#### Step 5: Code quality gate (MANDATORY)
+Before considering a feature done, you MUST pass the code quality gate:
+
+1. Run the linter (`lint` command) — **must pass with zero errors**
+2. Run the formatter — **must produce no changes**
+3. Run the build/compile step — **must succeed with zero errors/warnings**
+4. If any of the above fails: **fix the issues immediately and re-run until all pass**
+
+> **This is a blocking gate.** Do NOT move on to the next feature or present results to the user until lint, format, and build all pass cleanly. This applies to every feature, every time.
+
+#### Step 6: Functional verification
 1. Manually test that the feature works
 2. Verify previous features are not broken
-3. Ensure the linter passes
 
 ### Progress
 After each implemented feature, display:
@@ -61,6 +70,7 @@ After each implemented feature, display:
 ## Validation criteria
 - [ ] All `must-have` features are implemented
 - [ ] `should-have` features are implemented
-- [ ] Project compiles without errors
-- [ ] Linter passes without errors
+- [ ] **Linter passes with zero errors** (blocking — must be fixed before validation)
+- [ ] **Build/compile succeeds with zero errors** (blocking)
+- [ ] **Code is formatted** (no pending formatting changes)
 - [ ] Each feature meets its acceptance criteria
