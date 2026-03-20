@@ -37,7 +37,18 @@ You are in **Phase 2 — Scaffold**. You must create the project skeleton from t
 2. Create `index.ts` / `__init__.py` / `mod.rs` export files
 3. Create shared type/interface files
 
-### Step 5: Entry point
+### Step 5: Internationalization (i18n)
+If the project supports multiple languages (check the spec/architecture plan):
+1. Install the i18n library appropriate for the stack (e.g., `next-intl`, `react-i18next`, `@adonisjs/i18n`, `go-i18n`, etc.)
+2. Create the i18n configuration file
+3. Create translation files for each supported language (e.g., `en.json`, `fr.json`)
+4. Create a helper/hook to access translations in components (e.g., `useTranslations()`)
+5. Wire the i18n provider into the app's root layout/entry point
+6. Verify that a sample translation key renders correctly in each supported language
+
+> **Why:** If i18n is deferred to a "polish" phase, all UI text gets hardcoded and must be extracted later — a costly, error-prone rewrite. Setting up i18n infrastructure during scaffold ensures every feature uses translation keys from day one.
+
+### Step 6: Entry point
 1. Create the application entry point
 2. Configure basic routing (if web)
 3. Configure DB connection (if applicable)
@@ -55,3 +66,4 @@ You are in **Phase 2 — Scaffold**. You must create the project skeleton from t
 - [ ] `npm run lint` / equivalent passes without errors
 - [ ] Folder structure matches the plan
 - [ ] `.env.example` is created with all documented variables
+- [ ] If multilingual: i18n infrastructure is in place and a sample key renders in each language
