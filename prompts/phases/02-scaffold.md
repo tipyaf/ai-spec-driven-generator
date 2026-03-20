@@ -39,21 +39,20 @@ This step is **critical**. Every project MUST have linting, formatting, and stat
 Select **one linter** and **one formatter** (or a single tool that does both). If the language has a built-in linter or formatter (e.g., `go vet`, `rustfmt`, `dart analyze`), prefer it over third-party alternatives.
 
 #### 3.2 Linter rules — apply strict best practices
-Configure the linter with **strict rules**, not just defaults. At minimum:
+Configure the linter with **strict rules**, not just defaults. Research the recommended rule set for your language and enable rules covering these categories:
 
-- **Correctness**: unused imports (error), unused variables (error), no unreachable code
-- **Style**: consistent formatting (quotes, semicolons, indentation), consistent naming conventions, prefer const/immutable, use template literals over concatenation
-- **Suspicious**: no explicit `any`/equivalent (warn), no double equals, no empty blocks, no assignments in expressions
-- **Complexity**: prefer flat map, optional chaining, no useless fragments
-- **Performance**: no accumulating spread in loops, prefer efficient patterns
-- **Security**: no dangerous HTML injection, no eval, no hardcoded secrets
+- **Correctness**: unused imports/variables (error), unreachable code, type safety
+- **Style**: consistent formatting, naming conventions, prefer immutable declarations
+- **Suspicious**: no loose equality, no empty blocks, no assignments in conditions
+- **Complexity**: prefer simple and readable patterns, limit nesting depth
+- **Performance**: avoid known anti-patterns for the language
+- **Security**: no code injection, no eval-equivalents, no hardcoded secrets
 
-If the project has a **frontend** (React, Vue, Svelte, etc.), also enable:
-- **Accessibility (a11y)**: alt text, button types, valid anchors, keyboard events
-- **Hooks rules**: exhaustive dependencies (warn), hooks at top level (error)
-- **Security**: no `dangerouslySetInnerHTML` or equivalent
+If the project has a **frontend**, also enable rules for:
+- **Accessibility (a11y)**: alt text, semantic HTML, keyboard navigation
+- **Framework-specific rules**: research the recommended lint plugin for your UI framework
 
-If the project is a **monorepo** with backend + frontend, use **overrides** to disable frontend-only rules (a11y, hooks, etc.) in backend code.
+If the project is a **monorepo**, use **overrides** to scope rules per app (e.g., no a11y rules in backend code).
 
 #### 3.3 Formatter
 - Prefer a tool that handles both linting and formatting if one exists for the language
