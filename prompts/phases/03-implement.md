@@ -39,18 +39,24 @@ You are in **Phase 3 — Implementation**. You must code all project features.
 4. Add user interactions
 
 #### Step 5: Code quality gate (MANDATORY)
-Before considering a feature done, you MUST pass the code quality gate:
+Before considering a feature done, you MUST pass **all** checks below. Fix and re-run until every check passes.
 
+**Static checks:**
 1. Run the linter (`lint` command) — **must pass with zero errors**
 2. Run the formatter — **must produce no changes**
 3. Run the build/compile step — **must succeed with zero errors/warnings**
-4. If any of the above fails: **fix the issues immediately and re-run until all pass**
 
-> **This is a blocking gate.** Do NOT move on to the next feature or present results to the user until lint, format, and build all pass cleanly. This applies to every feature, every time.
+**Functional checks:**
+4. Start the dev server (if not already running)
+5. **Test every endpoint/route added or modified in this feature** with real HTTP requests:
+   - Send valid data → verify correct response (status code + body)
+   - Send invalid data → verify proper error response (not a 500 or stack trace)
+   - Test authenticated endpoints with and without a valid token
+6. If the feature has a UI: **verify the page loads and the main interactions work**
+7. **Regression check**: verify that previously implemented features still respond correctly (re-run their smoke tests)
+8. If any check fails: **fix the issue immediately and re-run all checks**
 
-#### Step 6: Functional verification
-1. Manually test that the feature works
-2. Verify previous features are not broken
+> **This is a blocking gate.** Do NOT move on to the next feature or present results to the user until all static and functional checks pass. A feature that compiles but doesn't work is not done.
 
 ### Progress
 After each implemented feature, display:
@@ -73,4 +79,6 @@ After each implemented feature, display:
 - [ ] **Linter passes with zero errors** (blocking — must be fixed before validation)
 - [ ] **Build/compile succeeds with zero errors** (blocking)
 - [ ] **Code is formatted** (no pending formatting changes)
+- [ ] **Every endpoint responds correctly to real requests** (blocking — not just compilation)
+- [ ] **Every UI page loads and main interactions work** (blocking)
 - [ ] Each feature meets its acceptance criteria

@@ -97,19 +97,33 @@ Enable the **strictest compiler/analyzer settings** available for the language. 
 4. Verify the project starts without errors
 
 ### Step 6: Code quality gate (MANDATORY)
-Before presenting results to the user, you MUST pass the code quality gate:
+Before presenting results to the user, you MUST pass **all** quality checks below. Fix and re-run until every check passes.
 
+#### 6.1 Static checks
 1. Run the linter (`lint` command) — **must pass with zero errors**
 2. Run the formatter — **must produce no changes** (all code already formatted)
 3. Run the build/compile step — **must succeed with zero errors**
-4. Run the dev server — **must start without errors**
-5. If any of the above fails: **fix the issues immediately and re-run until all pass**
 
-> **This is a blocking gate.** Do NOT present the scaffold as complete or request user validation until lint, format, build, and dev all pass cleanly. This code quality gate applies to every subsequent phase as well (implement, test, review).
+#### 6.2 Runtime checks
+4. Start the dev server — **must start without errors**
+5. **Smoke test every endpoint/route that exists** — send real HTTP requests (or equivalent for non-web projects) and verify you get the expected response. At minimum:
+   - Health check / root route returns 200
+   - If auth routes exist: test register, login, and authenticated endpoints with real HTTP requests
+   - If a frontend exists: verify the main page loads and renders without errors
+6. If any runtime check fails: **diagnose, fix the root cause, and re-run all checks**
+
+> **Why runtime checks?** A project that compiles does not necessarily work. Missing middleware, missing dependencies, missing configuration files, and incorrect wiring are only caught by actually running the code and sending requests. **Never skip this step.**
+
+#### 6.3 Dependency check
+7. Verify all **peer dependencies** and **required runtime dependencies** are installed — not just that the build passes, but that every import resolves at runtime
+8. For frameworks with plugins/providers: verify each registered provider has its required configuration file and dependencies
+
+> **This is a blocking gate.** Do NOT present the scaffold as complete or request user validation until ALL checks pass — static, runtime, and dependency. This code quality gate applies to every subsequent phase as well (implement, test, review).
 
 ## Expected deliverable
 - Project that compiles/starts without errors
-- All dependencies installed
+- **All endpoints respond correctly to real requests** (not just compilation)
+- All dependencies installed (including runtime-only deps like native modules)
 - Complete folder structure
 - **Strict linter configuration with language best practices**
 - **Formatter configured and all code formatted**
@@ -120,6 +134,8 @@ Before presenting results to the user, you MUST pass the code quality gate:
 - [ ] `lint` command passes with zero errors
 - [ ] `build` / compile command succeeds
 - [ ] `dev` command starts without errors
+- [ ] **Smoke test passes** — all existing endpoints return expected responses
+- [ ] **Every registered provider/plugin has its config file and dependencies**
 - [ ] Linter rules cover: correctness, style, suspicious patterns, performance, security
 - [ ] Frontend-specific rules (a11y, hooks) are enabled if applicable
 - [ ] Monorepo overrides disable irrelevant rules per app (e.g., no a11y rules in backend)
