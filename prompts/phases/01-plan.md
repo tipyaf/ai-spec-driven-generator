@@ -33,9 +33,8 @@ You are in **Phase 1 — Planning**. The user has provided a YAML spec describin
 3. Plan migrations
 
 ### Step 5: Plan the implementation
-1. Order features by dependency
-2. Break down into atomic tasks
-3. Estimate relative complexity (S/M/L)
+1. If Phase 0.7 (Feature Ordering) was done: use the epic order from the implementation plan as the starting point. Refine with technical details (file-level tasks, migration order).
+2. If Phase 0.7 was NOT done: order features by dependency, break down into atomic tasks, estimate relative complexity (S/M/L). Collaborate with the PO to validate the order.
 
 ### Step 6: Document decisions
 1. Create an ADR for each non-trivial decision
