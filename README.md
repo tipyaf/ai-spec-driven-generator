@@ -6,6 +6,40 @@ An AI-powered framework for generating complete code projects from structured YA
 
 This framework uses specialized AI agents, a phased workflow with human validation at every step, and persistent memory between sessions to generate any type of code project from a single YAML specification.
 
+## Fundamental Principles
+
+This framework is built on three core principles that guide every design decision:
+
+### 1. Agnostic
+The framework works with **any programming language** and **any type of project** — not just web applications.
+
+- Web apps, REST APIs, GraphQL, gRPC
+- CLI tools, desktop applications
+- Mobile apps (iOS, Android, cross-platform)
+- Libraries and SDKs
+- Data pipelines and ETL
+- Embedded systems and IoT
+- Games and simulations
+- Machine learning pipelines
+
+Agents, phases, and templates adapt their recommendations based on the project type declared in the spec. Web-specific concepts (pages, CSS, WCAG, Playwright) only apply when relevant.
+
+### 2. Autonomous
+Once the product is well-defined (Phases 0–1), the framework generates **production-ready code** without human intervention on technical tasks.
+
+- **Humans decide**: product scope, UX design, architecture choices, infrastructure, release go/no-go
+- **Machines verify**: code quality, tests, accessibility, security, conventions, anti-patterns
+
+The developer never self-validates. An independent validator agent verifies every implementation. Tests, reviews, and security audits are fully automated with escalation to humans only after 3 failures.
+
+### 3. Accompaniment
+The framework **guides and challenges** the user to build the best possible product. The user follows instructions and answers questions — never left without clear next steps.
+
+- The Product Owner **challenges assumptions**: "Is this feature really MVP? What happens if you ship without it?"
+- The Architect **presents options**: comparison tables with trade-offs, not just a single recommendation
+- Every phase **ends with clear guidance**: what was done, what's next, what the user needs to decide
+- The framework **explains why** it asks questions and enforces rules
+
 ## Features
 
 - **Spec-driven**: YAML specs as the single source of truth

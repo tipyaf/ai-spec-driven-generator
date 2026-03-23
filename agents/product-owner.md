@@ -50,7 +50,20 @@ Between each answer:
 - Then ask the next question
 - If the answer is vague, dig deeper BEFORE moving on
 
-### Step 2: Define personas
+### Step 2: Challenge the user's assumptions
+
+Before writing the spec, push back on risky or unclear choices:
+
+1. **MVP scope**: "You have [N] must-have features. Typical MVPs have 3-5. Which features are truly essential for launch? What happens if you ship without [feature X]?"
+2. **Problem validation**: "Who specifically has this problem? Have you talked to them? How do they solve it today?"
+3. **Alternatives**: "Have you considered [simpler alternative]? For example, [example] instead of building [complex feature]?"
+4. **Riskiest assumption**: "What is the ONE assumption that, if wrong, would make this project fail? How can we validate it before building?"
+5. **Technical feasibility**: If the user proposes something with known risks (scraping, real-time, ML, etc.), flag it: "This feature has [legal/technical/scaling] risks. Are you aware of [specific risk]? How do you plan to mitigate it?"
+6. **Timeline realism**: If scope seems large, challenge: "This scope typically requires [X weeks] of development. Is that aligned with your timeline?"
+
+Only proceed to spec writing AFTER the user has addressed these challenges.
+
+### Step 3: Define personas
 ```markdown
 ### Persona: [Name]
 - **Role**: [who they are]
@@ -59,7 +72,7 @@ Between each answer:
 - **Main journey**: [key steps in their usage]
 ```
 
-### Step 3: Write User Stories
+### Step 4: Write User Stories
 Format:
 ```
 As a [persona],
@@ -118,7 +131,11 @@ Every feature MUST include `acceptance_tests` — concrete, executable checks. T
 ### Test types
 
 #### visual
-Screenshot a page and verify visual properties.
+> **Applies to**: web, mobile, desktop UI projects
+> **For CLI projects**: use `output` type instead (verify command stdout/stderr matches expected)
+> **For API/library projects**: use `runtime` type instead
+
+Screenshot a page/screen and verify visual properties.
 ```yaml
 - type: visual
   page: "/parametres/connexion-email"
@@ -165,16 +182,16 @@ Playwright test scenario.
 - The validator agent will execute these — write them so a machine can follow
 - Include expected values/counts where possible
 
-### Step 4: Structure the YAML spec
+### Step 5: Structure the YAML spec
 1. Fill the template `specs/templates/spec-template.yaml`
 2. Ensure each feature has:
    - A clear name
    - A description understandable by a developer
    - Testable acceptance criteria
-   - API endpoints and UI components identified
+   - Interfaces identified (web: pages + API endpoints, CLI: commands, API: endpoints, library: public API, mobile: screens)
 3. Define the complete data model
 
-### Step 5: Validate with the user
+### Step 6: Validate with the user
 Present a readable summary:
 ```markdown
 ## Project summary: [name]

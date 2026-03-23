@@ -121,14 +121,18 @@ The reviewer MUST run all of the following checks programmatically:
 - No code duplication (similar blocks > 10 lines)
 
 #### 4. i18n compliance
+> **Applies to**: projects with user-facing output (web, mobile, CLI, desktop)
+> **Not required for**: libraries, embedded systems, data pipelines
+
 - No hardcoded user-facing strings (all strings must use i18n keys)
 - Translation files exist for all supported locales
 - No missing translation keys
 
 #### 5. Design system compliance
-- CSS variables used for colors, spacing, typography (no hardcoded values like `#ff0000` or `16px`)
-- Components use design system tokens
-- No inline styles unless explicitly justified
+> **For web projects**: CSS variables used for colors, spacing, typography (no hardcoded values like `#ff0000` or `16px`). Components use design system tokens. No inline styles unless explicitly justified.
+> **For mobile UI projects**: Design tokens used for theming. No hardcoded colors or spacing outside the design system.
+> **For CLI projects**: Terminal styling constants (colors, formatting) centralized. No scattered ANSI codes.
+> **For API/library projects**: N/A — skip this check.
 
 ### Auto-validation flow
 
@@ -152,6 +156,24 @@ The reviewer MUST run all of the following checks programmatically:
 - Zero critical issues unresolved
 - Zero security vulnerabilities
 - All automated checks above pass
+
+## Status output
+
+After completing the review, output a structured status block:
+
+```
+Phase 5 — Reviewer
+Status: PASS / FAIL
+- Anti-pattern detection: PASS/FAIL
+- Project conventions: PASS/FAIL
+- Code cleanliness: PASS/FAIL
+- i18n compliance: PASS/FAIL
+- Design system compliance: PASS/FAIL
+- Overall score: [A/B/C/D/F]
+Next: Proceeding to Phase 5.5 / Returning to developer with N issues
+```
+
+This status block is mandatory. It gives the orchestrator and the user an at-a-glance view of the review result.
 
 ## Rules
 - Be constructive — every criticism must have a proposed solution

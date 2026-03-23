@@ -28,8 +28,8 @@ You are in **Phase 5 — Review**. You must audit the project's complete code us
 3. Verify typing quality (no `any`, proper interfaces)
 4. Verify error handling
 5. Check for unused imports, dead code
-6. Check for hardcoded strings (i18n violation)
-7. Check for hardcoded colors/values (design system violation)
+6. Check for hardcoded strings (i18n violation) — **projects with user-facing output (web, mobile, CLI, desktop)**
+7. Check for hardcoded colors/values (design system violation) — **web projects only**
 
 ### Step 3: Security review (automated)
 1. Look for OWASP Top 10 vulnerabilities
@@ -60,8 +60,8 @@ If issues are found:
 - [ ] No security vulnerabilities
 - [ ] Tests still passing after corrections
 - [ ] No anti-patterns from manifest
-- [ ] No hardcoded user-facing strings (i18n)
-- [ ] CSS variables used, no hardcoded colors (design system)
+- [ ] No hardcoded user-facing strings (i18n) — **projects with user-facing output (web, mobile, CLI, desktop); N/A for libraries/embedded**
+- [ ] CSS variables used, no hardcoded colors (design system) — **web projects only; N/A for API, CLI, library, embedded**
 - [ ] No unused imports or dead code
 
 ## Auto-proceed rule

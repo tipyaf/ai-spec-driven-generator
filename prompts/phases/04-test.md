@@ -31,22 +31,32 @@ For each under-tested area:
 4. Mock all external dependencies in unit tests
 5. Prioritize: business logic > controllers > utilities
 
-### Step 3: E2E tests (Playwright)
-For every modified page:
-1. Write at least one E2E test covering the user flow (navigation, interaction, expected result)
-2. Test at three responsive breakpoints: mobile (320px), tablet (768px), desktop (1440px)
-3. Take screenshots at each breakpoint for visual regression comparison
-4. Test the full flow end-to-end (frontend -> API -> database)
+### Step 3: E2E / Integration tests
+> Adapt the tool and strategy to the project type:
+> - **Web**: Playwright — test pages at responsive breakpoints (320px, 768px, 1440px)
+> - **Mobile**: Detox/Appium — test screens on device simulators
+> - **CLI**: Command invocation tests — verify exit codes, stdout, stderr
+> - **API**: Integration tests (supertest, httpie) — verify endpoints end-to-end
+> - **Library**: Unit + integration tests — verify public API behaves as documented
+
+For every modified interface:
+1. Write at least one E2E/integration test covering the user flow (navigation/invocation, interaction, expected result)
+2. Test at three responsive breakpoints: mobile (320px), tablet (768px), desktop (1440px) (**web/mobile projects only**)
+3. Take screenshots at each breakpoint for visual regression comparison (**UI projects only**)
+4. Test the full flow end-to-end (frontend -> API -> database, or CLI -> service -> output)
 5. Identify main user journeys from the spec and write one E2E test per journey
 
 ### Step 4: WCAG Accessibility Audit
-For every modified page:
+> **Applies to**: web, mobile, desktop UI projects
+> **Does NOT apply to**: API, CLI, library, embedded, data pipeline projects. Skip to Step 5.
+
+For every modified page/screen:
 1. Run `@axe-core/playwright` (or equivalent) with WCAG 2.1 AA tags
 2. Verify 0 violations at AA level
 3. Check contrast ratios: 4.5:1 for normal text, 3:1 for large text and UI components
 4. Test keyboard navigation: tab through all interactive elements, verify logical focus order
 5. Verify ARIA roles and accessible labels on all interactive elements
-6. Run the audit at each responsive breakpoint (320px, 768px, 1440px)
+6. Run the audit at each responsive breakpoint (320px, 768px, 1440px) (**web projects only**)
 
 ### Step 5: Non-regression verification
 1. Run the **full test suite** (unit + integration + E2E + accessibility)
@@ -108,8 +118,8 @@ Produce the test report:
 ## Validation criteria (all machine-checkable)
 - [ ] All unit tests pass (exit code 0)
 - [ ] All E2E tests pass (Playwright exit code 0)
-- [ ] WCAG audit passes (0 AA violations via axe-core)
-- [ ] No visual regression in screenshots (0 unexpected differences)
+- [ ] WCAG audit passes (0 AA violations via axe-core) — **UI projects only, N/A for API/CLI/library/embedded**
+- [ ] No visual regression in screenshots (0 unexpected differences) — **UI projects only, N/A for API/CLI/library/embedded**
 - [ ] Test coverage meets project minimum (if defined)
 - [ ] Each feature's acceptance criteria has a corresponding test
 - [ ] No flaky (unstable) tests
