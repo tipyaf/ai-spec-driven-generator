@@ -58,6 +58,16 @@ sed "s/\[project-name\]/$PROJECT_NAME/g" framework/memory/memory-template.md \
 # --- Create LESSONS.md from template ---
 cp framework/memory/LESSONS.md.template memory/LESSONS.md
 
+# --- Create SYNC.md from template with current framework version ---
+FRAMEWORK_VERSION=$(cat framework/VERSION)
+SYNC_DATE=$(date +%Y-%m-%d)
+sed -e "s|\[read from framework/VERSION\]|$FRAMEWORK_VERSION|g" \
+    -e "s|\[date\]|$SYNC_DATE|g" \
+    -e "s|YYYY-MM-DD|$SYNC_DATE|g" \
+    -e "s|X.Y.Z | X.Y.Z|$FRAMEWORK_VERSION | $FRAMEWORK_VERSION|g" \
+    -e "s|Brief description|Initial framework setup|g" \
+    framework/memory/SYNC.md.template > SYNC.md
+
 # --- Create .gitignore ---
 cat > .gitignore << 'EOF'
 # Dependencies

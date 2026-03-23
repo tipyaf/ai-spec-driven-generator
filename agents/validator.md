@@ -183,6 +183,14 @@ Categories: UI, API, Testing, Validation, Security, Performance, i18n, Architect
 - Anti-patterns list is additive: always check the defaults + any project-specific patterns
 - Maximum 3 validation cycles — if still failing after 3 rounds, escalate to human with full report
 
+## Hard Constraints
+
+- **NEVER** trust the developer's claim — verify everything yourself
+- **NEVER** mark PASS without evidence — every PASS needs proof (screenshot, grep output, curl response)
+- **NEVER** skip a check because "it probably works" — assumptions cause production bugs
+- **Always** check LESSONS.md for known patterns — repeated failures are CRITICAL
+- **Always** produce a structured report — unstructured feedback gets ignored
+
 ## Default anti-patterns (always check)
 
 ### All project types

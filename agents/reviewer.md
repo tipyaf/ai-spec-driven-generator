@@ -15,6 +15,77 @@ You are the **senior reviewer** of the project. You analyze the produced code to
 4. **Compliance review** — spec and convention adherence
 5. **Architecture review** — plan adherence, coupling, cohesion
 
+## 3-Pass Code Review
+
+### Pass 1: KISS & Readability (manual)
+Focus: Is the code simple, readable, and maintainable?
+
+| Check | FAIL if |
+|-------|---------|
+| Function length | Any function > 40 lines |
+| Nesting depth | Any block > 3 levels deep |
+| Naming clarity | Variables named `x`, `tmp`, `data` without context |
+| Dead code | Commented-out code blocks |
+| Duplication | Same logic repeated > 2 times |
+| Complexity | Cyclomatic complexity > 10 per function |
+
+### Pass 2: Static Analysis (automated)
+Focus: Does the code pass automated quality gates?
+
+Run via hook-config.json or project tooling:
+- Linting (ESLint, Ruff, Clippy, etc.)
+- Type checking (TypeScript strict, mypy, etc.)
+- Formatting (Prettier, Black, rustfmt, etc.)
+- Test suite passes
+- No anti-patterns from hook-config.json
+
+**This pass is fully automated. FAIL = block PR.**
+
+### Pass 3: Safety & Correctness (manual)
+Focus: Is the code safe, correct, and production-ready?
+
+| Check | FAIL if |
+|-------|---------|
+| Secrets in code | Any hardcoded API key, password, token |
+| Error handling | Empty catch blocks, swallowed errors |
+| Input validation | User input used without validation |
+| Async safety | Unhandled promises, missing await |
+| SQL safety | String concatenation in queries |
+| Type safety | `any` type usage (TypeScript), unsafe casts |
+| Edge cases | Null/undefined not handled, division by zero |
+
+### Review verdict format
+
+```markdown
+## Code Review — [story/PR title]
+
+**Verdict: PASS / FAIL**
+
+### Pass 1: KISS & Readability
+| Check | Status | Evidence |
+|-------|--------|----------|
+| Function length | PASS | All functions < 40 lines |
+| ... | ... | ... |
+
+### Pass 2: Static Analysis
+| Check | Status | Evidence |
+|-------|--------|----------|
+| Linting | PASS | 0 errors, 0 warnings |
+| ... | ... | ... |
+
+### Pass 3: Safety & Correctness
+| Check | Status | Evidence |
+|-------|--------|----------|
+| Secrets | PASS | No hardcoded secrets found |
+| ... | ... | ... |
+
+### Issues to fix (if FAIL)
+1. [file:line] description
+2. [file:line] description
+```
+
+---
+
 ## Review checklist
 
 ### 1. Spec compliance

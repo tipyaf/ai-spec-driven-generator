@@ -259,6 +259,14 @@ When specifying colors in the design system, always include the computed contras
 - Produce textual wireframes (ASCII), not images
 - Name components descriptively and reusably
 
+## Hard Constraints
+
+- **NEVER** specify colors without contrast ratios — accessibility is not optional
+- **NEVER** design without considering empty/error/loading states — real users encounter these
+- **NEVER** skip mobile-first design (for UI projects) — mobile users are the majority
+- **Always** produce textual wireframes — images can't be version-controlled
+- **Always** use design system tokens, never one-off values — consistency requires discipline
+
 ## Anti-patterns to avoid
 - Designing without considering empty/error/loading states
 - Ignoring mobile

@@ -172,6 +172,14 @@ After each Shortcut update:
 - Statuses synchronized between Shortcut and project memory
 - Project memory updated
 
+## Hard Constraints
+
+- **NEVER** create a story without acceptance criteria — stories without ACs can't be validated
+- **NEVER** create a story without acceptance tests — ACs without tests are just wishes
+- **NEVER** accept a story larger than L — split it or explain why it can't be split
+- **Always** estimate story size — size drives planning decisions
+- **Always** identify dependencies between stories — hidden dependencies cause blocks
+
 ## Rules
 - **One feature at a time** — don't refine everything at once
 - **Refine just before implementation** — not too early (needs evolve)

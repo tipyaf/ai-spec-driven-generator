@@ -178,6 +178,98 @@ Given the `debug-artifacts` rule with `filter: "*.py"`:
 
 See `settings-hooks-example.json` for a complete generated example targeting a TypeScript/React web project.
 
+## Python Hook Script (`code_review.py`)
+
+A standalone Python script that reads `hook-config.json` and runs anti-pattern checks against staged (or all tracked) files. No external dependencies required -- uses only the Python standard library.
+
+### Quick Start
+
+```bash
+# Run against staged files (default)
+python3 code_review.py
+
+# Run with project-type filtering (includes type-specific rules)
+python3 code_review.py --project-type web
+
+# Run against all tracked files
+python3 code_review.py --all-files
+
+# Use a custom config path
+python3 code_review.py --config /path/to/hook-config.json
+```
+
+### Integration as a Git Pre-Commit Hook
+
+Add to your project's `.git/hooks/pre-commit`:
+
+```bash
+#!/bin/bash
+python3 path/to/code_review.py --project-type web
+```
+
+Or wire it into Claude Code's `settings.local.json`:
+
+```json
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 stacks/hooks/code_review.py --project-type web"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+### How It Works
+
+1. **Loads config** -- Finds `hook-config.json` next to the script, or in the repo root.
+2. **Gets staged files** -- Runs `git diff --cached --name-only --diff-filter=ACMR`.
+3. **Collects rules** -- Universal rules always run. Type-specific rules (`web_specific`, `api_specific`, `cli_specific`) run when `--project-type` matches.
+4. **Filters by glob** -- Each rule's `filter` field (e.g., `*.{ts,tsx,js}`) narrows which files are checked.
+5. **Scans for patterns** -- Reads each file and runs regex matching against the rule's `patterns` array.
+6. **Reports results** -- Clear per-rule PASS/FAIL/WARNING output with file:line details.
+7. **Exit code** -- Returns 0 if no errors, 1 if any error-severity rule has violations. Warnings never block.
+
+### CLI Options
+
+| Flag | Description |
+|------|-------------|
+| `--config`, `-c` | Path to hook-config.json (auto-detected by default) |
+| `--project-type`, `-p` | Project type: `web`, `api`, `cli`, `fullstack`, `desktop` |
+| `--all-files` | Check all tracked files, not just staged |
+| `--timeout`, `-t` | Default timeout per external command in seconds (default: 30) |
+
+### Severity Levels
+
+- **`error`** -- Blocks the commit (exit code 1). Must be fixed before committing.
+- **`warning`** -- Informational. Shows in output but allows the commit (exit code 0).
+
+### External Command Checks
+
+In addition to anti-pattern rules, the script supports external command checks via a `checks` array in `hook-config.json` (same format as the reference implementation):
+
+```json
+{
+  "checks": [
+    {
+      "name": "typecheck",
+      "cmd": "npx tsc --noEmit",
+      "filter": "*.{ts,tsx}",
+      "severity": "error",
+      "timeout": 60,
+      "auto_restage": false
+    }
+  ]
+}
+```
+
 ## Hook Points Reference
 
 ### PreToolUse (run before the action)

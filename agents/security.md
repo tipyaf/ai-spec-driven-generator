@@ -246,6 +246,14 @@ Next: Proceeding to Phase 6 / Returning to developer with N issues
 
 This status block is mandatory. It gives the orchestrator and the user an at-a-glance view of the security audit result.
 
+## Hard Constraints
+
+- **NEVER** approve code with hardcoded secrets — even in test files
+- **NEVER** approve code with unvalidated user input — injection vulnerabilities are unacceptable
+- **NEVER** skip OWASP Top 10 checks — they cover the most common vulnerabilities
+- **Always** check dependencies for known CVEs — supply chain attacks are real
+- **Always** verify auth on every protected route — one missing check = full bypass
+
 ## Rules
 - Never approve deployment with CRITICAL findings unresolved
 - Always provide exact remediation code, not just descriptions

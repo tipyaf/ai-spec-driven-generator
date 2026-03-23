@@ -58,6 +58,12 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Language-agnostic hooks**: Configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders — works with any language (TypeScript, Python, Rust, Go, Java, etc.)
 - **Agent role guards**: Strict enforcement of agent boundaries — refiner never codes, reviewer never modifies files, developer never self-validates
 - **Deployment verification**: Post-deploy health checks, smoke tests, rollback plan documentation
+- **Skills system**: `/refine`, `/build`, `/review`, `/validate`, `/spec` — slash commands that dispatch to specialized agents
+- **Auto-versioning**: GitHub Action bumps VERSION on every push, auto-generates CHANGELOG
+- **Framework sync tracking**: SYNC.md tracks which version each project uses
+- **3-pass code review**: KISS & readability → static analysis → safety & correctness
+- **Test quality standards**: Explicit "real test vs mock-soup" checklists, forbidden test patterns
+- **Hard constraints**: NEVER/Always rules in every agent — critical rules are visually distinct
 
 ## Workflow
 
@@ -105,6 +111,8 @@ Open the project in **Cursor** or **Claude Code**. The AI will automatically pic
 
 Describe your project idea to the AI, or provide a YAML spec. The AI will guide you through each phase with human validation at every step.
 
+Use `/spec` to start defining your project, `/refine` to break features into stories, `/build` to implement, `/review` to review code, `/validate` to verify.
+
 ### 4. Update the framework
 
 When the framework gets improvements, update all projects at once:
@@ -130,6 +138,12 @@ ai-spec-driven-generator/
 │   ├── reviewer.md          # Quality audit
 │   ├── security.md          # Security audit (OWASP, auth, data)
 │   └── devops.md            # CI/CD & deployment
+├── skills/                  # Slash command skill dispatchers
+│   ├── refine.md            # /refine — break features into stories
+│   ├── build.md             # /build — implement a feature
+│   ├── review.md            # /review — 3-pass code review
+│   ├── validate.md          # /validate — verify implementation
+│   └── spec.md              # /spec — define project from scratch
 ├── prompts/phases/          # Phase-specific instructions
 │   ├── 00-scoping.md        # Includes acceptance_tests requirement
 │   ├── 00.5-design.md       # Includes WCAG contrast validation
@@ -154,12 +168,19 @@ ai-spec-driven-generator/
 │   └── hooks/               # Claude Code quality gate hooks
 │       ├── README.md        # Hook documentation
 │       ├── settings-hooks-example.json  # Ready-to-use config
-│       └── hook-config.json # Language-agnostic hook configuration
+│       ├── hook-config.json # Language-agnostic hook configuration
+│       └── code_review.py   # 3-pass code review hook
 ├── examples/                # Example specs
 │   └── todo-app-spec.yaml
 ├── memory/                  # Memory templates
 │   ├── memory-template.md
-│   └── LESSONS.md.template
+│   ├── LESSONS.md.template
+│   └── SYNC.md.template     # Framework version sync tracker
+├── VERSION                  # Current framework version
+├── CHANGELOG.md             # Auto-generated changelog
+├── BOOTSTRAP.md             # Bootstrap guide for new projects
+├── .github/workflows/
+│   └── bump-version.yml     # Auto-versioning on push
 └── scripts/                 # Utility scripts
     └── init-project.sh      # Project initializer (submodule-based)
 ```
@@ -180,7 +201,8 @@ my-project/
 │   └── my-project-architecture.md  # Architecture plan (Phase 1)
 ├── memory/
 │   ├── my-project.md       # Project memory (updated by agents)
-│   └── LESSONS.md          # Failure memory (logged mistakes, read by all agents)
+│   ├── LESSONS.md          # Failure memory (logged mistakes, read by all agents)
+│   └── SYNC.md             # Framework version sync tracker (from template)
 ├── stacks/                 # Stack profiles (Phase 1)
 │   ├── typescript-nestjs.md
 │   └── typescript-react.md
