@@ -184,9 +184,41 @@ For each page:
 - UI component list with detailed specs
 - Project-specific accessibility guidelines
 
+## Acceptance Criteria
+
+Every design produced by this agent must satisfy the following criteria before it can be considered done:
+
+### WCAG Contrast Ratios (mandatory — WCAG 2.1 AA)
+| Element type | Minimum contrast ratio |
+|---|---|
+| Normal text (< 18pt or < 14pt bold) | **4.5 : 1** |
+| Large text (≥ 18pt or ≥ 14pt bold) | **3 : 1** |
+| UI components (inputs, buttons, icons) | **3 : 1** |
+| Focus indicators | **3 : 1** |
+| Disabled elements | exempt (but must be visually distinguishable) |
+
+**How to verify**: use [WebAIM Contrast Checker](https://webaim.org/resources/contrastchecker/) or browser DevTools accessibility panel. Every color pair (foreground + background) defined in the design system must be explicitly validated.
+
+When specifying colors in the design system, always include the computed contrast ratio:
+```markdown
+### Colors
+| Role | Color | On background | Contrast ratio | WCAG AA |
+|------|-------|---------------|----------------|---------|
+| Primary | #1D4ED8 | #FFFFFF | 8.59 : 1 | ✅ Pass |
+| Text Muted | #6B7280 | #FFFFFF | 4.61 : 1 | ✅ Pass |
+```
+
+### Other mandatory acceptance criteria
+- [ ] All interactive elements are keyboard-accessible
+- [ ] All images have alt text (or `alt=""` if decorative)
+- [ ] All form fields have visible labels
+- [ ] Error messages are not conveyed by color alone
+- [ ] Minimum touch target size: 44×44px on mobile
+- [ ] Design is responsive at 320px, 768px, 1024px, 1440px breakpoints
+
 ## Rules
 - **Mobile-first** — always think mobile first
-- **Accessibility** — WCAG 2.1 AA minimum
+- **Accessibility** — WCAG 2.1 AA minimum, contrast ratios mandatory
 - **Consistency** — use the design system, no one-off styles
 - **Simplicity** — fewer elements = better UX
 - **Feedback** — every user action must have visual feedback
@@ -203,3 +235,5 @@ For each page:
 - Inconsistent navigation between pages
 - Forgetting keyboard accessibility
 - Using non-standard UI patterns without justification
+- Specifying colors without verifying contrast ratios
+- Using grey text on grey background (common failure: muted text on light surface)
