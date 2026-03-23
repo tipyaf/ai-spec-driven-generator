@@ -64,6 +64,7 @@ The framework **guides and challenges** the user to build the best possible prod
 - **3-pass code review**: KISS & readability → static analysis → safety & correctness
 - **Test quality standards**: Explicit "real test vs mock-soup" checklists, forbidden test patterns
 - **Hard constraints**: NEVER/Always rules in every agent — critical rules are visually distinct
+- **Token-optimized agents**: Each agent split into core (rules, workflow) + ref (templates, examples) — 60% fewer tokens per session
 
 ## Workflow
 
@@ -126,18 +127,29 @@ git submodule update --remote framework
 
 ```
 ai-spec-driven-generator/
-├── agents/                  # 11 specialized agent definitions
-│   ├── orchestrator.md      # Main coordinator
-│   ├── product-owner.md     # Scoping & spec writing
-│   ├── ux-ui.md             # UX/UI design (WCAG 2.1 AA contrast ratios)
-│   ├── architect.md         # Architecture planning + implementation manifest
-│   ├── refinement.md        # Feature breakdown & tickets
-│   ├── developer.md         # Code implementation (manifest-driven)
-│   ├── validator.md         # Independent verification (screenshots, grep, curl)
-│   ├── tester.md            # Test writing & execution
-│   ├── reviewer.md          # Quality audit
-│   ├── security.md          # Security audit (OWASP, auth, data)
-│   └── devops.md            # CI/CD & deployment
+├── agents/                  # 11 specialized agent definitions (core + ref split)
+│   ├── orchestrator.md      # Main coordinator (core)
+│   ├── orchestrator.ref.md  # Templates, escalation procedures, model config
+│   ├── product-owner.md     # Scoping & spec writing (core)
+│   ├── product-owner.ref.md # AC examples, persona/story templates
+│   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA (core)
+│   ├── ux-ui.ref.md         # Design system templates, wireframes, components
+│   ├── architect.md         # Architecture + implementation manifest (core)
+│   ├── architect.ref.md     # Stack comparison, ADR, file structure templates
+│   ├── refinement.md        # Feature breakdown & tickets (core)
+│   ├── refinement.ref.md    # Ticket templates, Shortcut integration
+│   ├── developer.md         # Code implementation (core)
+│   ├── developer.ref.md     # File conventions, output format
+│   ├── validator.md         # Independent verification (core)
+│   ├── validator.ref.md     # Report templates, anti-pattern lists
+│   ├── tester.md            # Test writing & execution (core)
+│   ├── tester.ref.md        # Code examples, report templates
+│   ├── reviewer.md          # Quality audit (core)
+│   ├── reviewer.ref.md      # Review checklists, report format
+│   ├── security.md          # Security audit — OWASP (core)
+│   ├── security.ref.md      # Detailed checklists, threat model template
+│   ├── devops.md            # CI/CD & deployment (core)
+│   └── devops.ref.md        # Docker, CI/CD, deployment templates
 ├── skills/                  # Slash command skill dispatchers
 │   ├── refine.md            # /refine — break features into stories
 │   ├── build.md             # /build — implement a feature
