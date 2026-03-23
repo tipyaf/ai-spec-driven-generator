@@ -38,8 +38,25 @@ features:
   - name: ""                      # Feature name
     description: ""               # What the feature does
     priority: ""                  # must-have | should-have | nice-to-have
-    acceptance_criteria:           # Acceptance criteria
+    acceptance_criteria:           # Acceptance criteria (human-readable, Given/When/Then)
       - ""
+    acceptance_tests:              # Machine-verifiable checks run by the validator agent
+      - type: ""                   # visual | runtime | grep | e2e
+        check: ""                  # What is being verified
+        # --- visual ---
+        # page: ""                 # URL path to screenshot
+        # verify: ""               # What to verify in the screenshot
+        # --- runtime ---
+        # endpoint: ""             # HTTP method + path (e.g., "GET /api/health")
+        # verify: ""               # Expected response characteristics
+        # --- grep ---
+        # files: ""                # File glob pattern to search
+        # pattern: ""              # Regex pattern to search for
+        # expected: 0              # Expected match count (0 = pattern must NOT appear)
+        # --- e2e ---
+        # scenario: ""             # Scenario name
+        # steps:                   # Ordered list of Playwright steps
+        #   - ""
     api_endpoints:                 # Related API endpoints (if applicable)
       - method: ""                 # GET | POST | PUT | DELETE | PATCH
         path: ""
