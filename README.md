@@ -9,9 +9,13 @@ This framework uses specialized AI agents, a phased workflow with human validati
 ## Features
 
 - **Spec-driven**: YAML specs as the single source of truth
-- **10 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, Tester, Reviewer, Security, DevOps, Orchestrator
-- **Phase-based workflow**: Scoping → Design → Plan → Scaffold → [Refinement → Implement → Test] → Review → Security → Deploy
-- **Human validation gates**: Between every phase
+- **11 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, **Validator**, Tester, Reviewer, Security, DevOps, Orchestrator
+- **Phase-based workflow**: Scoping → Design → Plan → Scaffold → [Refinement → Implement → **Validate** → Test] → Review → Security → Deploy
+- **Automated validation**: Independent validator agent verifies implementations with screenshots, grep, curl — no self-assessment
+- **Machine-verifiable acceptance tests**: Visual, runtime, grep, and e2e tests defined in specs
+- **Context slicing**: Architect produces implementation manifests so dev agents only load relevant files
+- **Quality hooks**: Pre-commit anti-pattern detection, post-edit design system compliance
+- **Human validation gates**: Between every phase (reduced for technical checks thanks to automated validation)
 - **Persistent memory**: Per-project markdown files tracking decisions, feedback, and phase status
 - **Project management integration**: Shortcut.com support for ticket creation and tracking
 - **Tool-agnostic**: Works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
@@ -24,11 +28,12 @@ This framework uses specialized AI agents, a phased workflow with human validati
 [Phase 0.5: Design]       → UX/UI        → ✅ Human Validation
 [Phase 1: Plan]            → Architect    → ✅ Human Validation
 [Phase 2: Scaffold]        → Developer    → ✅ Human Validation
-  ┌─── For each feature: ─────────────────────────────┐
-  │ [Phase 2.5: Refinement] → Refinement → ✅ Valid.  │
-  │ [Phase 3: Implement]    → Developer  → ✅ Valid.   │
-  │ [Phase 4: Test]         → Tester     → ✅ Valid.   │
-  └────────────────────────────────────────────────────┘
+  ┌─── For each feature: ───────────────────────────────────┐
+  │ [Phase 2.5: Refinement] → Refinement  → ✅ Human Val. │
+  │ [Phase 3: Implement]    → Developer   →                │
+  │ [Phase 3.5: Validate]   → Validator   → 🤖 Auto (3x)  │
+  │ [Phase 4: Test]         → Tester      → ✅ Human Val. │
+  └─────────────────────────────────────────────────────────┘
 [Phase 5: Review]          → Reviewer     → ✅ Human Validation
 [Phase 5.5: Security]     → Security     → ✅ Human Validation
 [Phase 6: Deploy Config]   → DevOps       → ✅ Human Validation
@@ -73,35 +78,41 @@ git submodule update --remote framework
 
 ```
 ai-spec-driven-generator/
-├── agents/                  # 10 specialized agent definitions
+├── agents/                  # 11 specialized agent definitions
 │   ├── orchestrator.md      # Main coordinator
 │   ├── product-owner.md     # Scoping & spec writing
-│   ├── ux-ui.md             # UX/UI design
-│   ├── architect.md         # Architecture planning
+│   ├── ux-ui.md             # UX/UI design (WCAG 2.1 AA contrast ratios)
+│   ├── architect.md         # Architecture planning + implementation manifest
 │   ├── refinement.md        # Feature breakdown & tickets
-│   ├── developer.md         # Code implementation
+│   ├── developer.md         # Code implementation (manifest-driven)
+│   ├── validator.md         # Independent verification (screenshots, grep, curl)
 │   ├── tester.md            # Test writing & execution
 │   ├── reviewer.md          # Quality audit
 │   ├── security.md          # Security audit (OWASP, auth, data)
 │   └── devops.md            # CI/CD & deployment
 ├── prompts/phases/          # Phase-specific instructions
-│   ├── 00-scoping.md
-│   ├── 00.5-design.md
-│   ├── 01-plan.md
+│   ├── 00-scoping.md        # Includes acceptance_tests requirement
+│   ├── 00.5-design.md       # Includes WCAG contrast validation
+│   ├── 00.7-ordering.md     # Feature ordering
+│   ├── 01-plan.md           # Includes implementation manifest requirement
 │   ├── 02-scaffold.md
 │   ├── 03-implement.md
 │   ├── 04-test.md
 │   ├── 05-review.md
 │   ├── 05.5-security.md
-│   └── 06-deploy.md
+│   ├── 06-deploy.md
+│   └── 07-release.md
 ├── rules/                   # IDE integration
 │   ├── CLAUDE.md            # Rules for Claude Code (legacy, direct use)
 │   ├── CLAUDE.md.template   # Template for project init (uses framework/ paths)
 │   └── .cursorrules         # Rules for Cursor
 ├── specs/templates/         # YAML spec templates
-│   └── spec-template.yaml
-├── stacks/                  # Stack profile template
-│   └── stack-profile-template.md
+│   └── spec-template.yaml   # Includes acceptance_tests section
+├── stacks/                  # Stack profiles & quality hooks
+│   ├── stack-profile-template.md
+│   └── hooks/               # Claude Code quality gate hooks
+│       ├── README.md        # Hook documentation
+│       └── settings-hooks-example.json  # Ready-to-use config
 ├── examples/                # Example specs
 │   └── todo-app-spec.yaml
 ├── memory/                  # Memory templates
