@@ -111,6 +111,60 @@ AC-PROFILE-03:
   Then an error message indicates which fields are missing and the form is not submitted
 ```
 
+## Acceptance Tests (machine-verifiable)
+
+Every feature MUST include `acceptance_tests` — concrete, executable checks. These are NOT the same as acceptance criteria (which are human-readable). Acceptance tests are run by the validator agent.
+
+### Test types
+
+#### visual
+Screenshot a page and verify visual properties.
+```yaml
+- type: visual
+  page: "/parametres/connexion-email"
+  check: "Info card uses design system CSS variables, not hardcoded blue"
+  verify: "Screenshot shows card with neutral colors matching design system"
+```
+
+#### runtime
+Call an API endpoint and verify the response.
+```yaml
+- type: runtime
+  endpoint: "GET /api/chat/messages?searchId=test"
+  check: "Chat endpoint returns messages array"
+  verify: "Response is 200 with JSON body containing messages array"
+```
+
+#### grep
+Search for patterns in source files.
+```yaml
+- type: grep
+  files: "src/app/parametres/connexion-email/page.tsx"
+  pattern: "blue-"
+  expected: 0
+  check: "No hardcoded blue colors in email settings page"
+```
+
+#### e2e
+Playwright test scenario.
+```yaml
+- type: e2e
+  scenario: "Change language to English"
+  steps:
+    - "Navigate to /parametres"
+    - "Select 'English' in language dropdown"
+    - "Verify page content is in English"
+    - "Reload page"
+    - "Verify language is still English"
+  check: "Language change persists after reload"
+```
+
+### Rules for acceptance tests
+- Every acceptance criterion SHOULD have at least one acceptance test
+- Tests must be concrete and unambiguous
+- The validator agent will execute these — write them so a machine can follow
+- Include expected values/counts where possible
+
 ### Step 4: Structure the YAML spec
 1. Fill the template `specs/templates/spec-template.yaml`
 2. Ensure each feature has:

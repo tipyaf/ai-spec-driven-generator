@@ -47,6 +47,7 @@ A structured markdown document containing:
 - Complete data model
 - Ordered implementation plan
 - ADRs
+- **Implementation manifest** (YAML block listing all files to modify/read/create, endpoints and pages to verify, and task-specific anti-patterns — see the architect agent definition for the exact format)
 
 ## Validation criteria
 - [ ] Architecture is suited to the project size
@@ -54,3 +55,6 @@ A structured markdown document containing:
 - [ ] File hierarchy respects framework conventions
 - [ ] Data model covers all spec entities
 - [ ] Implementation plan has a logical order
+- [ ] Implementation manifest lists all files to modify/read/create
+- [ ] Pages and endpoints to verify are listed
+- [ ] Anti-patterns specific to this task are defined

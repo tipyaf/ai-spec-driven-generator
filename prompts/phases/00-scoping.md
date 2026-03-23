@@ -26,8 +26,9 @@ You are in **Phase 0 — Scoping**. The user has a project idea. Your role is to
 ### Step 3: List and prioritize features
 1. Transform needs into distinct features
 2. Write testable acceptance criteria for each
-3. Prioritize: must-have / should-have / nice-to-have
-4. Identify API endpoints and UI components per feature
+3. Write machine-verifiable acceptance tests for each feature (visual, runtime, grep, e2e)
+4. Prioritize: must-have / should-have / nice-to-have
+5. Identify API endpoints and UI components per feature
 
 ### Step 4: Model the data
 1. Identify necessary entities
@@ -45,10 +46,13 @@ You are in **Phase 0 — Scoping**. The user has a project idea. Your role is to
 
 ## Expected deliverable
 - Complete YAML spec (`specs/[project-name].yaml`)
+- Every feature MUST include `acceptance_tests` — machine-verifiable checks the validator agent will execute
 - Summary validated by the user
 
 ## Validation criteria
 - [ ] All features have testable acceptance criteria
+- [ ] Every feature has at least one machine-verifiable acceptance test
+- [ ] Acceptance tests cover visual, runtime, and code verification as appropriate
 - [ ] The data model is complete and consistent
 - [ ] Out-of-scope is documented
 - [ ] User has validated

@@ -124,6 +124,49 @@ For each non-trivial decision:
 - Adapt complexity to project size (no clean architecture for a simple CLI)
 - Document the "why", not the "what"
 
+## Implementation Manifest
+
+Every architecture plan MUST include an implementation manifest. This manifest is consumed by the developer agent to minimize context loading and by the validator agent to verify the implementation.
+
+### Manifest format
+```yaml
+implementation_manifest:
+  files_to_modify:
+    - path: "src/components/ui/info-banner.tsx"
+      reason: "Replace hardcoded colors with CSS variables"
+    - path: "src/app/parametres/connexion-email/page.tsx"
+      reason: "Use InfoBanner component instead of inline HTML"
+
+  files_to_read:
+    - path: "src/components/ui/market-snapshot.tsx"
+      reason: "Reference design system implementation"
+
+  files_to_create:
+    - path: "src/components/ui/status-message.tsx"
+      reason: "New reusable status feedback component"
+
+  endpoints_to_verify:
+    - "GET /api/chat/messages"
+    - "POST /api/settings"
+
+  pages_to_verify:
+    - route: "/parametres/connexion-email"
+      checks: ["design system colors", "card readability", "responsive"]
+    - route: "/parametres"
+      checks: ["language switch works", "settings persist"]
+
+  anti_patterns:
+    - pattern: "blue-|red-|green-"
+      scope: "modified UI files"
+      message: "Use CSS variables instead of hardcoded Tailwind colors"
+```
+
+### Rules for the manifest
+- **Exhaustive**: list ALL files that need reading or modification — nothing else
+- **Minimal**: don't include files that aren't needed
+- **Justified**: every file has a `reason` explaining why
+- **Verifiable**: include pages and endpoints that the validator can check
+
 ## Anti-patterns to avoid
 - Architecture astronaut (too many abstractions)
 - God classes / god modules

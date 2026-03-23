@@ -1,0 +1,53 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILES=$(git diff --cached --name-only -- \"*.tsx\" \"*.ts\" | head -50); if [ -n \"$FILES\" ]; then FOUND=$(echo \"$FILES\" | xargs grep -l \"blue-[0-9]\\|red-[0-9]\\|green-[0-9]\\|console\\.log\\|console\\.debug\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"Anti-patterns found in:\"; echo \"$FOUND\"; echo \"Fix these before committing.\"; exit 1; fi; fi; echo \"No anti-patterns found\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILES=$(git diff --cached --name-only -- \"*.tsx\" \"*.ts\" | head -50); if [ -n \"$FILES\" ]; then FOUND=$(echo \"$FILES\" | xargs grep -ln \"TODO\\|FIXME\\|HACK\\|XXX\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"Unresolved markers found in:\"; echo \"$FOUND\"; echo \"Resolve these before committing.\"; exit 1; fi; fi; echo \"No unresolved markers found\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'if command -v npx &>/dev/null && [ -f tsconfig.json ]; then npx tsc --noEmit --pretty 2>&1 | tail -20; exit ${PIPESTATUS[0]}; else echo \"TypeScript check skipped (no tsconfig.json)\"; exit 0; fi'"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit(*.tsx)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_file_path\"; if [ -n \"$FILE\" ] && [ -f \"$FILE\" ]; then FOUND=$(grep -n \"blue-[0-9]\\|red-[0-9]\\|green-[0-9]\\|yellow-[0-9]\\|gray-[0-9]\\|slate-[0-9]\" \"$FILE\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"Hardcoded Tailwind colors detected in $FILE:\"; echo \"$FOUND\"; echo \"Use CSS variables instead: var(--color-*)\"; exit 1; fi; fi; exit 0'"
+          }
+        ]
+      },
+      {
+        "matcher": "Write(*.tsx)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_file_path\"; if [ -n \"$FILE\" ] && [ -f \"$FILE\" ]; then EMPTY=$(grep -n \"catch\\s*([^)]*)[\\s]*{[\\s]*}\" \"$FILE\" 2>/dev/null); if [ -n \"$EMPTY\" ]; then echo \"Empty catch blocks detected in $FILE:\"; echo \"$EMPTY\"; echo \"Add error handling or at least log the error.\"; exit 1; fi; fi; exit 0'"
+          }
+        ]
+      }
+    ]
+  }
+}
