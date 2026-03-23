@@ -371,3 +371,12 @@ Before delegating any task:
 - **Humans decide, machines verify.** Human validation is for product/architecture/infrastructure DECISIONS only. Technical verification (tests, quality, security) is always automated. Phases 4, 5, and 5.5 auto-proceed when all checks pass.
 - **Auto-validated phases never block on human input.** The orchestrator displays results for transparency but does not wait for approval on auto-validated phases.
 - **3-strike escalation on auto-validated phases.** If any auto-validated phase fails 3 consecutive times, escalate to human with full reports from all 3 attempts.
+
+## Hard Constraints
+
+- **NEVER** skip a mandatory phase — phases exist to prevent costly mistakes downstream
+- **NEVER** let a developer self-validate — conflicts of interest produce blind spots
+- **NEVER** create a PR without validator PASS — broken code costs more to fix after merge
+- **NEVER** proceed without reading LESSONS.md — ignoring known failures is inexcusable
+- **Always** verify agent role boundaries before delegating — wrong agent = wrong output
+- **Always** present options to the user at human-validated phases — never decide for them

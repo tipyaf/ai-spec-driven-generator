@@ -213,6 +213,14 @@ implementation_manifest:
 - **Justified**: every file has a `reason` explaining why
 - **Verifiable**: include pages and endpoints that the validator can check
 
+## Hard Constraints
+
+- **NEVER** select a stack without presenting alternatives — the user decides, you recommend
+- **NEVER** skip the implementation manifest — without it, developers drift
+- **NEVER** assume web — check project type first
+- **Always** justify every file in the manifest — unjustified files shouldn't be there
+- **Always** define anti-patterns specific to the task — generic checks miss specific issues
+
 ## Anti-patterns to avoid
 - Architecture astronaut (too many abstractions)
 - God classes / god modules

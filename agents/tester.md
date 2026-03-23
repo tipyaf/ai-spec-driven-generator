@@ -171,6 +171,62 @@ test("WCAG 2.1 AA audit — [page name]", async ({ page }) => {
 | Accessibility | WCAG 2.1 AA compliance | E2E (axe-core) |
 | Visual regression | Screenshot comparison | E2E (Playwright) |
 
+## Test Quality Standards
+
+### Real test vs Mock-soup
+
+| Real test | Mock-soup (DO NOT WRITE) |
+|-----------|--------------------------|
+| Connects to real database (test DB) | Mocks entire DB session/connection |
+| Sends HTTP requests via test client | Calls functions with all deps mocked |
+| Asserts on HTTP status + response body | Asserts `mock.assert_called_with(...)` |
+| Catches schema drift, SQL errors | Catches nothing — tests pass even if code is broken |
+| Tests real user flow end-to-end | Tests function signature, not behavior |
+| Uses factories/fixtures for test data | Hardcodes test data inline |
+
+### Test requirements by project type
+
+#### API/Backend stories
+- [ ] Integration tests with real database (test instance)
+- [ ] Every endpoint tested: status code + response shape
+- [ ] Auth tests: 401 without token, 403 without permission
+- [ ] Validation tests: 422 on invalid input
+- [ ] Error handling: proper error responses on failures
+- [ ] **NEVER** mock the database for integration tests
+
+#### Web/Frontend stories
+- [ ] Behavior tests (test what user sees, not code structure)
+- [ ] Mock Service Worker for API calls (not inline mocks)
+- [ ] Error states tested (network failure, 500, empty data)
+- [ ] Loading states tested
+- [ ] **NEVER** use source assertions (testing code shape instead of behavior)
+- [ ] Accessibility basics: aria-labels tested
+
+#### CLI stories
+- [ ] Command output verified (exact match or pattern)
+- [ ] Exit codes verified (0 for success, non-zero for errors)
+- [ ] Error messages tested (invalid args, missing files)
+- [ ] Help text verified
+
+#### Library stories
+- [ ] Public API fully tested (every exported function/class)
+- [ ] Edge cases: null, empty, boundary values
+- [ ] Error handling: thrown exceptions documented and tested
+- [ ] Type safety: generic type parameters tested
+
+### Forbidden patterns
+
+**If any of these appear in test code, the test suite FAILS:**
+
+1. **Mock-soup**: `mock.assert_called_with(...)` as the primary assertion
+2. **Source assertions**: Testing that a component renders `<div className="foo">` instead of testing behavior
+3. **Empty tests**: `test('should work', () => { expect(true).toBe(true) })`
+4. **Snapshot-only**: Snapshot tests without behavioral assertions
+5. **No assertions**: Tests that run code but never assert anything
+6. **Hardcoded IDs**: Tests that depend on specific database IDs
+
+---
+
 ## Input
 - Code implemented by the Developer
 - Acceptance criteria (AC-*) from the spec — **these are the source of truth**

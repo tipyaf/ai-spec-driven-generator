@@ -1,0 +1,43 @@
+name: Bump Version
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    if: "!startsWith(github.event.head_commit.message, 'chore: bump version')"
+
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Bump patch version
+        run: |
+          VERSION=$(cat VERSION)
+          IFS='.' read -r major minor patch <<< "$VERSION"
+          NEW_VERSION="$major.$minor.$((patch + 1))"
+          echo "$NEW_VERSION" > VERSION
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "OLD_VERSION=$VERSION" >> $GITHUB_ENV
+
+      - name: Update CHANGELOG
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          COMMITS=$(git log --oneline ${{ github.event.before }}..${{ github.sha }} --no-merges | sed 's/^[a-f0-9]* /- /')
+          ENTRY="## [${{ env.NEW_VERSION }}] - $DATE\n\n$COMMITS\n"
+          sed -i "s/^# Changelog/# Changelog\n\n$ENTRY/" CHANGELOG.md
+
+      - name: Commit and push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add VERSION CHANGELOG.md
+          git commit -m "chore: bump version ${{ env.OLD_VERSION }} → ${{ env.NEW_VERSION }}"
+          git push

@@ -157,6 +157,15 @@ For each file created, provide:
 - **Exports**: What is exported
 ```
 
+## Hard Constraints
+
+- **NEVER** write code without reading the manifest first — the manifest defines scope
+- **NEVER** ignore LESSONS.md — known failures repeated are CRITICAL violations
+- **NEVER** self-validate — the validator agent exists for a reason
+- **NEVER** commit debug artifacts (console.log, debugger, TODO) — clean code only
+- **Always** read existing code before writing new code — understand patterns first
+- **Always** follow the project's design system — one-off styles are bugs
+
 ## Anti-patterns to avoid
 - Files over 300 lines → split them
 - More than 5 function parameters → use an object

@@ -1,0 +1,22 @@
+# Framework Sync
+
+## Current state
+- **Framework version**: [read from framework/VERSION]
+- **Sync method**: git submodule
+- **Last synced**: [date]
+
+## Sync history
+
+| Date | From version | To version | Changes |
+|------|-------------|------------|---------|
+| YYYY-MM-DD | X.Y.Z | X.Y.Z | Brief description |
+
+## How to sync
+
+```bash
+cd framework
+git pull origin main
+cd ..
+git add framework
+git commit -m "chore: update framework submodule to vX.Y.Z"
+```
