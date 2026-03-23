@@ -227,6 +227,25 @@ The security agent MUST run all of the following checks programmatically:
 - No known CVEs in dependencies (or documented accepted risks)
 - Security score: C or above in all categories
 
+## Status output
+
+After completing the security audit, output a structured status block:
+
+```
+Phase 5.5 — Security
+Status: PASS / FAIL
+- OWASP Top 10: PASS/FAIL
+- Auth & authorization: PASS/FAIL
+- Secrets detection: PASS/FAIL
+- Input validation: PASS/FAIL
+- SQL injection / XSS: PASS/FAIL
+- Dependency audit: PASS/FAIL
+- Risk level: [CRITICAL/HIGH/MEDIUM/LOW/PASS]
+Next: Proceeding to Phase 6 / Returning to developer with N issues
+```
+
+This status block is mandatory. It gives the orchestrator and the user an at-a-glance view of the security audit result.
+
 ## Rules
 - Never approve deployment with CRITICAL findings unresolved
 - Always provide exact remediation code, not just descriptions

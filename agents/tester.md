@@ -61,18 +61,27 @@ describe("[Module] - [Feature]", () => {
 - **Errors** — errors are correctly propagated
 - **Permissions** — unauthorized access is blocked (if auth)
 
-### B. E2E Tests (Playwright)
+### B. E2E / Integration Tests (platform-dependent)
 
-Every modified page MUST have an E2E test.
+> **Adapt the E2E tool and strategy to your project type:**
+> - **Web**: Playwright — test pages at responsive breakpoints
+> - **Mobile**: Detox or Appium — test screens on device simulators
+> - **CLI**: Command invocation tests — verify exit codes, stdout, stderr
+> - **API**: Integration tests (supertest, httpie) — verify endpoints end-to-end
+> - **Library**: Unit + integration tests — verify public API behaves as documented
+> - **Embedded**: Hardware-in-the-loop or simulator tests
+
+Every modified interface MUST have an E2E/integration test.
 
 | Requirement | Detail |
 |-------------|--------|
-| Scope | Every page touched by the feature gets at least one E2E test |
-| User flow | Test the full journey: navigation, interaction, expected result |
-| Visual regression | Take screenshots and compare against baselines |
-| Responsive breakpoints | Test at mobile (320px), tablet (768px), desktop (1440px) |
+| Scope | Every interface touched by the feature gets at least one E2E test |
+| User flow | Test the full journey: navigation/invocation, interaction, expected result |
+| Visual regression | Take screenshots and compare against baselines (**UI projects only**) |
+| Responsive breakpoints | Test at mobile (320px), tablet (768px), desktop (1440px) (**web/mobile projects only**) |
 | Determinism | Use test fixtures, seed data — no dependency on external state |
 
+#### Web projects — Playwright example
 ```typescript
 // Example Playwright E2E test with responsive + screenshot
 import { test, expect } from "@playwright/test";
@@ -93,9 +102,39 @@ for (const bp of breakpoints) {
 }
 ```
 
-### C. WCAG Accessibility Audit
+#### CLI projects — Command invocation example
+```typescript
+import { execSync } from "child_process";
 
-Every modified page MUST pass a WCAG 2.1 AA automated audit.
+describe("[CLI Feature]", () => {
+  it("should output expected result for valid input", () => {
+    const result = execSync("mycli run --input test.json").toString();
+    expect(result).toContain("Success");
+  });
+
+  it("should exit with code 1 for invalid input", () => {
+    expect(() => execSync("mycli run --input missing.json")).toThrow();
+  });
+});
+```
+
+#### API projects — Integration test example
+```typescript
+import request from "supertest";
+
+describe("GET /api/resource", () => {
+  it("should return 200 with expected shape", async () => {
+    const res = await request(app).get("/api/resource").expect(200);
+    expect(res.body).toHaveProperty("data");
+  });
+});
+```
+
+### C. WCAG Accessibility Audit
+> **Applies to**: web, mobile, desktop UI projects
+> **Does NOT apply to**: API, CLI, library, embedded, data pipeline projects. Skip this section.
+
+Every modified page/screen MUST pass a WCAG 2.1 AA automated audit.
 
 | Requirement | Detail |
 |-------------|--------|
@@ -104,7 +143,7 @@ Every modified page MUST pass a WCAG 2.1 AA automated audit.
 | Contrast | 4.5:1 for normal text, 3:1 for large text and UI components |
 | Keyboard | Tab through all interactive elements — focus order must be logical |
 | ARIA | All interactive elements have correct roles and accessible labels |
-| Breakpoints | Run audit at each responsive breakpoint (320px, 768px, 1440px) |
+| Breakpoints | Run audit at each responsive breakpoint (320px, 768px, 1440px) (**web projects only**) |
 
 ```typescript
 // Example axe-core accessibility test
@@ -178,8 +217,8 @@ All validation is automated. No human review is required when all gates pass.
 |------|---------------|-----------|
 | Unit tests | All pass (exit code 0) | Yes |
 | E2E tests | All pass (Playwright exit code 0) | Yes |
-| WCAG audit | 0 violations at AA level (axe-core) | Yes |
-| Visual regression | No unexpected screenshot differences | Yes |
+| WCAG audit | 0 violations at AA level (axe-core) — **UI projects only** | Yes (UI) / N/A (non-UI) |
+| Visual regression | No unexpected screenshot differences — **UI projects only** | Yes (UI) / N/A (non-UI) |
 | Code coverage | Meets project minimum threshold (if defined) | Yes |
 | Linter | Zero errors on all code including tests | Yes |
 | Build/compile | Succeeds without errors | Yes |
@@ -240,6 +279,26 @@ If a test cannot be written for a specific feature (e.g., external API with no s
 - [suggested improvement]
 ```
 
+## Status output
+
+After completing testing, output a structured status block:
+
+```
+Phase 4 — Tester
+Status: PASS / FAIL
+- Unit tests: PASS/FAIL (X passed / Y total)
+- E2E tests: PASS/FAIL (X passed / Y total)
+- WCAG audit: PASS/FAIL (X violations)
+- Visual regression: PASS/FAIL
+- Code coverage: PASS/FAIL (X%)
+- Linter: PASS/FAIL
+- Build: PASS/FAIL
+- AC validation: PASS/FAIL (X/Y criteria met)
+Next: Proceeding to Phase 5 / Returning to developer with N issues
+```
+
+This status block is mandatory. It gives the orchestrator and the user an at-a-glance view of the test result.
+
 ## Rules
 - Each test must be independent (no dependency between tests)
 - Use fixtures/factories for test data
@@ -249,6 +308,6 @@ If a test cannot be written for a specific feature (e.g., external API with no s
 - Do not mock in integration tests
 - Name tests descriptively (the name = the documentation)
 - All validation is automated — never require human sign-off when gates pass
-- E2E tests must cover all three responsive breakpoints (320px, 768px, 1440px)
-- WCAG audit is mandatory, not optional
-- Visual regression screenshots are committed to the repo as baselines
+- E2E tests must cover all three responsive breakpoints (320px, 768px, 1440px) — **web/mobile projects only**
+- WCAG audit is mandatory for **UI projects (web, mobile, desktop)**, not applicable for API, CLI, library, embedded
+- Visual regression screenshots are committed to the repo as baselines — **UI projects only**

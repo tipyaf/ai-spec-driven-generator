@@ -65,6 +65,18 @@ For each spec feature:
 
 ALL three types are validated by the Tester. The feature is NOT done until all pass.
 
+### Step 1c: Propose breakdown options
+
+For large features (estimated > 1 sprint or sized L/XL), propose alternatives before proceeding:
+
+"This feature is large. I see two approaches:
+- **Option A**: Single story, implement all at once (faster but riskier, harder to test)
+- **Option B**: Split into [N] smaller stories: [list]. (Incremental delivery, easier to validate)
+
+Which approach do you prefer?"
+
+Only proceed with the breakdown after the user confirms the approach.
+
 ### Step 2: Identify edge cases
 For each user story:
 - What happens if the data is empty?

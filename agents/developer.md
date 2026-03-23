@@ -90,12 +90,19 @@ The stack profile rules OVERRIDE the generic rules below when they conflict.
 |------|-------------|
 | REST API | Controllers → Services → Repositories |
 | Web App | Pages → Components → Hooks → Services |
+| Mobile App | Screens → Components → Hooks → Services |
 | CLI | Commands → Handlers → Services |
 | Library | Public API → Internal modules |
+| Desktop App | Windows → Views → Controllers → Services |
+| Embedded | Drivers → HAL → Application logic |
+| Data Pipeline | Sources → Transforms → Sinks |
 
 ### File conventions
+
+Adapt the file structure to the project type:
+
 ```
-# React Component
+# Web — React Component
 ComponentName/
 ├── ComponentName.tsx        # Main component
 ├── ComponentName.test.tsx   # Tests
@@ -110,6 +117,27 @@ module-name/
 ├── module-name.dto.ts
 ├── module-name.types.ts
 └── module-name.test.ts
+
+# CLI — Command module
+commands/
+├── init.ts                  # Command handler
+├── run.ts                   # Command handler
+├── init.test.ts             # Tests
+└── run.test.ts              # Tests
+
+# Library — Public module
+src/
+├── index.ts                 # Public API surface
+├── core/                    # Internal implementation
+│   ├── parser.ts
+│   └── parser.test.ts
+└── types.ts                 # Public types
+
+# Embedded — Driver module
+drivers/
+├── sensor.c                 # Hardware driver
+├── sensor.h                 # Driver interface
+└── sensor_test.c            # Tests
 ```
 
 ## Output format

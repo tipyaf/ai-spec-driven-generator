@@ -47,6 +47,29 @@ Before recommending a stack, the architect MUST evaluate ALL relevant options �
 | **Deployment simplicity** | Medium | Single binary? Docker-friendly? Matches the target infra (VPS, serverless, etc.)? |
 | **Long-term viability** | Medium | Is it actively maintained? Corporate backing? Risk of abandonment? |
 
+### Present stack options
+
+Never just select a stack. Present 2-3 options with trade-offs using this comparison table:
+
+```markdown
+## Stack Recommendation
+
+| Criterion | Option A: [name] | Option B: [name] | Option C: [name] |
+|-----------|-------------------|-------------------|-------------------|
+| Feature fit | [score/10] | [score/10] | [score/10] |
+| Performance | [score/10] | [score/10] | [score/10] |
+| Ecosystem | [score/10] | [score/10] | [score/10] |
+| Learning curve | [Easy/Medium/Hard] | ... | ... |
+| Community support | [Active/Moderate/Low] | ... | ... |
+| **Recommendation** | | **Recommended** | |
+
+**Why Option B?** [2-3 sentence justification]
+
+**Trade-offs**: [what you lose vs Option A or C]
+
+**Confirm Option B or tell me which option you prefer?**
+```
+
 ### Anti-bias rules
 - **Never default to the most popular option** — evaluate all viable candidates equally
 - **Never dismiss a framework for being "less known"** — if it technically fits better, recommend it
@@ -68,11 +91,24 @@ When the architect selects the tech stack, they MUST:
 ## Output — Architecture Plan
 
 ### 1. Overview
+
+Adapt the architecture pattern to the project type:
+
+| Project type | Typical patterns |
+|-------------|-----------------|
+| Web App | MVC, Clean Architecture, Feature-sliced |
+| REST API | Layered (Controllers → Services → Repositories), Hexagonal |
+| CLI | Command pattern, Plugin architecture |
+| Library | Facade, Module system, Public API + internal core |
+| Mobile App | MVVM, Clean Architecture, Redux/Bloc |
+| Embedded | HAL layers, State machines, Event-driven |
+| Data Pipeline | ETL stages, DAG-based, Stream processing |
+
 ```markdown
 ## Architecture Overview
 - Pattern: [e.g., Clean Architecture]
 - Layers: [e.g., Presentation → Application → Domain → Infrastructure]
-- Communication: [e.g., REST API, WebSocket]
+- Communication: [e.g., REST API, WebSocket, CLI stdin/stdout, IPC]
 ```
 
 ### 2. File structure
@@ -149,11 +185,21 @@ implementation_manifest:
     - "GET /api/chat/messages"
     - "POST /api/settings"
 
-  pages_to_verify:
+  interfaces_to_verify:  # Adapt key to project type: pages (web), screens (mobile), commands (CLI), endpoints (API)
+    # Web example:
     - route: "/parametres/connexion-email"
       checks: ["design system colors", "card readability", "responsive"]
     - route: "/parametres"
       checks: ["language switch works", "settings persist"]
+    # CLI example:
+    # - command: "mycli init --template react"
+    #   checks: ["exit code 0", "creates config file", "stdout contains success message"]
+    # Mobile example:
+    # - screen: "SettingsScreen"
+    #   checks: ["theme colors", "layout on small devices"]
+    # API example:
+    # - endpoint: "GET /api/users"
+    #   checks: ["returns 200", "response shape matches spec", "pagination works"]
 
   anti_patterns:
     - pattern: "blue-|red-|green-"

@@ -1,124 +1,501 @@
 # ============================================================================
 # SPEC TEMPLATE - AI Project Generation Framework
 # ============================================================================
-# This file serves as a template to describe any project.
-# The AI uses this spec as the source of truth to generate code.
+# This template is project-type agnostic. Sections are marked with which
+# project types they apply to. Include only the sections relevant to your
+# project type and delete the rest.
+#
+# Project types:
+#   web-app        — Browser-based application (SPA, SSR, static site)
+#   api            — Backend service exposing an API
+#   cli            — Command-line tool
+#   mobile         — Native or cross-platform mobile app
+#   desktop        — Desktop application (Electron, Tauri, Qt, etc.)
+#   library        — Reusable package/SDK published to a registry
+#   embedded       — Firmware or IoT software for constrained hardware
+#   data-pipeline  — ETL, batch processing, or streaming data system
+#   fullstack      — Combined frontend + backend (e.g., Next.js, Rails)
+#   monorepo       — Multi-package repository with multiple deliverables
 # ============================================================================
 
-# --- METADATA ---
+
+# ============================================================================
+# METADATA
+# Applies to: ALL project types
+# ============================================================================
+
 project:
-  name: ""                        # Project name (kebab-case)
-  description: ""                 # Short description (1-2 sentences)
-  type: ""                        # web-app | api | cli | mobile | library | fullstack | monorepo
-  language: ""                    # typescript | python | go | rust | java | etc.
+  name: ""                          # Project name (kebab-case)
+  description: ""                   # Short description (1-2 sentences)
+  type: ""                          # web-app | api | cli | mobile | desktop | library | embedded | data-pipeline | fullstack | monorepo
+  language: ""                      # typescript | python | go | rust | java | c | cpp | swift | kotlin | dart | etc.
   version: "0.1.0"
 
-# --- TECH STACK ---
+
+# ============================================================================
+# PROBLEM & GOALS
+# Applies to: ALL project types
+# ============================================================================
+
+problem_statement: ""               # What problem does this project solve?
+target_users: ""                    # Who are the users? (developers, end-users, devices, systems)
+success_metrics:                    # How do we know the project succeeded?
+  - ""
+
+
+# ============================================================================
+# TECH STACK
+# Applies to: ALL project types
+# Include only the fields relevant to your project type.
+# ============================================================================
+
 stack:
-  runtime: ""                     # node | bun | deno | python | go | etc.
-  framework: ""                   # nextjs | express | fastapi | gin | etc.
-  database: ""                    # postgres | mysql | sqlite | mongodb | none
-  orm: ""                         # prisma | drizzle | sqlalchemy | gorm | none
-  auth: ""                        # nextauth | clerk | custom | none
-  styling: ""                     # tailwind | css-modules | styled-components | none
-  testing: ""                     # vitest | jest | pytest | go-test | none
-  linting: ""                     # eslint | biome | ruff | none
-  package_manager: ""             # npm | pnpm | bun | yarn | pip | cargo | go
+  # --- Universal ---
+  runtime: ""                       # node | bun | deno | python | go | dotnet | jvm | native | etc.
+  framework: ""                     # nextjs | express | fastapi | gin | clap | flutter | react-native | electron | tauri | qt | etc.
+  package_manager: ""               # npm | pnpm | bun | yarn | pip | uv | cargo | go | maven | gradle | etc.
+  testing: ""                       # vitest | jest | pytest | go-test | cargo-test | junit | xctest | etc.
+  linting: ""                       # eslint | biome | ruff | clippy | golangci-lint | none
 
-# --- ARCHITECTURE ---
+  # --- Data layer (web-app, api, fullstack, data-pipeline) ---
+  database: ""                      # postgres | mysql | sqlite | mongodb | redis | none
+  orm: ""                           # prisma | drizzle | sqlalchemy | gorm | diesel | none
+
+  # --- Auth (web-app, api, mobile, fullstack) ---
+  auth: ""                          # nextauth | clerk | firebase-auth | custom | none
+
+  # --- UI (web-app, mobile, desktop, fullstack) ---
+  styling: ""                       # tailwind | css-modules | styled-components | material-ui | none
+  ui_toolkit: ""                    # shadcn | radix | flutter-widgets | swiftui | jetpack-compose | qt-widgets | none
+
+  # --- Embedded ---
+  toolchain: ""                     # gcc-arm | esp-idf | platformio | arduino | zephyr | none
+  rtos: ""                          # freertos | zephyr-rtos | none | bare-metal
+
+  # --- Data pipeline ---
+  orchestrator: ""                  # airflow | dagster | prefect | temporal | cron | none
+  message_broker: ""                # kafka | rabbitmq | sqs | redis-streams | none
+
+
+# ============================================================================
+# ARCHITECTURE
+# Applies to: ALL project types
+# ============================================================================
+
 architecture:
-  pattern: ""                     # mvc | clean-architecture | hexagonal | layered | modular
-  directory_structure: |          # Desired folder structure (optional)
-    # Leave empty to use framework convention
-  monorepo: false                 # true if monorepo (turborepo, nx, etc.)
-  monorepo_tool: ""               # turborepo | nx | none
+  pattern: ""                       # mvc | clean-architecture | hexagonal | layered | modular | event-driven | microservices | serverless
+  directory_structure: |            # Desired folder structure (leave empty to use framework convention)
+  monorepo: false                   # true if monorepo (turborepo, nx, cargo workspaces, etc.)
+  monorepo_tool: ""                 # turborepo | nx | lerna | cargo-workspaces | go-workspaces | none
 
-# --- FEATURES ---
+
+# ============================================================================
+# FEATURES
+# Applies to: ALL project types
+# Each feature includes acceptance criteria and machine-verifiable tests.
+# Use only the test types relevant to your project type.
+# ============================================================================
+
 features:
-  - name: ""                      # Feature name
-    description: ""               # What the feature does
-    priority: ""                  # must-have | should-have | nice-to-have
-    acceptance_criteria:           # Acceptance criteria (human-readable, Given/When/Then)
-      - ""
-    acceptance_tests:              # Machine-verifiable checks run by the validator agent
-      - type: ""                   # visual | runtime | grep | e2e
-        check: ""                  # What is being verified
-        # --- visual ---
-        # page: ""                 # URL path to screenshot
-        # verify: ""               # What to verify in the screenshot
-        # --- runtime ---
-        # endpoint: ""             # HTTP method + path (e.g., "GET /api/health")
-        # verify: ""               # Expected response characteristics
-        # --- grep ---
-        # files: ""                # File glob pattern to search
-        # pattern: ""              # Regex pattern to search for
-        # expected: 0              # Expected match count (0 = pattern must NOT appear)
-        # --- e2e ---
-        # scenario: ""             # Scenario name
-        # steps:                   # Ordered list of Playwright steps
-        #   - ""
-    api_endpoints:                 # Related API endpoints (if applicable)
-      - method: ""                 # GET | POST | PUT | DELETE | PATCH
-        path: ""
-        description: ""
-    ui_components:                 # Related UI components (if applicable)
-      - name: ""
-        description: ""
+  - name: ""                        # Feature name
+    description: ""                 # What the feature does
+    priority: ""                    # must-have | should-have | nice-to-have
 
-# --- DATA MODEL ---
+    acceptance_criteria:             # Human-readable criteria (Given/When/Then)
+      - ""
+
+    acceptance_tests:                # Machine-verifiable checks run by the validator agent
+      # ------------------------------------------------------------------
+      # Test type: grep
+      # Applies to: ALL project types
+      # Searches source files for patterns (or absence of patterns)
+      # ------------------------------------------------------------------
+      - type: grep
+        files: ""                   # File glob pattern to search (e.g., "src/**/*.ts")
+        pattern: ""                 # Regex pattern to search for
+        expected: 0                 # Expected match count (0 = pattern must NOT appear)
+        check: ""                   # What is being verified
+
+      # ------------------------------------------------------------------
+      # Test type: unit
+      # Applies to: ALL project types
+      # Runs a unit test on a specific function, module, or class
+      # ------------------------------------------------------------------
+      - type: unit
+        target: ""                  # Function, class, or module to test
+        check: ""                   # What is being verified
+
+      # ------------------------------------------------------------------
+      # Test type: visual
+      # Applies to: web-app, mobile, desktop, fullstack
+      # Skip for: api, cli, library, embedded, data-pipeline
+      # Takes a screenshot and verifies visual appearance
+      # ------------------------------------------------------------------
+      - type: visual
+        target: ""                  # URL path (web), screen name (mobile), or window (desktop)
+        check: ""                   # What to verify in the screenshot
+
+      # ------------------------------------------------------------------
+      # Test type: e2e
+      # Applies to: web-app, mobile, desktop, fullstack
+      # Skip for: api, cli, library, embedded, data-pipeline
+      # End-to-end user flow simulation
+      # ------------------------------------------------------------------
+      - type: e2e
+        scenario: ""                # Scenario name
+        steps:                      # Ordered list of user actions
+          - ""
+        check: ""                   # Expected outcome
+
+      # ------------------------------------------------------------------
+      # Test type: runtime
+      # Applies to: api, cli, library, fullstack, data-pipeline
+      # Skip for: embedded (use hardware-in-the-loop instead)
+      # Calls an endpoint, command, or function and verifies the result
+      # ------------------------------------------------------------------
+      - type: runtime
+        target: ""                  # Endpoint URL, CLI command, or function call
+        method: ""                  # GET | POST | PUT | DELETE (api) | invoke (cli) | call (library)
+        input: ""                   # Request body, arguments, or parameters
+        check: ""                   # Expected response or output
+
+      # ------------------------------------------------------------------
+      # Test type: accessibility
+      # Applies to: web-app, mobile, fullstack
+      # Skip for: api, cli, library, embedded, desktop, data-pipeline
+      # WCAG compliance check
+      # ------------------------------------------------------------------
+      - type: accessibility
+        target: ""                  # Page URL or screen name
+        standard: "WCAG 2.1 AA"    # WCAG level
+        check: ""                   # Specific accessibility requirement
+
+      # ------------------------------------------------------------------
+      # Test type: hardware
+      # Applies to: embedded
+      # Skip for: all other types
+      # Hardware-in-the-loop or simulation-based verification
+      # ------------------------------------------------------------------
+      - type: hardware
+        interface: ""               # GPIO | I2C | SPI | UART | USB | ADC | PWM
+        stimulus: ""                # Input signal or action
+        check: ""                   # Expected hardware response
+
+      # ------------------------------------------------------------------
+      # Test type: data-validation
+      # Applies to: data-pipeline
+      # Skip for: all other types
+      # Verifies data quality and transformation correctness
+      # ------------------------------------------------------------------
+      - type: data-validation
+        source: ""                  # Input dataset or table
+        sink: ""                    # Output dataset or table
+        check: ""                   # Data quality assertion (row count, schema, values)
+
+
+# ============================================================================
+# UI DEFINITION
+# Applies to: web-app, mobile, desktop, fullstack
+# Skip for: api, cli, library, embedded, data-pipeline
+# ============================================================================
+
+ui:
+  design_system:
+    colors:                         # Brand colors with contrast ratios for WCAG AA
+      primary: ""
+      secondary: ""
+      background: ""
+      text: ""
+      error: ""
+      success: ""
+    typography:
+      font_family: ""
+      headings: ""                  # e.g., "Inter Bold 24/20/16px"
+      body: ""                      # e.g., "Inter Regular 14px"
+    spacing: ""                     # e.g., "4px base unit"
+    border_radius: ""               # e.g., "8px"
+
+  components:                       # Reusable UI components
+    - name: ""
+      description: ""
+      states:                       # Component states to implement
+        - default
+        - hover
+        - loading
+        - error
+        - empty
+        - disabled
+
+  # Web: pages, Mobile: screens, Desktop: windows
+  pages:
+    - name: ""
+      route: ""                     # URL path (web) | screen name (mobile) | window ID (desktop)
+      layout: ""                    # Layout description
+      components: []                # Components used on this page
+
+
+# ============================================================================
+# API DEFINITION
+# Applies to: api, web-app (with backend), fullstack
+# Skip for: cli, library, embedded, desktop, data-pipeline
+#   (unless they expose an API — include this section if they do)
+# ============================================================================
+
+api:
+  protocol: ""                      # REST | GraphQL | gRPC | WebSocket | tRPC
+  base_url: ""                      # e.g., /api/v1
+  authentication: ""                # JWT | OAuth2 | API-key | session | none
+
+  endpoints:
+    - method: ""                    # GET | POST | PUT | DELETE | PATCH
+      path: ""
+      description: ""
+      request_body: ""              # JSON schema or description
+      response: ""                  # JSON schema or description
+      auth_required: true
+
+
+# ============================================================================
+# CLI DEFINITION
+# Applies to: cli
+# Skip for: all other types
+# ============================================================================
+
+cli:
+  binary_name: ""                   # Name of the compiled binary or script
+  global_flags:                     # Flags available on all commands
+    - name: ""
+      short: ""                     # Single-letter alias (e.g., "v" for --verbose)
+      description: ""
+      default: ""
+
+  commands:
+    - name: ""                      # Command name (e.g., "init", "build", "run")
+      description: ""
+      arguments:                    # Positional arguments
+        - name: ""
+          required: true
+          description: ""
+      flags:                        # Command-specific flags
+        - name: ""
+          short: ""
+          description: ""
+          default: ""
+      example: ""                   # Usage example (e.g., "mycli init --template react")
+      expected_output: ""           # What the user should see
+
+
+# ============================================================================
+# LIBRARY / SDK DEFINITION
+# Applies to: library
+# Skip for: all other types
+# ============================================================================
+
+library:
+  package_name: ""                  # Published package name (e.g., "@scope/package")
+  distribution: ""                  # npm | PyPI | crates.io | Maven | NuGet | pub.dev | hex | etc.
+  min_language_version: ""          # Minimum supported language version
+
+  public_api:                       # Exported functions, classes, types
+    - name: ""                      # Function, class, or type name
+      kind: ""                      # function | class | type | constant | module
+      signature: ""                 # Full type signature
+      description: ""
+      example: ""                   # Usage example
+
+  peer_dependencies: []             # Required peer/companion packages
+  tree_shakeable: false             # Whether unused exports can be eliminated
+
+
+# ============================================================================
+# EMBEDDED / IoT DEFINITION
+# Applies to: embedded
+# Skip for: all other types
+# ============================================================================
+
+embedded:
+  target_hardware: ""               # e.g., ESP32, STM32F4, Raspberry Pi Pico, Arduino Mega
+  architecture: ""                  # ARM Cortex-M4, RISC-V, AVR, Xtensa, etc.
+
+  interfaces:
+    - type: ""                      # GPIO | I2C | SPI | UART | USB | ADC | PWM | CAN | BLE | WiFi
+      description: ""
+      pins: ""                      # Pin assignments (e.g., "GPIO 21 = SDA, GPIO 22 = SCL")
+
+  constraints:
+    flash: ""                       # e.g., 512KB
+    ram: ""                         # e.g., 256KB
+    clock: ""                       # e.g., 240MHz
+    power: ""                       # e.g., "battery-operated, target < 50mA active"
+    real_time: false                # Hard real-time constraints?
+    max_latency: ""                 # e.g., "10ms interrupt response"
+
+  peripherals:                      # External hardware components
+    - name: ""                      # e.g., "BME280 sensor", "SSD1306 OLED"
+      interface: ""                 # How it connects (I2C, SPI, etc.)
+      driver: ""                    # Library or custom driver
+
+
+# ============================================================================
+# DATA PIPELINE DEFINITION
+# Applies to: data-pipeline
+# Skip for: all other types
+# ============================================================================
+
+pipeline:
+  sources:                          # Input data sources
+    - name: ""
+      type: ""                      # database | api | file | stream | queue
+      format: ""                    # csv | json | parquet | avro | protobuf
+      location: ""                  # Connection string, URL, or file path
+
+  transformations:                  # Processing steps in order
+    - name: ""
+      description: ""
+      input: ""                     # Source or previous transformation
+      output: ""                    # Output dataset name
+      logic: ""                     # Transformation description
+
+  sinks:                            # Output destinations
+    - name: ""
+      type: ""                      # database | file | api | warehouse | lake
+      format: ""
+      location: ""
+
+  schedule: ""                      # Cron expression, event trigger, or "real-time"
+  volume: ""                        # Expected data volume (e.g., "10M rows/day", "500GB/month")
+  idempotent: false                 # Can the pipeline be safely re-run?
+  backfill_strategy: ""             # How to handle historical data reprocessing
+
+
+# ============================================================================
+# DATA MODEL
+# Applies to: web-app, api, fullstack, mobile, data-pipeline
+# Skip for: cli, library, embedded, desktop (unless they persist data)
+# ============================================================================
+
 data_model:
   entities:
-    - name: ""                    # Entity name (PascalCase)
+    - name: ""                      # Entity name (PascalCase)
       fields:
-        - name: ""                # Field name
-          type: ""                # string | number | boolean | date | relation
+        - name: ""                  # Field name
+          type: ""                  # string | number | boolean | date | json | relation | enum
           required: true
           unique: false
           description: ""
       relations:
-        - type: ""                # one-to-one | one-to-many | many-to-many
-          target: ""              # Target entity
-          field: ""               # Relation field name
+        - type: ""                  # one-to-one | one-to-many | many-to-many
+          target: ""                # Target entity name
+          field: ""                 # Relation field name
 
-# --- CONSTRAINTS & REQUIREMENTS ---
-constraints:
+
+# ============================================================================
+# NON-FUNCTIONAL REQUIREMENTS
+# Applies to: ALL project types
+# Include only the subsections relevant to your project type.
+# ============================================================================
+
+non_functional:
+  # --- Universal ---
   performance:
-    - ""                          # E.g., "API response time < 200ms"
+    - ""                            # e.g., "API response < 200ms", "CLI startup < 100ms", "Boot time < 2s"
   security:
-    - ""                          # E.g., "JWT authentication required"
-  accessibility:
-    - ""                          # E.g., "WCAG 2.1 AA"
-  browser_support:
-    - ""                          # E.g., "Chrome, Firefox, Safari latest versions"
-  deployment:
-    target: ""                    # vercel | aws | docker | railway | fly.io
-    ci_cd: ""                     # github-actions | gitlab-ci | none
+    - ""                            # e.g., "Input sanitization", "No secrets in source", "Encrypted at rest"
+  monitoring:
+    - ""                            # e.g., "Structured logging", "Error tracking", "Health check endpoint"
 
-# --- CONVENTIONS ---
+  # --- Web / Mobile / Desktop (UI projects) ---
+  # Skip for: api, cli, library, embedded, data-pipeline
+  accessibility: ""                 # e.g., "WCAG 2.1 AA"
+  browser_support:                  # Web only
+    - ""                            # e.g., "Chrome, Firefox, Safari, Edge (latest 2 versions)"
+  device_support:                   # Mobile only
+    - ""                            # e.g., "iOS 16+, Android 12+"
+  responsive: false                 # Web / mobile: responsive design required?
+  offline_support: false            # Mobile / desktop / embedded: works offline?
+
+  # --- API ---
+  # Skip for: cli, library, embedded, desktop, data-pipeline
+  rate_limiting: ""                 # e.g., "100 req/min per API key"
+  versioning: ""                    # e.g., "URL-based /v1/, /v2/"
+  documentation: ""                 # e.g., "OpenAPI 3.0 auto-generated"
+
+  # --- Library ---
+  # Skip for: all other types
+  bundle_size: ""                   # e.g., "< 10KB gzipped"
+  backward_compatibility: ""        # e.g., "Semver, no breaking changes in minor"
+
+  # --- Embedded ---
+  # Skip for: all other types
+  power_consumption: ""             # e.g., "< 50mA active, < 10uA deep sleep"
+  memory_budget: ""                 # e.g., "< 200KB flash, < 64KB RAM"
+  operating_temperature: ""         # e.g., "-20C to 60C"
+
+  # --- Data pipeline ---
+  # Skip for: all other types
+  data_freshness: ""                # e.g., "< 5 min latency from source to sink"
+  data_quality: ""                  # e.g., "< 0.1% null rate on required fields"
+  recovery: ""                      # e.g., "Automatic retry with dead-letter queue"
+
+
+# ============================================================================
+# DEPLOYMENT
+# Applies to: ALL project types
+# ============================================================================
+
+deployment:
+  platform: ""                      # vercel | aws | gcp | azure | docker | fly.io | railway | bare-metal | app-stores | package-registry | firmware-ota
+  environments:                     # Deployment environments
+    - name: ""                      # dev | staging | production
+      url: ""                       # URL or identifier
+  ci_cd: ""                         # github-actions | gitlab-ci | circleci | jenkins | none
+  containerized: false              # Docker-based deployment?
+  infrastructure_as_code: ""        # terraform | pulumi | cdk | none
+
+
+# ============================================================================
+# CONVENTIONS
+# Applies to: ALL project types
+# ============================================================================
+
 conventions:
   naming:
-    files: ""                     # kebab-case | camelCase | PascalCase
-    functions: ""                 # camelCase | snake_case
-    components: ""                # PascalCase
-    variables: ""                 # camelCase | snake_case
+    files: ""                       # kebab-case | camelCase | PascalCase | snake_case
+    functions: ""                   # camelCase | snake_case | PascalCase
+    components: ""                  # PascalCase (UI projects only)
+    variables: ""                   # camelCase | snake_case | SCREAMING_SNAKE_CASE (constants)
+    types: ""                       # PascalCase (typed languages)
   git:
-    branch_strategy: ""           # gitflow | trunk-based | github-flow
-    commit_format: ""             # conventional-commits | free-form
-  code_style: ""                  # Reference to a preset or free description
+    branch_strategy: ""             # gitflow | trunk-based | github-flow
+    commit_format: ""               # conventional-commits | free-form
+  code_style: ""                    # Reference to preset or description (e.g., "Airbnb", "Google", "PEP 8")
+  documentation: ""                 # JSDoc | docstrings | rustdoc | godoc | none
 
-# --- VALIDATION PHASES ---
-# Defines human validation checkpoints between each phase
+
+# ============================================================================
+# VALIDATION PHASES
+# Applies to: ALL project types
+# Human validation checkpoints between generation phases.
+# ============================================================================
+
 validation:
-  after_plan: true                # Validate architecture plan before coding
-  after_scaffold: true            # Validate file structure before implementing
-  after_implement: true           # Validate implementation before tests
-  after_test: true                # Validate tests before review
-  after_review: true              # Validate review before deployment
+  after_plan: true                  # Validate architecture plan before coding
+  after_scaffold: true              # Validate file structure before implementing
+  after_implement: true             # Validate implementation before tests
+  after_test: true                  # Validate tests before review
+  after_review: true                # Validate review before deployment
 
-# --- ADDITIONAL CONTEXT ---
+
+# ============================================================================
+# ADDITIONAL CONTEXT
+# Applies to: ALL project types
+# ============================================================================
+
 context:
-  inspiration: ""                 # Similar projects or sources of inspiration
-  existing_code: ""               # Path to existing code to integrate
-  documentation: ""               # Links to relevant documentation
-  notes: |                        # Free notes for the AI
+  inspiration: ""                   # Similar projects or sources of inspiration
+  existing_code: ""                 # Path to existing code to integrate
+  documentation: ""                 # Links to relevant documentation
+  wireframes: []                    # Paths to wireframe images (UI projects)
+  hardware_schematics: []           # Paths to schematics (embedded projects)
+  notes: |                          # Free notes for the AI
     # Add any additional context here
