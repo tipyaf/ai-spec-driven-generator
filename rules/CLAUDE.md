@@ -72,6 +72,15 @@ Phase 6: Deploy Config   →           devops.md          → ✅ Human
 Phase 7: Release         →           orchestrator.md    → ✅ Human
 ```
 
+## Coding standards (agnostic — all languages, all projects)
+
+| Rule | Why | Example |
+|------|-----|---------|
+| **No magic strings** | Hardcoded strings buried in logic are invisible, fragile, and impossible to search for. Extract to named constants or config. | ❌ `if (status === 'accredited')` → ✅ `if (status === VISA_STATUS.ACCREDITED)` |
+| **No magic numbers** | Same as strings. Raw numbers have no meaning without context. | ❌ `slice(0, 50)` → ✅ `slice(0, BATCH_SIZE)` |
+| **Max 400 lines per file** | Files over 400 lines signal poor separation of concerns. Split into smaller, focused modules. | A 800-line service → split into core service + helpers + constants |
+| **Extract constants** | Group related constants in a dedicated file or block at the top of the module. Never scatter literals across business logic. | `const CACHE_TTL_DAYS = 30` at top, not `30` inline |
+
 ## Strict rules
 1. **Always read memory** at session start
 2. **Always update memory** after each phase

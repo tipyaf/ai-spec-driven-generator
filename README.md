@@ -66,6 +66,7 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Hard constraints**: NEVER/Always rules in every agent — critical rules are visually distinct
 - **Token-optimized agents**: Each agent split into core (rules, workflow) + ref (templates, examples) — 60% fewer tokens per session
 - **Lazy agent loading**: Skills load only the required agents per task — never all 11 at once. Principles enforced via CLAUDE.md
+- **Agnostic coding standards**: No magic strings/numbers, max 400 lines per file, extract constants — enforced regardless of language or framework
 
 ## Workflow
 
