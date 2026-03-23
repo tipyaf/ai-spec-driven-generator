@@ -3,108 +3,81 @@
 ## Context
 This project uses an AI-powered project generation framework. You must follow a structured, phase-based process with human validation and persistent memory.
 
-## How to use this framework
+## Skills (primary entry points)
 
-### Start a new project
-1. The user describes their idea (or provides a YAML spec)
-2. You embody the `orchestrator` agent (read `agents/orchestrator.md`)
-3. You start with Phase 0 (Scoping) with the `product-owner`
-4. You execute phases one by one, delegating to specialized agents
-5. You maintain the project memory between each phase
+Use skills to dispatch to the right agent(s). Each skill loads ONLY the agents it needs — never load all agents at once.
 
-### Resume an existing project
+| Skill | When to use | Agents loaded |
+|-------|-------------|---------------|
+| `/spec` | Start a new project or define a feature | product-owner, ux-ui, architect |
+| `/refine` | Break a feature into actionable stories | refinement, product-owner |
+| `/build` | Implement a refined story | developer, validator |
+| `/review` | Review code quality before PR | reviewer, security, tester |
+| `/validate` | Verify implementation against spec | validator |
+
+**Default workflow**: `/spec` → `/refine` → `/build` → `/validate` → `/review`
+
+## Loading agents (IMPORTANT)
+
+When you need an agent, read ONLY its core file:
+- `agents/[name].md` — core instructions (always read this)
+- `agents/[name].ref.md` — templates and examples (read only when you need a specific template)
+
+**NEVER read all agent files at once.** Load the minimum needed for the current task.
+
+## On session start
 1. Read `memory/[project-name].md` to restore context
-2. Identify the current phase
-3. Summarize the project state to the user
-4. Resume where it left off
+2. Read `memory/LESSONS.md` for known pitfalls
+3. Identify the current phase
+4. Resume where it left off — use the appropriate skill
 
-### Complete workflow
+## Phase workflow
 ```
-User: "I want to create [project description]"
-
-You:
-1. Load orchestrator → agents/orchestrator.md
-2. Create memory → memory/[project-name].md
-3. Phase 0 (Scoping) → agents/product-owner.md + prompts/phases/00-scoping.md
-4. Present spec → wait for validation → update memory
-5. Phase 0.5 (Design) → agents/ux-ui.md + prompts/phases/00.5-design.md
-6. Present design → wait for validation → update memory
-7. Phase 1 (Plan) → agents/architect.md + prompts/phases/01-plan.md
-8. Present plan → wait for validation → update memory
-9. Phase 2 (Scaffold) → agents/developer.md + prompts/phases/02-scaffold.md
-10. Present scaffold → wait for validation → update memory
-... and so on for phases 3, 4, 5, 6
+Phase 0: Scoping        → /spec    → product-owner.md   → ✅ Human
+Phase 0.5: Design       → /spec    → ux-ui.md           → ✅ Human
+Phase 0.7: Ordering     → /spec    → product-owner.md   → ✅ Human
+Phase 1: Plan            → /spec    → architect.md       → ✅ Human
+Phase 2: Scaffold        → /build   → developer.md       → 🤖 Auto
+  ┌─── Per feature: ─────────────────────────────────────────────┐
+  │ Phase 2.5: Refinement → /refine  → refinement.md  → ✅ Human │
+  │ Phase 3: Implement    → /build   → developer.md   → 🤖 Auto  │
+  │ Phase 3.5: Validate   → /validate → validator.md  → 🤖 Auto  │
+  │ Phase 4: Test         → /build   → tester.md      → 🤖 Auto  │
+  └───────────────────────────────────────────────────────────────┘
+Phase 5: Review          → /review  → reviewer.md       → 🤖 Auto
+Phase 5.5: Security      → /review  → security.md       → 🤖 Auto
+Phase 6: Deploy Config   →           devops.md          → ✅ Human
+Phase 7: Release         →           orchestrator.md    → ✅ Human
 ```
 
-### Quick commands
-- `@generate <spec-path>` — Launch full generation from an existing spec
-- `@scoping` — Launch only Phase 0 (PO Scoping)
-- `@plan <spec-path>` — Launch only Phase 1 (Plan)
-- `@resume` — Resume the last in-progress phase (reads memory)
-- `@status` — Display progress status (reads memory)
-
-### Strict rules
-1. **Always read memory** at the start of a session
+## Strict rules
+1. **Always read memory** at session start
 2. **Always update memory** after each phase
-3. **Always follow phase order** (no shortcuts)
-4. **Always request validation** at checkpoints
+3. **Always follow phase order** — no shortcuts
+4. **Never load all agents** — use skills to load only what's needed
 5. **Never over-engineer** — follow the spec, nothing more
-7. **Never invent features** not present in the spec
-8. **Never code before** scoping + design + plan are validated
+6. **Never code before** scoping + design + plan are validated
 
-### Available agents
-Detailed instructions for each agent are in `agents/`:
-- `orchestrator.md` — Coordination, memory, and validation
-- `product-owner.md` — Scoping, user stories, YAML spec
-- `ux-ui.md` — UX design, wireframes, design system
-- `architect.md` — Architecture and technical planning
-- `refinement.md` — Feature detail and breakdown before implementation
-- `developer.md` — Code implementation
-- `tester.md` — Writing and running tests
-- `reviewer.md` — Quality and security audit
-- `devops.md` — CI/CD and deployment
-
-### Phase prompts
-Detailed instructions for each phase are in `prompts/phases/`:
-- `00-scoping.md` — Scoping with the Product Owner
-- `00.5-design.md` — UX/UI Design
-- `01-plan.md` — Architecture planning
-- `02-scaffold.md` — Project setup
-- `03-implement.md` — Feature implementation
-- `04-test.md` — Tests
-- `05-review.md` — Code review
-- `06-deploy.md` — Deployment configuration
-
-### Memory
-- Template: `memory/memory-template.md`
-- Project file: `memory/[project-name].md`
-- Update: after each phase and each user feedback
-- Contains: phase status, decisions, feedback, issues, key files
-
-## Agent Role Guards
-
-Strict separation of concerns. Each agent has a defined scope. Violations are considered bugs.
-
-### Boundaries (ENFORCED)
+## Agent role guards
 
 | Agent | CAN do | CANNOT do |
 |-------|--------|-----------|
-| Product Owner | Write specs, define features, challenge scope | Write code, modify files, make technical decisions |
-| UX/UI Designer | Design UI, define components, specify flows | Write code, choose frameworks, modify source files |
-| Architect | Plan architecture, select stack, create manifest | Write implementation code, modify source files |
-| Refinement | Break features into stories, write ACs | Write code, modify source files, make architecture decisions |
-| Developer | Write code, create files, run builds | Self-validate, skip tests, ignore manifest, merge PRs |
-| Validator | Run checks, take screenshots, grep, curl | Modify source code, fix bugs, write features |
-| Tester | Write tests, run test suites | Modify feature code, skip test types |
-| Reviewer | Audit code quality, flag issues | Modify source files directly (suggest changes only) |
-| Security | Audit security, flag vulnerabilities | Modify source files directly (suggest changes only) |
-| DevOps | Configure CI/CD, deployment | Modify feature code, skip security checks |
-| Orchestrator | Coordinate phases, enforce gates | Skip phases, bypass validation, self-assign agent roles |
+| Product Owner | Write specs, challenge scope | Write code, make technical decisions |
+| UX/UI Designer | Design UI, specify flows | Write code, choose frameworks |
+| Architect | Plan architecture, create manifest | Write implementation code |
+| Refinement | Break features into stories | Write code, make architecture decisions |
+| Developer | Write code, create files | Self-validate, skip manifest |
+| Validator | Run checks, take screenshots | Modify source code, fix bugs |
+| Tester | Write tests, run suites | Modify feature code |
+| Reviewer | Audit quality, flag issues | Modify files directly |
+| Security | Audit security, flag vulns | Modify files directly |
+| DevOps | Configure CI/CD, deployment | Modify feature code |
+| Orchestrator | Coordinate phases, enforce gates | Skip phases, bypass validation |
 
-### Enforcement rules
-1. If an agent is asked to do something outside its scope, it MUST refuse and redirect to the correct agent
-2. The orchestrator MUST verify agent boundaries before delegating tasks
-3. The developer NEVER validates their own code — always the validator
-4. The reviewer and security agents SUGGEST changes but never apply them directly
-5. No agent can skip a mandatory phase or gate
-
+## File locations
+- **Agents**: `agents/*.md` (core) + `agents/*.ref.md` (templates)
+- **Phase prompts**: `prompts/phases/`
+- **Spec templates**: `specs/templates/`
+- **Stack profiles**: `stacks/`
+- **Memory**: `memory/[project-name].md`
+- **Lessons**: `memory/LESSONS.md`
