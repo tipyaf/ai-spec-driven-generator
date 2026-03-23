@@ -4,6 +4,16 @@
 This project uses the **ai-spec-driven-generator** framework (in `framework/`).
 You must follow a structured, phase-based process with human validation and persistent memory.
 
+## Fundamental Principles
+
+These three principles apply to EVERY action, EVERY agent, EVERY phase:
+
+| Principle | Rule |
+|-----------|------|
+| **Agnostic** | Adapt to the project type. Never assume web. Check `spec.type` before applying platform-specific rules (WCAG, Playwright, CSS, responsive). |
+| **Autonomous** | Humans decide (product, architecture, infra), machines verify (tests, review, security). Auto-proceed when automated gates pass. Escalate to human after 3 failures only. |
+| **Accompaniment** | Guide and challenge the user. Every human-validated phase ends with clear options, trade-offs, and next steps. Never leave the user without guidance. |
+
 ## Skills (primary entry points)
 
 Use skills to dispatch to the right agent(s). Each skill loads ONLY the agents it needs — never load all agents at once.

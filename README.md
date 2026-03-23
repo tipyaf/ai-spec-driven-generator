@@ -58,13 +58,14 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Language-agnostic hooks**: Configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders — works with any language (TypeScript, Python, Rust, Go, Java, etc.)
 - **Agent role guards**: Strict enforcement of agent boundaries — refiner never codes, reviewer never modifies files, developer never self-validates
 - **Deployment verification**: Post-deploy health checks, smoke tests, rollback plan documentation
-- **Skills system**: `/refine`, `/build`, `/review`, `/validate`, `/spec` — slash commands that dispatch to specialized agents
+- **Skills system**: `/refine`, `/build`, `/review`, `/validate`, `/spec` — slash commands that load only the agents needed for the current task
 - **Auto-versioning**: GitHub Action bumps VERSION on every push, auto-generates CHANGELOG
 - **Framework sync tracking**: SYNC.md tracks which version each project uses
 - **3-pass code review**: KISS & readability → static analysis → safety & correctness
 - **Test quality standards**: Explicit "real test vs mock-soup" checklists, forbidden test patterns
 - **Hard constraints**: NEVER/Always rules in every agent — critical rules are visually distinct
 - **Token-optimized agents**: Each agent split into core (rules, workflow) + ref (templates, examples) — 60% fewer tokens per session
+- **Lazy agent loading**: Skills load only the required agents per task — never all 11 at once. Principles enforced via CLAUDE.md
 
 ## Workflow
 
