@@ -36,10 +36,22 @@ When you need an agent, read ONLY its core file:
 **NEVER read all agent files at once.** Load the minimum needed for the current task.
 
 ## On session start
+
+### New project (no memory file exists)
+When a user describes a project idea or asks to build something:
+1. Tell the user: "We'll define your project together before writing any code. I'll guide you through 4 phases: Scoping → Design → Architecture → then we build."
+2. Launch `/spec` — this guides through Phase 0, 0.5, and 1 with human validation at each step
+3. After `/spec` is complete: launch `/refine` to break features into stories
+4. Only then: `/build` for each refined story
+
+**NEVER jump to code.** Always start with `/spec`.
+
+### Existing project (memory file exists)
 1. Read `memory/[project-name].md` to restore context
 2. Read `memory/LESSONS.md` for known pitfalls
 3. Identify the current phase
-4. Resume where it left off — use the appropriate skill
+4. Summarize the project state to the user: what's done, what's next, what decisions are needed
+5. Resume where it left off — use the appropriate skill
 
 ## Phase workflow
 ```
@@ -67,6 +79,18 @@ Phase 7: Release         →           orchestrator.md    → ✅ Human
 4. **Never load all agents** — use skills to load only what's needed
 5. **Never over-engineer** — follow the spec, nothing more
 6. **Never code before** scoping + design + plan are validated
+
+## Phase guards
+
+Before executing a skill, verify its prerequisites are met:
+
+| Skill | Prerequisites | If missing |
+|-------|--------------|------------|
+| `/spec` | None — this is the starting point | — |
+| `/refine` | Spec validated (Phase 0 + 0.5 + 1 done) | → Tell user: "Let's define the project first" → launch `/spec` |
+| `/build` | Story refined with ACs (Phase 2.5 done) | → Tell user: "This story needs refinement first" → launch `/refine` |
+| `/validate` | Implementation exists (Phase 3 done) | → Tell user: "Nothing to validate yet" → launch `/build` |
+| `/review` | Validation passed (Phase 3.5 done) | → Tell user: "Let's validate first" → launch `/validate` |
 
 ## Agent role guards
 

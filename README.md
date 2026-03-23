@@ -111,9 +111,14 @@ Open the project in **Cursor** or **Claude Code**. The AI will automatically pic
 
 ### 3. Start building
 
-Describe your project idea to the AI, or provide a YAML spec. The AI will guide you through each phase with human validation at every step.
+Describe your project idea to the AI. It will automatically guide you through:
 
-Use `/spec` to start defining your project, `/refine` to break features into stories, `/build` to implement, `/review` to review code, `/validate` to verify.
+1. **`/spec`** — Scoping (one question at a time), UX design, architecture planning
+2. **`/refine`** — Break features into stories with acceptance criteria
+3. **`/build`** — Implement each story with automatic validation
+4. **`/review`** — Code review + security audit before PR
+
+The AI enforces phase order: you can't build before the spec is validated, you can't review before validation passes. Each phase ends with clear options and next steps.
 
 ### 4. Update the framework
 
