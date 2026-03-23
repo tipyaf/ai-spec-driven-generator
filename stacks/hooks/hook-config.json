@@ -1,0 +1,90 @@
+{
+  "$schema": "hook-config-schema",
+  "description": "Language-agnostic quality gate hooks. Patterns are configured per project, not hardcoded.",
+
+  "anti_patterns": {
+    "description": "Patterns that should NOT appear in committed code. Configure per project.",
+    "rules": [
+      {
+        "name": "debug-artifacts",
+        "description": "Debug code left in source files",
+        "patterns": ["console\\.log", "console\\.debug", "debugger", "print\\(.*DEBUG"],
+        "filter": "*.{ts,tsx,js,jsx,py,rs,go,java}",
+        "severity": "error",
+        "message": "Remove debug artifacts before committing"
+      },
+      {
+        "name": "incomplete-code",
+        "description": "TODO/FIXME markers left in code",
+        "patterns": ["TODO", "FIXME", "HACK", "XXX"],
+        "filter": "*.{ts,tsx,js,jsx,py,rs,go,java}",
+        "severity": "warning",
+        "message": "Resolve TODO/FIXME markers before committing"
+      },
+      {
+        "name": "hardcoded-secrets",
+        "description": "Potential secrets in source code",
+        "patterns": ["password\\s*=\\s*['\"]", "api_key\\s*=\\s*['\"]", "secret\\s*=\\s*['\"]", "token\\s*=\\s*['\"]"],
+        "filter": "*.{ts,tsx,js,jsx,py,rs,go,java,yaml,yml,json}",
+        "severity": "error",
+        "message": "Never hardcode secrets. Use environment variables."
+      }
+    ],
+
+    "web_specific": [
+      {
+        "name": "hardcoded-colors",
+        "description": "Tailwind color classes instead of design system tokens",
+        "patterns": ["blue-[0-9]", "red-[0-9]", "green-[0-9]", "yellow-[0-9]", "gray-[0-9]"],
+        "filter": "*.{tsx,jsx,vue,svelte}",
+        "severity": "error",
+        "applies_to": ["web-app", "fullstack"],
+        "message": "Use CSS variables / design tokens instead of hardcoded color classes"
+      },
+      {
+        "name": "hardcoded-strings-ui",
+        "description": "Hardcoded user-facing strings instead of i18n keys",
+        "patterns": [">[A-Z][a-z]+\\s[a-z]+<"],
+        "filter": "*.{tsx,jsx,vue,svelte}",
+        "severity": "warning",
+        "applies_to": ["web-app", "mobile", "desktop"],
+        "message": "Use i18n translation keys for user-facing text"
+      }
+    ],
+
+    "api_specific": [
+      {
+        "name": "hardcoded-urls",
+        "description": "Hardcoded API URLs instead of config",
+        "patterns": ["http://localhost", "https://api\\.", "http://127\\.0\\.0\\.1"],
+        "filter": "*.{ts,js,py,rs,go,java}",
+        "severity": "warning",
+        "applies_to": ["api", "web-app", "fullstack"],
+        "message": "Use environment variables for API URLs"
+      }
+    ],
+
+    "cli_specific": [
+      {
+        "name": "hardcoded-paths",
+        "description": "Hardcoded file paths instead of config",
+        "patterns": ["/home/", "/Users/", "C:\\\\Users"],
+        "filter": "*.{ts,js,py,rs,go,java}",
+        "severity": "error",
+        "applies_to": ["cli", "desktop"],
+        "message": "Use config or env vars for file paths"
+      }
+    ]
+  },
+
+  "hook_commands": {
+    "pre_commit": {
+      "description": "Run before git commit. Uses {files} placeholder for staged files.",
+      "command_template": "bash -c 'FILES=$(git diff --cached --name-only -- {filter}); if [ -n \"$FILES\" ]; then FOUND=$(echo \"$FILES\" | xargs grep -l \"{pattern}\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"❌ {name}: {message}\"; echo \"$FOUND\"; exit 1; fi; fi; echo \"✅ {name}: clean\"; exit 0'"
+    },
+    "post_edit": {
+      "description": "Run after editing a file. Uses {file} for the edited file path.",
+      "command_template": "bash -c 'grep -n \"{pattern}\" \"{file}\" && echo \"⚠️ {name}: {message}\" || true'"
+    }
+  }
+}

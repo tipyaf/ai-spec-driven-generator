@@ -1,0 +1,27 @@
+# Lessons Learned
+
+Recurring failures and lessons learned across sessions. Every agent MUST read this file before starting work.
+
+## How to use
+- **Read**: Before starting any task, check if a relevant lesson exists
+- **Write**: When the same mistake happens twice, log it here
+- **Format**: Each lesson has a category, description, and the rule to follow
+
+## Lessons
+
+### [Category] Short title
+**Problem**: What went wrong (concrete example)
+**Root cause**: Why it happened
+**Rule**: What to do instead — agents must follow this rule
+
+<!-- Example:
+### [UI] Hardcoded colors instead of design system
+**Problem**: PR #27 used `text-blue-800` instead of CSS variables. The card was unreadable.
+**Root cause**: Developer didn't check existing design system reference (market-snapshot.tsx).
+**Rule**: Always grep for the design system reference component before writing any UI. Use `var(--color-*)` CSS variables, never Tailwind color classes directly.
+
+### [Validation] Declaring done without runtime verification
+**Problem**: PR #27 and #28 were declared "done" with "0 TS errors" but features didn't work visually or at runtime.
+**Root cause**: Developer validated TypeScript compilation but never started the app or took screenshots.
+**Rule**: Never declare done without: 1) starting the dev server, 2) visiting the modified page, 3) taking a screenshot, 4) curling modified endpoints.
+-->

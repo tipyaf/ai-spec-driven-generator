@@ -1,83 +1,202 @@
-# Claude Code Quality Hooks
+# Quality Gate Hooks
 
-Automated quality gates that run at key points in the development workflow. These hooks are configured in Claude Code's `settings.json` and execute automatically.
+Language-agnostic, configurable quality hooks for Claude Code. Instead of hardcoding patterns for a specific stack, hooks are driven by `hook-config.json` and adapted per project.
 
-## Available Hook Points
+## Architecture
 
-### PreToolUse hooks
-Run before specific tool calls. Use to enforce rules before actions happen.
+```
+hook-config.json              — Pattern definitions (language-agnostic)
+  |
+  v
+settings-hooks-example.json   — Generated Claude Code hooks (project-specific)
+  |
+  v
+.claude/settings.local.json   — Copy relevant hooks into your project
+```
 
-### PostToolUse hooks
-Run after specific tool calls. Use to verify results after actions complete.
+## hook-config.json Format
 
-## Recommended Hooks
+The config file defines **what** to check, not **how** to wire it into Claude Code.
 
-### 1. Pre-commit: Anti-pattern check
-Before any git commit, verify no anti-patterns exist in staged files.
+### Anti-pattern Rules
 
-**What it checks:**
-- No hardcoded Tailwind colors in UI files (blue-200, red-500, etc.)
-- No console.log/console.debug left in code
-- No TODO/FIXME/HACK in committed code
-- No empty catch blocks
-- TypeScript compiles cleanly
+Each rule has:
 
-### 2. Post-edit: Design system compliance
-After editing a UI component file, verify CSS variables are used.
+| Field | Description |
+|-------|-------------|
+| `name` | Unique identifier for the rule |
+| `description` | Human-readable explanation |
+| `patterns` | Array of regex patterns to detect |
+| `filter` | Glob for which files to check (e.g., `*.{py,rs,go}`) |
+| `severity` | `error` (blocks commit) or `warning` (informational) |
+| `message` | Feedback shown when pattern is detected |
+| `applies_to` | Optional. Project types where this rule is relevant |
 
-### 3. Pre-PR: Visual regression
-Before creating a PR, take screenshots of modified pages and include in PR description.
+### Rule Categories
 
-## Setup
+- **`rules`** — Universal rules (debug artifacts, secrets, incomplete code). Apply to every project.
+- **`web_specific`** — Hardcoded colors, missing i18n. Apply to web-app, fullstack, mobile.
+- **`api_specific`** — Hardcoded URLs. Apply to API and fullstack projects.
+- **`cli_specific`** — Hardcoded file paths. Apply to CLI and desktop projects.
 
-Copy the relevant hooks from `settings-hooks-example.json` into your project's `.claude/settings.local.json`.
+### Hook Command Templates
 
-### Project-specific anti-patterns
-Add your own patterns in the hook configuration. Example for ExpatHunter:
-- No hardcoded country names (use i18n-iso-countries lib)
-- No hardcoded colors (use CSS variables: var(--color-*))
-- API responses must include proper error codes
+Templates use placeholders that get resolved per-rule:
 
-## Hook Configuration Format
+| Placeholder | Resolves to |
+|-------------|-------------|
+| `{files}` | Staged files matching the rule's filter |
+| `{file}` | Single file path (for post-edit hooks) |
+| `{filter}` | The rule's file glob pattern |
+| `{pattern}` | Regex pattern(s) joined for grep |
+| `{name}` | Rule name |
+| `{message}` | Rule's feedback message |
+| `{cwd}` | Project working directory |
 
-Hooks in Claude Code settings.json use this format:
+## Configuring for Your Language
+
+The `filter` field determines which files are checked. Adapt it to your stack:
+
+### Python project
 ```json
 {
-  "hooks": {
-    "PreToolUse": [
-      {
-        "matcher": "Bash(git commit*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "echo 'Checking anti-patterns...' && git diff --cached --name-only -- '*.tsx' '*.ts' | xargs grep -l 'blue-\\|red-\\|green-\\|console\\.log' && echo 'ANTI-PATTERNS FOUND' && exit 1 || exit 0"
-          }
-        ]
-      }
-    ]
-  }
+  "name": "debug-artifacts",
+  "patterns": ["print\\(.*DEBUG", "breakpoint\\(\\)", "import pdb", "import ipdb"],
+  "filter": "*.py",
+  "severity": "error",
+  "message": "Remove debug artifacts before committing"
 }
 ```
 
-## Writing Custom Hooks
-
-### Matcher patterns
-- `Bash(git commit*)` — matches any git commit command
-- `Bash(git push*)` — matches any git push command
-- `Bash(gh pr create*)` — matches PR creation
-- `Edit(*.tsx)` — matches edits to TSX files
-- `Write(*.ts)` — matches writes to TS files
-
-### Command guidelines
-- Always wrap complex commands in `bash -c '...'`
-- Exit 0 means the hook passes (tool call proceeds)
-- Exit 1 means the hook fails (tool call is blocked)
-- Use `echo` to provide feedback about what was checked
-- Keep commands fast — they run synchronously before/after every matched tool call
-
-### Testing hooks
-Test your hook commands manually in the terminal before adding them to settings:
-```bash
-# Test the anti-pattern check against staged files
-git diff --cached --name-only -- "*.tsx" "*.ts" | xargs grep -l "blue-[0-9]\|console\.log" 2>/dev/null
+### Rust project
+```json
+{
+  "name": "debug-artifacts",
+  "patterns": ["dbg!", "println!.*debug", "todo!", "unimplemented!"],
+  "filter": "*.rs",
+  "severity": "error",
+  "message": "Remove debug macros before committing"
+}
 ```
+
+### Go project
+```json
+{
+  "name": "debug-artifacts",
+  "patterns": ["fmt\\.Println", "log\\.Print", "panic\\("],
+  "filter": "*.go",
+  "severity": "error",
+  "message": "Remove debug prints before committing"
+}
+```
+
+### Java project
+```json
+{
+  "name": "debug-artifacts",
+  "patterns": ["System\\.out\\.print", "e\\.printStackTrace", "\\.dump\\("],
+  "filter": "*.java",
+  "severity": "error",
+  "message": "Remove debug output before committing"
+}
+```
+
+## Project-Type Examples
+
+### Web App (React/Vue/Svelte)
+Use rules from: `rules` + `web_specific`
+```
+Checks: debug artifacts, secrets, hardcoded colors, missing i18n
+Filter: *.{tsx,jsx,vue,svelte,ts,js}
+```
+
+### REST API (any language)
+Use rules from: `rules` + `api_specific`
+```
+Checks: debug artifacts, secrets, hardcoded URLs
+Filter: *.{py,rs,go,java,ts}
+```
+
+### CLI Tool
+Use rules from: `rules` + `cli_specific`
+```
+Checks: debug artifacts, secrets, hardcoded paths
+Filter: *.{py,rs,go}
+```
+
+### Library / Package
+Use rules from: `rules` only (universal)
+```
+Checks: debug artifacts, secrets, incomplete code
+Filter: *.{ts,py,rs,go,java}
+```
+
+## Adding Project-Specific Patterns
+
+Add custom rules to `hook-config.json` under the appropriate category:
+
+```json
+{
+  "name": "raw-sql",
+  "description": "Raw SQL queries instead of query builder",
+  "patterns": ["SELECT\\s+\\*", "DROP\\s+TABLE", "DELETE\\s+FROM"],
+  "filter": "*.{py,ts,js,go,java}",
+  "severity": "error",
+  "message": "Use the query builder or ORM instead of raw SQL"
+}
+```
+
+## Generating Claude Code Hooks from Config
+
+To turn `hook-config.json` rules into Claude Code `settings.json` hooks:
+
+1. **Pick your rules** — Select which rule categories apply to your project type.
+
+2. **Expand the filter** — Convert the glob `*.{ts,tsx,js}` into separate arguments: `"*.ts" "*.tsx" "*.js"`.
+
+3. **Join patterns for grep** — Combine the `patterns` array with `\|` for grep: `"console\\.log\|console\\.debug\|debugger"`.
+
+4. **Apply the command template** — Substitute placeholders in `hook_commands.pre_commit.command_template`.
+
+5. **Set the matcher** — Use `Bash(git commit*)` for pre-commit, `Edit(*.ext)` / `Write(*.ext)` for post-edit.
+
+### Manual example
+
+Given the `debug-artifacts` rule with `filter: "*.py"`:
+
+```json
+{
+  "matcher": "Bash(git commit*)",
+  "hooks": [
+    {
+      "type": "command",
+      "command": "bash -c 'FILES=$(git diff --cached --name-only -- \"*.py\" | head -50); if [ -n \"$FILES\" ]; then FOUND=$(echo \"$FILES\" | xargs grep -l \"print(.*DEBUG\\|breakpoint()\\|import pdb\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"debug-artifacts: Remove debug artifacts before committing\"; echo \"$FOUND\"; exit 1; fi; fi; exit 0'"
+    }
+  ]
+}
+```
+
+See `settings-hooks-example.json` for a complete generated example targeting a TypeScript/React web project.
+
+## Hook Points Reference
+
+### PreToolUse (run before the action)
+| Matcher | Triggers on |
+|---------|-------------|
+| `Bash(git commit*)` | Any git commit |
+| `Bash(git push*)` | Any git push |
+| `Bash(gh pr create*)` | PR creation |
+
+### PostToolUse (run after the action)
+| Matcher | Triggers on |
+|---------|-------------|
+| `Edit(*.ext)` | File edits matching extension |
+| `Write(*.ext)` | File writes matching extension |
+
+### Command Guidelines
+- Wrap commands in `bash -c '...'`
+- Exit 0 = hook passes (action proceeds)
+- Exit 1 = hook fails (action is blocked)
+- Use `echo` for feedback
+- Keep commands fast (they run synchronously)
+- Use `$CLAUDE_TOOL_ARG_file_path` in PostToolUse hooks to access the edited file path

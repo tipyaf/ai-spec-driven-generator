@@ -54,6 +54,10 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Project management integration**: Shortcut.com support for ticket creation and tracking
 - **Tool-agnostic**: Works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
 - **Stack profiles**: Coding and security contracts generated per tech stack
+- **Failure memory (LESSONS.md)**: Recurring mistakes are logged and read by all agents before starting work — the framework learns from its errors
+- **Language-agnostic hooks**: Configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders — works with any language (TypeScript, Python, Rust, Go, Java, etc.)
+- **Agent role guards**: Strict enforcement of agent boundaries — refiner never codes, reviewer never modifies files, developer never self-validates
+- **Deployment verification**: Post-deploy health checks, smoke tests, rollback plan documentation
 
 ## Workflow
 
@@ -133,6 +137,7 @@ ai-spec-driven-generator/
 │   ├── 01-plan.md           # Includes implementation manifest requirement
 │   ├── 02-scaffold.md
 │   ├── 03-implement.md
+│   ├── 03.5-validate.md
 │   ├── 04-test.md
 │   ├── 05-review.md
 │   ├── 05.5-security.md
@@ -148,11 +153,13 @@ ai-spec-driven-generator/
 │   ├── stack-profile-template.md
 │   └── hooks/               # Claude Code quality gate hooks
 │       ├── README.md        # Hook documentation
-│       └── settings-hooks-example.json  # Ready-to-use config
+│       ├── settings-hooks-example.json  # Ready-to-use config
+│       └── hook-config.json # Language-agnostic hook configuration
 ├── examples/                # Example specs
 │   └── todo-app-spec.yaml
 ├── memory/                  # Memory templates
-│   └── memory-template.md
+│   ├── memory-template.md
+│   └── LESSONS.md.template
 └── scripts/                 # Utility scripts
     └── init-project.sh      # Project initializer (submodule-based)
 ```
@@ -172,7 +179,8 @@ my-project/
 │   ├── my-project-ux.md    # UX design (Phase 0.5)
 │   └── my-project-architecture.md  # Architecture plan (Phase 1)
 ├── memory/
-│   └── my-project.md       # Project memory (updated by agents)
+│   ├── my-project.md       # Project memory (updated by agents)
+│   └── LESSONS.md          # Failure memory (logged mistakes, read by all agents)
 ├── stacks/                 # Stack profiles (Phase 1)
 │   ├── typescript-nestjs.md
 │   └── typescript-react.md

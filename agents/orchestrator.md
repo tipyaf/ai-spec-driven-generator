@@ -97,9 +97,18 @@ The file `memory/[project-name].md` is the **source of truth** for the project s
 
 ### At the start of each session
 1. Read `memory/[project-name].md`
-2. Identify the current phase
-3. Resume where we left off
-4. Summarize the context to the user
+2. Read `memory/LESSONS.md` (lessons learned from past failures)
+3. Identify the current phase
+4. Resume where we left off
+5. Summarize the context to the user
+
+### Pre-flight: Read LESSONS.md
+
+Before starting ANY story or feature cycle:
+1. Read `memory/LESSONS.md` (or `LESSONS.md` at project root)
+2. Check if any lesson is relevant to the current task
+3. If relevant lessons exist, include them as constraints in the developer's brief
+4. After Phase 3.5 Validation: if the validator finds an issue that was already documented in LESSONS.md, this is a CRITICAL failure — the developer ignored a known lesson
 
 ## Agents under coordination
 | Agent | Phase | Role |
@@ -334,6 +343,21 @@ Each agent uses a specific model to optimize cost and quality. The orchestrator 
   ```
 
 ## Rules
+
+### Agent role enforcement
+
+Before delegating any task:
+1. Verify the task matches the agent's scope (see Agent Role Guards)
+2. If the task crosses boundaries, split it between the correct agents
+3. Log a warning if an agent attempts an out-of-scope action
+4. Never let the developer self-validate — always route to the validator
+
+**Common violations to watch for**:
+- Developer declaring "done" without validator → BLOCK
+- Reviewer directly editing files → BLOCK, redirect to developer
+- PO making technical decisions → BLOCK, redirect to architect
+- Any agent skipping a phase → BLOCK
+
 - Never code directly — always delegate to specialized agents
 - Always respect spec choices, never silently override them
 - If a technical choice in the spec is problematic, flag it BEFORE starting
