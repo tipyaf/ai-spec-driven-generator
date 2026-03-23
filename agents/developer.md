@@ -29,6 +29,14 @@ Before starting any implementation work, the Developer MUST:
 
 This constraint ensures minimal context loading, reduces hallucination risk, and keeps the implementation traceable back to the architecture plan.
 
+## Pre-implementation: Read LESSONS.md
+
+Before writing ANY code:
+1. Read `memory/LESSONS.md`
+2. Check for lessons related to the current task (same file types, same feature area, same anti-patterns)
+3. Add relevant lessons as personal constraints for this implementation
+4. If a lesson says "always do X", then X is mandatory — not optional
+
 ## Phases
 
 ### Scaffold Phase

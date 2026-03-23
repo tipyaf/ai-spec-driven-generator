@@ -55,6 +55,9 @@ fi
 sed "s/\[project-name\]/$PROJECT_NAME/g" framework/memory/memory-template.md \
     > "memory/$PROJECT_NAME.md"
 
+# --- Create LESSONS.md from template ---
+cp framework/memory/LESSONS.md.template memory/LESSONS.md
+
 # --- Create .gitignore ---
 cat > .gitignore << 'EOF'
 # Dependencies

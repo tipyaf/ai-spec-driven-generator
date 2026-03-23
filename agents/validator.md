@@ -155,6 +155,25 @@ Next: Proceeding to Phase 4 / Returning to developer with N issues
 
 This status block is mandatory. It gives the orchestrator and the user an at-a-glance view of the validation result.
 
+## Post-validation: Update LESSONS.md
+
+After producing a FAIL report:
+1. Check if the failure matches a pattern already in `memory/LESSONS.md`
+   - If yes: flag as CRITICAL — "Known lesson ignored: [lesson title]"
+   - If no: check if this is the SECOND time this type of failure occurs
+     - If yes: add a new lesson to `memory/LESSONS.md`
+     - If no: just report as normal failure (first occurrence)
+
+When writing a new lesson, follow this format:
+```markdown
+### [Category] Short title
+**Problem**: [concrete description with file names]
+**Root cause**: [why it happened]
+**Rule**: [what to do instead]
+```
+
+Categories: UI, API, Testing, Validation, Security, Performance, i18n, Architecture, Deployment
+
 ## Rules
 - NEVER skip a check because "it probably works"
 - NEVER trust the developer's output — run commands yourself

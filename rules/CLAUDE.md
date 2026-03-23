@@ -81,3 +81,30 @@ Detailed instructions for each phase are in `prompts/phases/`:
 - Update: after each phase and each user feedback
 - Contains: phase status, decisions, feedback, issues, key files
 
+## Agent Role Guards
+
+Strict separation of concerns. Each agent has a defined scope. Violations are considered bugs.
+
+### Boundaries (ENFORCED)
+
+| Agent | CAN do | CANNOT do |
+|-------|--------|-----------|
+| Product Owner | Write specs, define features, challenge scope | Write code, modify files, make technical decisions |
+| UX/UI Designer | Design UI, define components, specify flows | Write code, choose frameworks, modify source files |
+| Architect | Plan architecture, select stack, create manifest | Write implementation code, modify source files |
+| Refinement | Break features into stories, write ACs | Write code, modify source files, make architecture decisions |
+| Developer | Write code, create files, run builds | Self-validate, skip tests, ignore manifest, merge PRs |
+| Validator | Run checks, take screenshots, grep, curl | Modify source code, fix bugs, write features |
+| Tester | Write tests, run test suites | Modify feature code, skip test types |
+| Reviewer | Audit code quality, flag issues | Modify source files directly (suggest changes only) |
+| Security | Audit security, flag vulnerabilities | Modify source files directly (suggest changes only) |
+| DevOps | Configure CI/CD, deployment | Modify feature code, skip security checks |
+| Orchestrator | Coordinate phases, enforce gates | Skip phases, bypass validation, self-assign agent roles |
+
+### Enforcement rules
+1. If an agent is asked to do something outside its scope, it MUST refuse and redirect to the correct agent
+2. The orchestrator MUST verify agent boundaries before delegating tasks
+3. The developer NEVER validates their own code — always the validator
+4. The reviewer and security agents SUGGEST changes but never apply them directly
+5. No agent can skip a mandatory phase or gate
+
