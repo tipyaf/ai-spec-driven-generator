@@ -15,7 +15,7 @@ This framework uses specialized AI agents, a phased workflow with human validati
 - **Machine-verifiable acceptance tests**: Visual, runtime, grep, and e2e tests defined in specs
 - **Context slicing**: Architect produces implementation manifests so dev agents only load relevant files
 - **Quality hooks**: Pre-commit anti-pattern detection, post-edit design system compliance
-- **Human validation gates**: Between every phase (reduced for technical checks thanks to automated validation)
+- **Smart validation**: Human decides (product, architecture, infra), machines verify (tests, review, security)
 - **Persistent memory**: Per-project markdown files tracking decisions, feedback, and phase status
 - **Project management integration**: Shortcut.com support for ticket creation and tracking
 - **Tool-agnostic**: Works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
@@ -24,19 +24,21 @@ This framework uses specialized AI agents, a phased workflow with human validati
 ## Workflow
 
 ```
-[Phase 0: Scoping]        → PO           → ✅ Human Validation
-[Phase 0.5: Design]       → UX/UI        → ✅ Human Validation
-[Phase 1: Plan]            → Architect    → ✅ Human Validation
-[Phase 2: Scaffold]        → Developer    → ✅ Human Validation
-  ┌─── For each feature: ───────────────────────────────────┐
-  │ [Phase 2.5: Refinement] → Refinement  → ✅ Human Val. │
-  │ [Phase 3: Implement]    → Developer   →                │
-  │ [Phase 3.5: Validate]   → Validator   → 🤖 Auto (3x)  │
-  │ [Phase 4: Test]         → Tester      → ✅ Human Val. │
-  └─────────────────────────────────────────────────────────┘
-[Phase 5: Review]          → Reviewer     → ✅ Human Validation
-[Phase 5.5: Security]     → Security     → ✅ Human Validation
-[Phase 6: Deploy Config]   → DevOps       → ✅ Human Validation
+[Phase 0: Scoping]         → PO           → ✅ Human (product decision)
+[Phase 0.5: Design]        → UX/UI        → ✅ Human (UX decision)
+[Phase 0.7: Ordering]      → PO           → ✅ Human (priority decision)
+[Phase 1: Plan]            → Architect    → ✅ Human (architecture decision)
+[Phase 2: Scaffold]        → Developer    → 🤖 Auto
+  ┌─── For each feature: ───────────────────────────────────────┐
+  │ [Phase 2.5: Refinement]  → Refinement  → ✅ Human (scope)  │
+  │ [Phase 3: Implement]     → Developer   →                    │
+  │ [Phase 3.5: Validate]    → Validator   → 🤖 Auto (max 3x)  │
+  │ [Phase 4: Test]          → Tester      → 🤖 Auto (e2e+TU)  │
+  └──────────────────────────────────────────────────────────────┘
+[Phase 5: Review]           → Reviewer     → 🤖 Auto
+[Phase 5.5: Security]      → Security     → 🤖 Auto
+[Phase 6: Deploy Config]    → DevOps       → ✅ Human (infra decision)
+[Phase 7: Release]          → Orchestrator → ✅ Human (go/no-go)
 ```
 
 ## Quick start

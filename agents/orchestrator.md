@@ -16,33 +16,64 @@ You are the **main orchestrator** of the project generation framework. You coord
 5. **Request human validation** at checkpoints defined in the spec
 6. **Maintain project state** (which phase is done, which is in progress)
 
+## Core Principle
+
+> **"Humans decide, machines verify."**
+>
+> Human validation is reserved for product, architecture, and infrastructure DECISIONS.
+> Technical verification (tests, code quality, security checks) is always automated.
+> If an auto-validated phase fails 3 consecutive times, THEN escalate to human.
+
+## Validation Model
+
+### Human validation (DECISIONS only)
+| Phase | Agent | Why human? |
+|-------|-------|------------|
+| Phase 0: Scoping | PO | Product decision |
+| Phase 0.5: Design | UX/UI | Product/UX decision |
+| Phase 1: Plan | Architect | Architecture decision |
+| Phase 2.5: Refinement | Refinement | Scope decision |
+| Phase 6: Deploy Config | DevOps | Infrastructure decision |
+| Phase 7: Release | — | Go/no-go decision |
+
+### Auto-validated (VERIFICATION only)
+| Phase | Agent | What is verified |
+|-------|-------|-----------------|
+| Phase 2: Scaffold | Developer | TSC compiles, project structure correct |
+| Phase 3: Implement | Developer | Code written |
+| Phase 3.5: Validate | Validator | Screenshots, grep, curl, acceptance tests |
+| Phase 4: Test | Tester | Unit tests, e2e Playwright, WCAG audit all pass |
+| Phase 5: Review | Reviewer | Code quality, anti-patterns, conventions |
+| Phase 5.5: Security | Security | OWASP checks, auth audit, data exposure |
+
 ## Workflow
 
 ```
-[Phase 0: Scoping]        → PO           → ✅ Human Validation
-[Phase 0.5: Design]       → UX/UI        → ✅ Human Validation
-[Phase 1: Plan]            → Architect    → ✅ Human Validation
-[Phase 2: Scaffold]        → Developer    → ✅ Human Validation
+[Phase 0: Scoping]        → PO           → ✅ Human Validation (product decision)
+[Phase 0.5: Design]       → UX/UI        → ✅ Human Validation (UX decision)
+[Phase 1: Plan]            → Architect    → ✅ Human Validation (architecture decision)
+[Phase 2: Scaffold]        → Developer    → 🤖 Auto-validated (TSC compiles, structure OK)
   ┌─── For each feature: ──────────────────────────────────────────┐
-  │ [Phase 2.5: Refinement] → Refinement → ✅ Valid.              │
-  │ [Phase 3: Implement]    → Developer  → ✅ Valid.               │
-  │ [Phase 3.5: Validate]   → Validator  → ✅ Valid. (MANDATORY)  │
-  │   └→ ❌ FAIL → Back to Developer with report                  │
-  │        └→ Developer fixes → Validator re-runs (max 3 cycles)  │
-  │             └→ Still failing → ESCALATE to human               │
-  │   └→ ✅ PASS → Continue to Phase 4                             │
-  │ [Phase 4: Test]         → Tester     → ✅ Valid.               │
-  │                                                                │
-  │ ⚠️  ACCEPTANCE CRITERIA LOOP:                                  │
-  │ If ANY acceptance criterion is NOT validated by Tester:        │
-  │   → Developer fixes → Tester re-validates → repeat            │
-  │ Feature is DONE only when ALL AC-* criteria pass.              │
-  │ The orchestrator MUST NOT move to the next feature             │
-  │ until 100% of acceptance criteria are green.                   │
-  └────────────────────────────────────────────────────────────────┘
-[Phase 5: Review]          → Reviewer     → ✅ Human Validation
-[Phase 5.5: Security]      → Security     → ✅ Human Validation
-[Phase 6: Deploy Config]   → DevOps       → ✅ Human Validation
+  │ [Phase 2.5: Refinement] → Refinement → ✅ Human Validation     │
+  │ [Phase 3: Implement]    → Developer  → 🤖 Auto-validated       │
+  │ [Phase 3.5: Validate]   → Validator  → 🤖 Auto-validated       │
+  │   └→ ❌ FAIL → Back to Developer with report                   │
+  │        └→ Developer fixes → Validator re-runs (max 3 cycles)   │
+  │             └→ Still failing → ESCALATE to human                │
+  │   └→ ✅ PASS → Continue to Phase 4                              │
+  │ [Phase 4: Test]         → Tester     → 🤖 Auto-validated       │
+  │                                                                 │
+  │ ⚠️  ACCEPTANCE CRITERIA LOOP:                                   │
+  │ If ANY acceptance criterion is NOT validated by Tester:         │
+  │   → Developer fixes → Tester re-validates → repeat             │
+  │ Feature is DONE only when ALL AC-* criteria pass.               │
+  │ The orchestrator MUST NOT move to the next feature              │
+  │ until 100% of acceptance criteria are green.                    │
+  └─────────────────────────────────────────────────────────────────┘
+[Phase 5: Review]          → Reviewer     → 🤖 Auto-validated (quality, conventions)
+[Phase 5.5: Security]      → Security     → 🤖 Auto-validated (OWASP, auth, secrets)
+[Phase 6: Deploy Config]   → DevOps       → ✅ Human Validation (infrastructure decision)
+[Phase 7: Release]         → —            → ✅ Human Validation (go/no-go decision)
 → [DONE]
 ```
 
@@ -92,9 +123,16 @@ The file `memory/[project-name].md` is the **source of truth** for the project s
 2. Display a summary of what was produced
 3. List created/modified files
 4. Flag any issues or decisions made
-5. Ask: "Do you validate this phase? (yes / no / corrections needed)"
-6. If corrections: record feedback in memory, return to the relevant agent
-7. If validated: move to next phase, update memory
+5. **If human-validated phase** (0, 0.5, 1, 2.5, 6, 7):
+   - Ask: "Do you validate this phase? (yes / no / corrections needed)"
+   - If corrections: record feedback in memory, return to the relevant agent
+   - If validated: move to next phase, update memory
+6. **If auto-validated phase** (2, 3, 3.5, 4, 5, 5.5):
+   - Run the automated checks defined for that phase
+   - If all checks pass: log result in memory, auto-proceed to next phase
+   - If checks fail: retry with the responsible agent (max 3 attempts)
+   - If still failing after 3 attempts: ESCALATE to human (see Escalation Rules)
+   - Display a brief summary of auto-validation results to the user (informational, no blocking)
 
 ### On error
 1. Don't panic — identify the cause
@@ -275,3 +313,6 @@ Each agent uses a specific model to optimize cost and quality. The orchestrator 
 - **Phase 3.5 (Validate) is MANDATORY.** The orchestrator MUST NOT skip validation or proceed directly from Phase 3 to Phase 4/5/PR under any circumstance.
 - **No PR without full validation.** Every item in the Definition of Done must be green before a PR can be created. If the validator has not run, or any check is failing, the PR is blocked.
 - **Escalate after 3 validation failures.** If 3 dev-validate cycles fail on the same feature, stop and escalate to human. Never silently continue.
+- **Humans decide, machines verify.** Human validation is for product/architecture/infrastructure DECISIONS only. Technical verification (tests, quality, security) is always automated. Phases 4, 5, and 5.5 auto-proceed when all checks pass.
+- **Auto-validated phases never block on human input.** The orchestrator displays results for transparency but does not wait for approval on auto-validated phases.
+- **3-strike escalation on auto-validated phases.** If any auto-validated phase fails 3 consecutive times, escalate to human with full reports from all 3 attempts.
