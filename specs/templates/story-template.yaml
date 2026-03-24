@@ -1,0 +1,75 @@
+# ============================================================================
+# STORY TEMPLATE — Refinement output per feature
+# ============================================================================
+# This file is created by the Refinement agent during /refine.
+# It persists between sessions (committed to git).
+# It is the BUILD CONTRACT — the developer implements exactly this.
+# The validator verifies exactly this.
+#
+# Location: specs/stories/[feature-id].yaml
+# ============================================================================
+
+story:
+  id: ""                                  # Feature ID (e.g., "auth")
+  title: ""                               # Short title
+  parent_spec: ""                         # Path to main spec YAML
+  status: "refined"                       # refined | building | testing | validated
+  size: ""                                # XS | S | M | L (XL must be split)
+  refined_at: ""                          # ISO 8601 date
+  refined_by: "refinement"                # Agent that produced this
+
+# User story
+user_story: ""                            # As a [role], I want [goal], so that [benefit]
+
+# Scope — files the developer is allowed to touch
+scope:
+  files_to_create: []                     # New files with purpose
+  files_to_modify: []                     # Existing files with reason
+  files_to_read: []                       # Reference files (read-only)
+
+# Acceptance criteria — THE CONTRACT
+# Format: AC-[TYPE]-[FEATURE]-[NUMBER]
+# Types: FUNC (functional), SEC (security), BP (best practice)
+#
+# EVERY AC MUST have a `verify:` field with a runnable shell command.
+# verify: commands must be copy-paste-ready — no placeholders, no angle brackets.
+#
+# Testability tiers:
+#   Tier 1: verify: grep/bash — runs without a live service (PREFERRED)
+#   Tier 2: verify: curl/playwright — requires a live service
+#   Tier 3: verify: runtime-only — last resort, minimize usage
+#
+# Rules:
+#   - AC-SEC-* MUST be Tier 1 (check code artefacts, not runtime behavior)
+#   - `verify: static` is BANNED — rewrite until you have a shell command
+#   - No AC without verify: — unverifiable ACs are wishes, not criteria
+acceptance_criteria:
+
+  functional:                             # AC-FUNC-[FEATURE]-*
+    - id: ""                              # e.g., AC-FUNC-AUTH-01
+      description: ""                     # Given / When / Then
+      verify: ""                          # Shell command (grep, bash, curl, playwright)
+      tier: 1                             # 1 | 2 | 3
+
+  security:                               # AC-SEC-[FEATURE]-* (auto-generated from stack profile)
+    - id: ""                              # e.g., AC-SEC-AUTH-01
+      description: ""
+      verify: ""
+      tier: 1                             # Security ACs MUST be Tier 1
+
+  best_practices:                         # AC-BP-[FEATURE]-* (auto-generated from stack profile)
+    - id: ""                              # e.g., AC-BP-AUTH-01
+      description: ""
+      verify: ""
+      tier: 1
+
+# Edge cases identified during refinement
+edge_cases:
+  - description: ""
+    handling: ""                          # How the implementation should handle it
+
+# Dependencies on other features
+depends_on: []                            # Feature IDs that must be "validated" first
+
+# Technical notes for the developer
+notes: ""

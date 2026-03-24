@@ -1,64 +1,88 @@
 # Cursor Rules — AI Project Generation Framework
 
 ## Context
-This project is an AI-powered project generation framework. It uses YAML specs, specialized agents, a phase-based process with human validation, and persistent memory.
+This project is an AI-powered project generation framework. It uses YAML specs, specialized agents, a skill-based process with human validation, persistent memory, and machine-verifiable acceptance criteria.
 
 ## How to use this framework
 
 ### Start a new project
-1. The user describes their idea (or provides a YAML spec)
-2. Embody the `orchestrator` agent (read `agents/orchestrator.md`)
-3. Start with Phase 0 (Scoping) if no spec exists
-4. Execute phases one by one, maintain memory
+1. The user describes their idea
+2. Follow the skill workflow: `/spec` → `/refine` → `/build` → `/validate` → `/review`
+3. Each skill loads only the agents it needs
 
 ### Resume a project
 1. Read `memory/[project-name].md` to restore context
-2. Resume at the current phase
+2. Read `specs/feature-tracker.yaml` to know feature states
+3. Resume with the appropriate skill
 
-### Phases (in strict order)
-0. **Scoping** → `agents/product-owner.md` + `prompts/phases/00-scoping.md`
-0.5. **Design** → `agents/ux-ui.md` + `prompts/phases/00.5-design.md`
-1. **Plan** → `agents/architect.md` + `prompts/phases/01-plan.md`
-2. **Scaffold** → `agents/developer.md` + `prompts/phases/02-scaffold.md`
-3. **Implement** → `agents/developer.md` + `prompts/phases/03-implement.md`
-4. **Test** → `agents/tester.md` + `prompts/phases/04-test.md`
-5. **Review** → `agents/reviewer.md` + `prompts/phases/05-review.md`
-6. **Deploy** → `agents/devops.md` + `prompts/phases/06-deploy.md`
+### Skills (primary entry points)
+
+| Skill | When to use | Agents loaded |
+|-------|-------------|---------------|
+| `/spec` | Start a new project or define a feature | product-owner, ux-ui, architect |
+| `/refine` | Break a feature into actionable stories | refinement, product-owner |
+| `/build` | Implement a refined story | developer, validator |
+| `/validate` | Verify implementation against story file | validator |
+| `/review` | Review all validated features before PR | reviewer, security, tester |
+
+### Phase workflow
+```
+PHASE 0 — CONCEPTION (/spec)
+  Constitution → Scoping → Clarify → Design (if UI) → Ordering → Architecture → Initialize tracker
+
+PHASE 1 — SCAFFOLD (/build first run)
+
+PHASE 2 — CONSTRUCTION (per feature loop)
+  /refine → /build → /validate → repeat until all features validated
+
+PHASE 3 — REVIEW (/review) — all features must be validated
+
+PHASE 4 — DEPLOY (human validation)
+PHASE 5 — RELEASE (human validation)
+```
+
+### Enforcement mechanisms
+- **Filesystem existence** = phase gates (file exists → phase done)
+- **feature-tracker.yaml** = per-feature state (pending → refined → building → testing → validated)
+- **Story files** = build contracts with `verify:` shell commands on every AC
+- **Cycle counter** = max 3 validation attempts before human escalation
 
 ### Strict rules
-1. ALWAYS read/update memory (`memory/[project-name].md`)
-2. ALWAYS follow phase order
-3. ALWAYS request validation at checkpoints
-4. ALWAYS generate code in `output/[project-name]/`
-5. NEVER over-engineer — follow the spec only
-6. NEVER invent features not present in the spec
-7. NEVER code before scoping + design + plan are validated
+1. ALWAYS read memory + feature tracker at session start
+2. ALWAYS update memory + tracker after each phase/feature
+3. ALWAYS follow skill order — skills enforce prerequisites via filesystem checks
+4. NEVER over-engineer — follow the spec only
+5. NEVER code before `/spec` is complete (conception artefacts must exist)
+6. NEVER skip `verify:` commands — they are the machine contract
 
 ### Framework structure
 ```
-agents/              → Definitions of 9 agents (role, rules, output)
-prompts/phases/      → Detailed instructions per phase (0 → 6)
-specs/templates/     → YAML spec templates
+agents/              → Agent definitions (role, rules, output)
+skills/              → Skill entry points (load agents, enforce guards)
+prompts/phases/      → Detailed instructions per phase
+specs/templates/     → YAML templates (spec, feature-tracker, story)
+specs/stories/       → Per-feature build contracts (created by /refine)
 memory/              → Persistent memory per project
-stacks/              → Tech stack definitions
+stacks/              → Tech stack profiles (coding rules, forbidden patterns)
 rules/               → This file + CLAUDE.md
-output/              → Generated projects
 examples/            → Spec examples
 ```
 
 ### Available agents
 Read files in `agents/` for detailed instructions:
-- orchestrator.md — Coordination + memory
-- product-owner.md — Scoping + spec
+- product-owner.md — Scoping + spec + ACs
 - ux-ui.md — UX/UI design
 - architect.md — Architecture
-- refinement.md — Feature detail/breakdown + tickets
-- developer.md — Code
+- refinement.md — Feature breakdown + story files
+- developer.md — Code implementation
+- validator.md — Verify: command execution
 - tester.md — Tests
-- reviewer.md — Review
-- devops.md — DevOps
+- reviewer.md — Quality review
+- security.md — Security audit
+- devops.md — Deployment
 
 ### Memory
 - Template: `memory/memory-template.md`
 - Project file: `memory/[project-name].md`
+- Feature tracker: `specs/feature-tracker.yaml`
 - Read at session start, update after each phase

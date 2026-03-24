@@ -28,63 +28,115 @@ features:
   - name: "auth"
     description: "User registration and login"
     priority: "must-have"
+
     acceptance_criteria:
-      - "A user can register with email/password"
-      - "A user can log in"
-      - "A user can log out"
-      - "Protected routes redirect to /login"
-    api_endpoints:
-      - method: "POST"
-        path: "/api/auth/register"
-        description: "Register a new user"
-      - method: "POST"
-        path: "/api/auth/[...nextauth]"
-        description: "NextAuth endpoints (login, logout, session)"
-    ui_components:
-      - name: "LoginForm"
-        description: "Email/password login form"
-      - name: "RegisterForm"
-        description: "Registration form"
+      - id: "AC-FUNC-AUTH-01"
+        type: "FUNC"
+        description: "Given a valid email and password / When user submits registration / Then account is created and user is redirected to dashboard"
+        verify: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/auth/register -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"Test1234!\"}'"
+        tier: 2
+
+      - id: "AC-FUNC-AUTH-02"
+        type: "FUNC"
+        description: "Given a registered user / When user submits login with correct credentials / Then session is created and user is redirected to dashboard"
+        verify: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/auth/callback/credentials -H 'Content-Type: application/json' -d '{\"email\":\"test@example.com\",\"password\":\"Test1234!\"}'"
+        tier: 2
+
+      - id: "AC-FUNC-AUTH-03"
+        type: "FUNC"
+        description: "Given an unauthenticated user / When user navigates to a protected route / Then user is redirected to /login"
+        verify: "curl -s -o /dev/null -w '%{http_code}' http://localhost:3000/dashboard"
+        tier: 2
+
+      - id: "AC-FUNC-AUTH-04"
+        type: "FUNC"
+        description: "Given an authenticated user / When user clicks logout / Then session is destroyed"
+        verify: "grep -r 'signOut' src/components/"
+        tier: 1
+
+      # Security ACs — auto-generated from stack profile during /refine
+      - id: "AC-SEC-AUTH-01"
+        type: "SEC"
+        description: "Passwords are hashed with bcrypt before storage"
+        verify: "grep -r 'bcrypt\\|argon2' src/lib/auth"
+        tier: 1
+
+      - id: "AC-SEC-AUTH-02"
+        type: "SEC"
+        description: "No secrets or API keys hardcoded in source files"
+        verify: "bash -c '! grep -rn \"password\\s*=\\s*[\\x27\\\"]\" src/ --include=\"*.ts\" --include=\"*.tsx\" | grep -v test | grep -v \\.env'"
+        tier: 1
+
+      # Best practice ACs — auto-generated from stack profile during /refine
+      - id: "AC-BP-AUTH-01"
+        type: "BP"
+        description: "All API routes use NextAuth session validation"
+        verify: "grep -r 'getServerSession\\|getSession' src/app/api/"
+        tier: 1
 
   - name: "todos-crud"
     description: "Create, read, update, and delete tasks"
     priority: "must-have"
+
     acceptance_criteria:
-      - "A logged-in user can create a task with a title"
-      - "A user can see their task list"
-      - "A user can check/uncheck a task"
-      - "A user can delete a task"
-      - "A user only sees their own tasks"
-    api_endpoints:
-      - method: "GET"
-        path: "/api/todos"
-        description: "List of the logged-in user's tasks"
-      - method: "POST"
-        path: "/api/todos"
-        description: "Create a new task"
-      - method: "PATCH"
-        path: "/api/todos/:id"
-        description: "Update a task (toggle completed, edit title)"
-      - method: "DELETE"
-        path: "/api/todos/:id"
-        description: "Delete a task"
-    ui_components:
-      - name: "TodoList"
-        description: "Task list with checkbox and delete button"
-      - name: "TodoItem"
-        description: "An individual task item"
-      - name: "AddTodoForm"
-        description: "Form to add a task"
+      - id: "AC-FUNC-TODOS-01"
+        type: "FUNC"
+        description: "Given a logged-in user / When user submits a new task with a title / Then task is created and appears in the list"
+        verify: "curl -s -w '%{http_code}' -X POST http://localhost:3000/api/todos -H 'Content-Type: application/json' -d '{\"title\":\"Test task\"}'"
+        tier: 2
+
+      - id: "AC-FUNC-TODOS-02"
+        type: "FUNC"
+        description: "Given a logged-in user with tasks / When user loads the dashboard / Then only their own tasks are displayed"
+        verify: "grep -r 'userId\\|session.user' src/app/api/todos/"
+        tier: 1
+
+      - id: "AC-FUNC-TODOS-03"
+        type: "FUNC"
+        description: "Given a task / When user clicks the checkbox / Then task completed status is toggled"
+        verify: "grep -r 'completed.*toggle\\|!completed\\|completed:.*!prev' src/"
+        tier: 1
+
+      - id: "AC-FUNC-TODOS-04"
+        type: "FUNC"
+        description: "Given a task / When user clicks delete / Then task is removed from database and UI"
+        verify: "curl -s -o /dev/null -w '%{http_code}' -X DELETE http://localhost:3000/api/todos/test-id"
+        tier: 2
+
+      - id: "AC-SEC-TODOS-01"
+        type: "SEC"
+        description: "API validates that user owns the todo before mutation"
+        verify: "grep -r 'userId.*session\\|where.*userId' src/app/api/todos/"
+        tier: 1
+
+      - id: "AC-BP-TODOS-01"
+        type: "BP"
+        description: "All database queries use Prisma ORM — no raw SQL"
+        verify: "bash -c '! grep -rn \"\\$queryRaw\\|\\$executeRaw\" src/app/api/todos/'"
+        tier: 1
 
   - name: "todo-filters"
     description: "Filter tasks by status"
     priority: "should-have"
+
     acceptance_criteria:
-      - "Filter by: all, active, completed"
-      - "Display remaining task count"
-    ui_components:
-      - name: "TodoFilters"
-        description: "Filter bar (All, Active, Completed) with counter"
+      - id: "AC-FUNC-FILTERS-01"
+        type: "FUNC"
+        description: "Given a task list / When user clicks 'Active' filter / Then only incomplete tasks are shown"
+        verify: "grep -r 'filter.*active\\|completed.*false' src/components/"
+        tier: 1
+
+      - id: "AC-FUNC-FILTERS-02"
+        type: "FUNC"
+        description: "Given a task list / When user clicks 'Completed' filter / Then only completed tasks are shown"
+        verify: "grep -r 'filter.*completed\\|completed.*true' src/components/"
+        tier: 1
+
+      - id: "AC-FUNC-FILTERS-03"
+        type: "FUNC"
+        description: "Given a task list / When viewing any filter / Then remaining task count is displayed"
+        verify: "grep -r 'count\\|remaining\\|length' src/components/TodoFilters"
+        tier: 1
 
 data_model:
   entities:
@@ -145,7 +197,7 @@ data_model:
           target: "User"
           field: "userId"
 
-constraints:
+non_functional:
   performance:
     - "API response time < 200ms"
     - "First Contentful Paint < 1.5s"
@@ -153,12 +205,11 @@ constraints:
     - "Passwords hashed with bcrypt"
     - "CSRF protection via NextAuth"
     - "Server-side input validation"
-  accessibility:
-    - "Full keyboard navigation"
-    - "Labels on all form fields"
-  deployment:
-    target: "vercel"
-    ci_cd: "github-actions"
+  accessibility: "WCAG 2.1 AA"
+
+deployment:
+  platform: "vercel"
+  ci_cd: "github-actions"
 
 conventions:
   naming:
@@ -170,13 +221,6 @@ conventions:
     branch_strategy: "github-flow"
     commit_format: "conventional-commits"
   code_style: "biome default"
-
-validation:
-  after_plan: true
-  after_scaffold: true
-  after_implement: true
-  after_test: true
-  after_review: true
 
 context:
   inspiration: "TodoMVC, Things 3"

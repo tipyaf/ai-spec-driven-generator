@@ -1,13 +1,25 @@
 ---
 name: review
-description: Review code quality, security, and test coverage for a story or PR. Use before creating a PR or after implementation.
+description: Review code quality, security, and test coverage for all validated features before PR. Use when all features are validated and ready for final review.
 ---
+
+## Phase guard — verify before proceeding
+
+**Prerequisites** (check filesystem):
+1. `specs/feature-tracker.yaml` must exist
+2. ALL features in the tracker must have `status: validated`
+   - If ANY feature has a different status → Tell user which features are not ready
+   - Suggest `/build` or `/validate` for incomplete features
+
+**If prerequisites are not met** → Tell user: "Some features still need validation" → list them with status
 
 ## Setup — Read these files before starting
 
 1. Read `agents/reviewer.md` (core instructions)
 2. Read `agents/security.md` (core instructions)
 3. Read `agents/tester.md` (core instructions — for test quality check)
+4. Read `specs/feature-tracker.yaml` (verify all validated)
+5. Read ALL `specs/stories/*.yaml` files (all build contracts)
 
 Only read `.ref.md` files if you need detailed checklists or report templates.
 
@@ -19,5 +31,6 @@ Only read `.ref.md` files if you need detailed checklists or report templates.
 4. **Pass 3 — Safety & Correctness**: secrets, error handling, input validation, SQL safety
 5. Run security audit (OWASP Top 10, auth, secrets, dependencies)
 6. Verify test quality (no mock-soup, real integration tests, forbidden patterns)
-7. Produce structured PASS/FAIL report
-8. If FAIL → return issues to developer with file:line references
+7. **Verify ALL ACs across ALL stories**: re-run every `verify:` command from every story file
+8. Produce structured PASS/FAIL report
+9. If FAIL → return issues to developer with file:line references → suggest `/build` to fix

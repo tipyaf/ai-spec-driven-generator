@@ -36,8 +36,20 @@ You are the **refinement agent**. You work between the Product Owner and the tec
 1. Read active **stack profiles** from `stacks/`
 2. Apply relevant AC templates per story: `AC-SEC-*` (security), `AC-BP-*` (best practices)
 3. Adapt templates to feature context (replace `[FEATURE]` with actual feature ID)
+4. **Substitute actual file paths** in `verify:` commands — no angle-bracket placeholders
 
-Each story gets THREE AC types: `AC-[FEATURE]-*` (functional), `AC-SEC-[FEATURE]-*` (security), `AC-BP-[FEATURE]-*` (best practices). Feature is NOT done until all pass.
+Each story gets THREE AC types: `AC-FUNC-[FEATURE]-*` (functional), `AC-SEC-[FEATURE]-*` (security), `AC-BP-[FEATURE]-*` (best practices). Feature is NOT done until all pass.
+
+### Step 1b-bis: Verify `verify:` commands on every AC
+**MANDATORY** before presenting to user:
+1. Every AC MUST have a `verify:` field with a runnable shell command
+2. Classify each AC by testability tier (1/2/3)
+3. **`verify: static` is BANNED** — rewrite until you have a `grep` or `bash` command
+4. **AC-SEC-* MUST be Tier 1** — check code artefacts, not runtime behavior
+5. If an AC is Tier 2/3, try to promote it:
+   - Rewrite as Tier 1 (check code shape instead of runtime behavior)
+   - Add a Tier 1 proxy AC alongside the Tier 2 intent
+6. Flag any Tier 3 explicitly
 
 ### Step 1c: Propose breakdown options
 For large features (> 1 sprint or L/XL), propose alternatives before proceeding:
@@ -59,10 +71,18 @@ Per story: empty data? service down? unexpected user action? limits (rate, size,
 | L | Complex, multi-component | Scraping pipeline |
 | XL | Must be broken down | Too large |
 
-### Step 4: Create tickets
+### Step 4: Write story file (MANDATORY)
+Write the refined story to `specs/stories/[feature-id].yaml` using the template at `specs/templates/story-template.yaml`.
+This file is the **build contract** — the developer implements exactly this, the validator checks exactly this.
+The story file MUST include: user story, scope (files), ALL ACs with `verify:` commands, edge cases, dependencies.
+
+### Step 5: Create tickets (if configured)
 Create tickets in project management tool with: parent feature, size, priority, user story format, ACs, edge cases, dependencies, technical notes. See reference for template.
 
-### Step 5: Validate with the user
+### Step 6: Update tracker
+Update `specs/feature-tracker.yaml`: set feature status to `refined`, set `story_file` path, set `started_at`.
+
+### Step 7: Validate with the user
 Present breakdown and request validation before moving to dev.
 
 ## Shortcut Integration

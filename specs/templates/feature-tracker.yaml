@@ -1,0 +1,49 @@
+# ============================================================================
+# FEATURE TRACKER — Per-feature state management
+# ============================================================================
+# This file is the SINGLE SOURCE OF TRUTH for feature progress.
+# Updated by agents after each phase transition.
+# Read by skills to enforce phase guards and detect completion.
+#
+# Status flow per feature:
+#   pending → refined → building → testing → validated
+#
+# Phase guard rules (enforced by skills):
+#   - /refine: feature must be "pending"
+#   - /build:  feature must be "refined" (story file must exist)
+#   - /validate: feature must be "building" (code must exist)
+#   - /review: ALL features must be "validated"
+#   - /deploy: ALL features must be "validated"
+#
+# Cycle tracking:
+#   - cycles counts validation/fix iterations (max 3 before escalation)
+#   - cycles resets to 0 when feature moves to "validated"
+# ============================================================================
+
+project:
+  name: ""
+  spec_file: ""                           # Path to main spec YAML
+  created_at: ""                          # ISO 8601 date
+
+# Artefact gates — phase guards verified by filesystem existence
+# A phase is "done" when its artefact file exists on disk.
+artefacts:
+  constitution: ""                        # specs/constitution.md
+  spec: ""                                # specs/[project].yaml
+  clarifications: ""                      # specs/[project]-clarifications.md
+  wireframes: ""                          # specs/[project]-ux.md (empty if non-UI)
+  architecture: ""                        # specs/[project]-arch.md
+  manifest: ""                            # specs/[project]-manifest.yaml
+
+# Per-feature tracking
+features:
+  - id: ""                                # Feature ID from spec (e.g., "auth")
+    name: ""                              # Human-readable name
+    priority: ""                          # must-have | should-have | nice-to-have
+    status: "pending"                     # pending | refined | building | testing | validated
+    cycles: 0                             # Validation/fix cycles (max 3)
+    story_file: ""                        # specs/stories/[feature-id].yaml
+    depends_on: []                        # Feature IDs this depends on
+    started_at: ""                        # ISO 8601 — when refinement started
+    validated_at: ""                      # ISO 8601 — when validation passed
+    notes: ""                             # Free-form notes (blockers, decisions)
