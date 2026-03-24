@@ -2,6 +2,36 @@
 
 All notable changes to the ai-spec-driven-generator framework.
 
+## [2.1.0] - 2026-03-24
+
+### Added
+- **Enforcement layer**: filesystem-based phase guards — a phase is "done" when its artefact exists on disk
+- **Feature tracker** (`specs/feature-tracker.yaml`): per-feature state management (pending → refined → building → testing → validated)
+- **Story files** (`specs/stories/[feature-id].yaml`): persistent build contracts with `verify:` commands that survive between sessions
+- **Unified AC format**: `AC-[TYPE]-[FEATURE]-[NUMBER]` with mandatory `verify:` shell commands and testability tiers (1/2/3)
+- **Constitution phase**: non-negotiable project principles as a versioned artefact (`specs/constitution.md`)
+- **Clarify phase**: resolve spec ambiguities before architecture planning
+- **5 sequential quality gates**: Security → Tests → UI → AC Validation → Review
+- **Cycle counter**: max 3 validation cycles per feature before human escalation
+- **Story template** (`specs/templates/story-template.yaml`)
+- **Feature tracker template** (`specs/templates/feature-tracker.yaml`)
+
+### Changed
+- **CLAUDE.md**: complete rewrite with v3 workflow, enforcement mechanisms, unified AC format
+- **Skills (all 5)**: rewritten with filesystem phase guards and story-based contracts
+- **Orchestrator**: transformed from active agent to reference document (rules distributed into skills)
+- **Product Owner**: AC format now requires `verify:` commands, `verify: static` banned
+- **Refinement agent**: writes story files, updates tracker, verifies all ACs have verify: commands
+- **Validator agent**: reads story file as primary source, executes verify: commands, checks scope
+- **Spec template**: unified AC format replaces fragmented acceptance_criteria + acceptance_tests
+- **Todo app example**: all features rewritten with structured ACs (IDs, types, verify:, tiers)
+- **Memory template**: added feature status table, framework version, decisions with alternatives
+- **.cursorrules**: aligned with CLAUDE.md v3 skill-based approach
+
+### Removed
+- Dead `validation:` section from spec template (no agent read it)
+- Orchestrator as an active loaded agent (never loaded by any skill)
+
 ## [2.0.0] - 2026-03-23
 
 ### Added
