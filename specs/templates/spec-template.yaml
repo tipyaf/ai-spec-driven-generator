@@ -101,96 +101,31 @@ features:
     description: ""                 # What the feature does
     priority: ""                    # must-have | should-have | nice-to-have
 
-    acceptance_criteria:             # Human-readable criteria (Given/When/Then)
-      - ""
-
-    acceptance_tests:                # Machine-verifiable checks run by the validator agent
-      # ------------------------------------------------------------------
-      # Test type: grep
-      # Applies to: ALL project types
-      # Searches source files for patterns (or absence of patterns)
-      # ------------------------------------------------------------------
-      - type: grep
-        files: ""                   # File glob pattern to search (e.g., "src/**/*.ts")
-        pattern: ""                 # Regex pattern to search for
-        expected: 0                 # Expected match count (0 = pattern must NOT appear)
-        check: ""                   # What is being verified
-
-      # ------------------------------------------------------------------
-      # Test type: unit
-      # Applies to: ALL project types
-      # Runs a unit test on a specific function, module, or class
-      # ------------------------------------------------------------------
-      - type: unit
-        target: ""                  # Function, class, or module to test
-        check: ""                   # What is being verified
-
-      # ------------------------------------------------------------------
-      # Test type: visual
-      # Applies to: web-app, mobile, desktop, fullstack
-      # Skip for: api, cli, library, embedded, data-pipeline
-      # Takes a screenshot and verifies visual appearance
-      # ------------------------------------------------------------------
-      - type: visual
-        target: ""                  # URL path (web), screen name (mobile), or window (desktop)
-        check: ""                   # What to verify in the screenshot
-
-      # ------------------------------------------------------------------
-      # Test type: e2e
-      # Applies to: web-app, mobile, desktop, fullstack
-      # Skip for: api, cli, library, embedded, data-pipeline
-      # End-to-end user flow simulation
-      # ------------------------------------------------------------------
-      - type: e2e
-        scenario: ""                # Scenario name
-        steps:                      # Ordered list of user actions
-          - ""
-        check: ""                   # Expected outcome
-
-      # ------------------------------------------------------------------
-      # Test type: runtime
-      # Applies to: api, cli, library, fullstack, data-pipeline
-      # Skip for: embedded (use hardware-in-the-loop instead)
-      # Calls an endpoint, command, or function and verifies the result
-      # ------------------------------------------------------------------
-      - type: runtime
-        target: ""                  # Endpoint URL, CLI command, or function call
-        method: ""                  # GET | POST | PUT | DELETE (api) | invoke (cli) | call (library)
-        input: ""                   # Request body, arguments, or parameters
-        check: ""                   # Expected response or output
-
-      # ------------------------------------------------------------------
-      # Test type: accessibility
-      # Applies to: web-app, mobile, fullstack
-      # Skip for: api, cli, library, embedded, desktop, data-pipeline
-      # WCAG compliance check
-      # ------------------------------------------------------------------
-      - type: accessibility
-        target: ""                  # Page URL or screen name
-        standard: "WCAG 2.1 AA"    # WCAG level
-        check: ""                   # Specific accessibility requirement
-
-      # ------------------------------------------------------------------
-      # Test type: hardware
-      # Applies to: embedded
-      # Skip for: all other types
-      # Hardware-in-the-loop or simulation-based verification
-      # ------------------------------------------------------------------
-      - type: hardware
-        interface: ""               # GPIO | I2C | SPI | UART | USB | ADC | PWM
-        stimulus: ""                # Input signal or action
-        check: ""                   # Expected hardware response
-
-      # ------------------------------------------------------------------
-      # Test type: data-validation
-      # Applies to: data-pipeline
-      # Skip for: all other types
-      # Verifies data quality and transformation correctness
-      # ------------------------------------------------------------------
-      - type: data-validation
-        source: ""                  # Input dataset or table
-        sink: ""                    # Output dataset or table
-        check: ""                   # Data quality assertion (row count, schema, values)
+    # ------------------------------------------------------------------
+    # ACCEPTANCE CRITERIA
+    # Structured format with unique IDs and machine-verifiable commands.
+    # During /spec (PO phase), write functional ACs only.
+    # During /refine, AC-SEC-* and AC-BP-* are auto-generated from stack profiles.
+    #
+    # Format: AC-[TYPE]-[FEATURE]-[NUMBER]
+    # Types: FUNC (functional), SEC (security), BP (best practice)
+    #
+    # EVERY AC MUST have a `verify:` field with a runnable shell command.
+    # Testability tiers:
+    #   Tier 1 (preferred): grep/bash — runs without live service
+    #   Tier 2: curl/playwright — requires live service
+    #   Tier 3 (last resort): runtime-only — minimize usage
+    # Rules:
+    #   - `verify: static` is BANNED — rewrite until you have a command
+    #   - AC-SEC-* MUST be Tier 1
+    #   - No AC without verify:
+    # ------------------------------------------------------------------
+    acceptance_criteria:
+      - id: ""                      # e.g., AC-FUNC-AUTH-01
+        type: ""                    # FUNC | SEC | BP
+        description: ""             # Given [precondition] / When [action] / Then [result]
+        verify: ""                  # Shell command: grep, bash, curl, or playwright
+        tier: 1                     # 1 | 2 | 3
 
 
 # ============================================================================
@@ -470,20 +405,6 @@ conventions:
     commit_format: ""               # conventional-commits | free-form
   code_style: ""                    # Reference to preset or description (e.g., "Airbnb", "Google", "PEP 8")
   documentation: ""                 # JSDoc | docstrings | rustdoc | godoc | none
-
-
-# ============================================================================
-# VALIDATION PHASES
-# Applies to: ALL project types
-# Human validation checkpoints between generation phases.
-# ============================================================================
-
-validation:
-  after_plan: true                  # Validate architecture plan before coding
-  after_scaffold: true              # Validate file structure before implementing
-  after_implement: true             # Validate implementation before tests
-  after_test: true                  # Validate tests before review
-  after_review: true                # Validate review before deployment
 
 
 # ============================================================================

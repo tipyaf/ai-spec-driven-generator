@@ -4,7 +4,7 @@ An AI-powered framework for generating complete code projects from structured YA
 
 ## Overview
 
-This framework uses specialized AI agents, a phased workflow with human validation at every step, and persistent memory between sessions to generate any type of code project from a single YAML specification.
+This framework uses specialized AI agents, a skill-based workflow with human validation, persistent memory, machine-verifiable acceptance criteria, and per-feature state tracking to generate any type of code project from a single YAML specification.
 
 ## Fundamental Principles
 
@@ -25,12 +25,12 @@ The framework works with **any programming language** and **any type of project*
 Agents, phases, and templates adapt their recommendations based on the project type declared in the spec. Web-specific concepts (pages, CSS, WCAG, Playwright) only apply when relevant.
 
 ### 2. Autonomous
-Once the product is well-defined (Phases 0–1), the framework generates **production-ready code** without human intervention on technical tasks.
+Once the product is well-defined (Phase 0), the framework generates **production-ready code** without human intervention on technical tasks.
 
 - **Humans decide**: product scope, UX design, architecture choices, infrastructure, release go/no-go
 - **Machines verify**: code quality, tests, accessibility, security, conventions, anti-patterns
 
-The developer never self-validates. An independent validator agent verifies every implementation. Tests, reviews, and security audits are fully automated with escalation to humans only after 3 failures.
+The developer never self-validates. An independent validator agent executes every `verify:` command from the build contract. Tests, reviews, and security audits are fully automated with escalation to humans only after 3 failures.
 
 ### 3. Accompaniment
 The framework **guides and challenges** the user to build the best possible product. The user follows instructions and answers questions — never left without clear next steps.
@@ -40,52 +40,80 @@ The framework **guides and challenges** the user to build the best possible prod
 - Every phase **ends with clear guidance**: what was done, what's next, what the user needs to decide
 - The framework **explains why** it asks questions and enforces rules
 
-## Features
+## Key Features
 
+### Enforcement (not just documentation)
+- **Filesystem-based phase gates**: a phase is "done" when its artefact file exists on disk — not a checkbox in the LLM's memory
+- **Per-feature state tracking**: `feature-tracker.yaml` tracks every feature (pending → refined → building → testing → validated)
+- **Machine-verifiable ACs**: every acceptance criterion has a `verify:` shell command executed by the validator
+- **Persistent build contracts**: `specs/stories/[feature].yaml` files survive between sessions — refinement output is never lost
+- **Cycle counter with escalation**: max 3 validation attempts per feature, then mandatory human escalation
+
+### Development
 - **Spec-driven**: YAML specs as the single source of truth
-- **11 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, **Validator**, Tester, Reviewer, Security, DevOps, Orchestrator
-- **Phase-based workflow**: Scoping → Design → Plan → Scaffold → [Refinement → Implement → **Validate** → Test] → Review → Security → Deploy
-- **Automated validation**: Independent validator agent verifies implementations with screenshots, grep, curl — no self-assessment
-- **Machine-verifiable acceptance tests**: Visual, runtime, grep, and e2e tests defined in specs
-- **Context slicing**: Architect produces implementation manifests so dev agents only load relevant files
-- **Quality hooks**: Pre-commit anti-pattern detection, post-edit design system compliance
-- **Smart validation**: Human decides (product, architecture, infra), machines verify (tests, review, security)
-- **Persistent memory**: Per-project markdown files tracking decisions, feedback, and phase status
-- **Project management integration**: Shortcut.com support for ticket creation and tracking
-- **Tool-agnostic**: Works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
-- **Stack profiles**: Coding and security contracts generated per tech stack
-- **Failure memory (LESSONS.md)**: Recurring mistakes are logged and read by all agents before starting work — the framework learns from its errors
-- **Language-agnostic hooks**: Configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders — works with any language (TypeScript, Python, Rust, Go, Java, etc.)
-- **Agent role guards**: Strict enforcement of agent boundaries — refiner never codes, reviewer never modifies files, developer never self-validates
-- **Deployment verification**: Post-deploy health checks, smoke tests, rollback plan documentation
-- **Skills system**: `/refine`, `/build`, `/review`, `/validate`, `/spec` — slash commands that load only the agents needed for the current task
-- **Auto-versioning**: GitHub Action bumps VERSION on every push, auto-generates CHANGELOG
-- **Framework sync tracking**: SYNC.md tracks which version each project uses
+- **10 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, Validator, Tester, Reviewer, Security, DevOps
+- **Skills system**: `/spec`, `/refine`, `/build`, `/validate`, `/review` — each loads only the agents needed
+- **Constitution pattern**: non-negotiable project principles defined before any code
+- **Clarification phase**: ambiguities resolved before planning, not discovered during implementation
+- **Unified AC format**: `AC-[TYPE]-[FEATURE]-[NUMBER]` with `verify:` command and testability tier
+- **Stack profiles**: coding and security contracts per tech stack — auto-generate AC-SEC and AC-BP
+- **Implementation scope control**: developers can only touch files listed in the story's scope section
+- **5 sequential quality gates**: Security → Tests → UI → AC Validation → Review
+
+### Quality
 - **3-pass code review**: KISS & readability → static analysis → safety & correctness
-- **Test quality standards**: Explicit "real test vs mock-soup" checklists, forbidden test patterns
-- **Hard constraints**: NEVER/Always rules in every agent — critical rules are visually distinct
-- **Token-optimized agents**: Each agent split into core (rules, workflow) + ref (templates, examples) — 60% fewer tokens per session
-- **Lazy agent loading**: Skills load only the required agents per task — never all 11 at once. Principles enforced via CLAUDE.md
-- **Agnostic coding standards**: No magic strings/numbers, max 400 lines per file, extract constants — enforced regardless of language or framework
+- **Independent validation**: the agent that writes code is never the agent that validates it
+- **Test quality standards**: explicit "real test vs mock-soup" checklists, forbidden test patterns
+- **Failure memory (LESSONS.md)**: recurring mistakes logged and read by all agents before starting
+- **Language-agnostic hooks**: configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders
+
+### Infrastructure
+- **Persistent memory**: per-project markdown files tracking decisions, feedback, phase status, and feature progress
+- **Project management integration**: Shortcut.com support for ticket creation and tracking
+- **Tool-agnostic**: works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
+- **Auto-versioning**: GitHub Action bumps VERSION on every push, auto-generates CHANGELOG
+- **Token-optimized agents**: core (rules) + ref (templates) split — 60% fewer tokens per session
 
 ## Workflow
 
 ```
-[Phase 0: Scoping]         → PO           → ✅ Human (product decision)
-[Phase 0.5: Design]        → UX/UI        → ✅ Human (UX decision)
-[Phase 0.7: Ordering]      → PO           → ✅ Human (priority decision)
-[Phase 1: Plan]            → Architect    → ✅ Human (architecture decision)
-[Phase 2: Scaffold]        → Developer    → 🤖 Auto
-  ┌─── For each feature: ───────────────────────────────────────┐
-  │ [Phase 2.5: Refinement]  → Refinement  → ✅ Human (scope)  │
-  │ [Phase 3: Implement]     → Developer   →                    │
-  │ [Phase 3.5: Validate]    → Validator   → 🤖 Auto (max 3x)  │
-  │ [Phase 4: Test]          → Tester      → 🤖 Auto (e2e+TU)  │
-  └──────────────────────────────────────────────────────────────┘
-[Phase 5: Review]           → Reviewer     → 🤖 Auto
-[Phase 5.5: Security]      → Security     → 🤖 Auto
-[Phase 6: Deploy Config]    → DevOps       → ✅ Human (infra decision)
-[Phase 7: Release]          → Orchestrator → ✅ Human (go/no-go)
+═══════════════════════════════════════════════════════════
+PHASE 0 — CONCEPTION (/spec) — Human validation at each step
+═══════════════════════════════════════════════════════════
+  Constitution    → specs/constitution.md
+  Scoping (PO)    → specs/[project].yaml
+  Clarify         → specs/[project]-clarifications.md
+  Design (UX/UI)  → specs/[project]-ux.md (skip if non-UI)
+  Ordering        → features ordered in arch doc
+  Architecture    → specs/[project]-arch.md
+  Initialize      → specs/feature-tracker.yaml
+
+═══════════════════════════════════════════════════════════
+PHASE 1 — SCAFFOLD (/build first run) — Auto
+═══════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════
+PHASE 2 — CONSTRUCTION (per feature loop)
+═══════════════════════════════════════════════════════════
+  For each feature [pending → refined → building → testing → validated]:
+
+  /refine   → story file written (build contract with verify: commands)
+  /build    → code + tests
+  /validate → 5 gates: Security → Tests → UI → ACs → Review
+  → PASS: feature validated
+  → FAIL: fix + re-validate (max 3 cycles, then escalate)
+
+═══════════════════════════════════════════════════════════
+PHASE 3 — REVIEW (/review) — All features must be validated
+═══════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════
+PHASE 4 — DEPLOY — ✅ Human validation
+═══════════════════════════════════════════════════════════
+
+═══════════════════════════════════════════════════════════
+PHASE 5 — RELEASE — ✅ Human validation
+═══════════════════════════════════════════════════════════
 ```
 
 ## Quick start
@@ -114,12 +142,13 @@ Open the project in **Cursor** or **Claude Code**. The AI will automatically pic
 
 Describe your project idea to the AI. It will automatically guide you through:
 
-1. **`/spec`** — Scoping (one question at a time), UX design, architecture planning
-2. **`/refine`** — Break features into stories with acceptance criteria
-3. **`/build`** — Implement each story with automatic validation
-4. **`/review`** — Code review + security audit before PR
+1. **`/spec`** — Constitution, scoping (one question at a time), clarification, UX design, architecture planning
+2. **`/refine`** — Break features into stories with structured ACs and `verify:` commands
+3. **`/build`** — Implement each story with 5 sequential quality gates
+4. **`/validate`** — Independent verification executing every `verify:` command
+5. **`/review`** — Full code review + security audit before PR
 
-The AI enforces phase order: you can't build before the spec is validated, you can't review before validation passes. Each phase ends with clear options and next steps.
+Skills enforce phase order via filesystem checks: you can't build before the story file exists, you can't review before all features are validated. Each phase ends with clear options and next steps.
 
 ### 4. Update the framework
 
@@ -134,74 +163,49 @@ git submodule update --remote framework
 
 ```
 ai-spec-driven-generator/
-├── agents/                  # 11 specialized agent definitions (core + ref split)
-│   ├── orchestrator.md      # Main coordinator (core)
-│   ├── orchestrator.ref.md  # Templates, escalation procedures, model config
-│   ├── product-owner.md     # Scoping & spec writing (core)
-│   ├── product-owner.ref.md # AC examples, persona/story templates
-│   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA (core)
-│   ├── ux-ui.ref.md         # Design system templates, wireframes, components
-│   ├── architect.md         # Architecture + implementation manifest (core)
-│   ├── architect.ref.md     # Stack comparison, ADR, file structure templates
-│   ├── refinement.md        # Feature breakdown & tickets (core)
-│   ├── refinement.ref.md    # Ticket templates, Shortcut integration
-│   ├── developer.md         # Code implementation (core)
-│   ├── developer.ref.md     # File conventions, output format
-│   ├── validator.md         # Independent verification (core)
-│   ├── validator.ref.md     # Report templates, anti-pattern lists
-│   ├── tester.md            # Test writing & execution (core)
-│   ├── tester.ref.md        # Code examples, report templates
-│   ├── reviewer.md          # Quality audit (core)
-│   ├── reviewer.ref.md      # Review checklists, report format
-│   ├── security.md          # Security audit — OWASP (core)
-│   ├── security.ref.md      # Detailed checklists, threat model template
-│   ├── devops.md            # CI/CD & deployment (core)
-│   └── devops.ref.md        # Docker, CI/CD, deployment templates
-├── skills/                  # Slash command skill dispatchers
-│   ├── refine.md            # /refine — break features into stories
-│   ├── build.md             # /build — implement a feature
-│   ├── review.md            # /review — 3-pass code review
-│   ├── validate.md          # /validate — verify implementation
-│   └── spec.md              # /spec — define project from scratch
-├── prompts/phases/          # Phase-specific instructions
-│   ├── 00-scoping.md        # Includes acceptance_tests requirement
-│   ├── 00.5-design.md       # Includes WCAG contrast validation
-│   ├── 00.7-ordering.md     # Feature ordering
-│   ├── 01-plan.md           # Includes implementation manifest requirement
-│   ├── 02-scaffold.md
-│   ├── 03-implement.md
-│   ├── 03.5-validate.md
-│   ├── 04-test.md
-│   ├── 05-review.md
-│   ├── 05.5-security.md
-│   ├── 06-deploy.md
-│   └── 07-release.md
+├── agents/                  # 10 specialized agent definitions (core + ref split)
+│   ├── orchestrator.md      # Orchestration rules reference (enforced by skills)
+│   ├── product-owner.md     # Scoping, spec writing, AC format
+│   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA
+│   ├── architect.md         # Architecture + implementation manifest
+│   ├── refinement.md        # Feature breakdown, story files, verify: commands
+│   ├── developer.md         # Code implementation (scoped to story files)
+│   ├── validator.md         # Independent verification (executes verify: commands)
+│   ├── tester.md            # Test writing & execution
+│   ├── reviewer.md          # Quality audit (3-pass)
+│   ├── security.md          # Security audit — OWASP Top 10
+│   ├── devops.md            # CI/CD & deployment
+│   └── *.ref.md             # Templates and examples (loaded on demand)
+├── skills/                  # Skill dispatchers with phase guards
+│   ├── spec/SKILL.md        # /spec — constitution → scoping → clarify → design → arch
+│   ├── refine/SKILL.md      # /refine — break feature into story file
+│   ├── build/SKILL.md       # /build — implement from story file
+│   ├── validate/SKILL.md    # /validate — execute verify: commands
+│   └── review/SKILL.md      # /review — final quality gate
+├── prompts/phases/          # Phase-specific detailed instructions
 ├── rules/                   # IDE integration
-│   ├── CLAUDE.md            # Rules for Claude Code (legacy, direct use)
-│   ├── CLAUDE.md.template   # Template for project init (uses framework/ paths)
+│   ├── CLAUDE.md            # Rules for Claude Code
+│   ├── CLAUDE.md.template   # Template for project init
 │   └── .cursorrules         # Rules for Cursor
-├── specs/templates/         # YAML spec templates
-│   └── spec-template.yaml   # Includes acceptance_tests section
+├── specs/templates/         # YAML templates
+│   ├── spec-template.yaml   # Spec with unified AC format
+│   ├── feature-tracker.yaml # Per-feature state tracking
+│   └── story-template.yaml  # Refinement output (build contract)
 ├── stacks/                  # Stack profiles & quality hooks
-│   ├── stack-profile-template.md
-│   └── hooks/               # Claude Code quality gate hooks
-│       ├── README.md        # Hook documentation
-│       ├── settings-hooks-example.json  # Ready-to-use config
-│       ├── hook-config.json # Language-agnostic hook configuration
-│       └── code_review.py   # 3-pass code review hook
+│   ├── hooks/               # Claude Code quality gate hooks
+│   └── stack-profile-template.md
 ├── examples/                # Example specs
-│   └── todo-app-spec.yaml
+│   └── todo-app-spec.yaml   # With structured ACs and verify: commands
 ├── memory/                  # Memory templates
-│   ├── memory-template.md
+│   ├── memory-template.md   # With feature status table
 │   ├── LESSONS.md.template
-│   └── SYNC.md.template     # Framework version sync tracker
-├── VERSION                  # Current framework version
-├── CHANGELOG.md             # Auto-generated changelog
-├── BOOTSTRAP.md             # Bootstrap guide for new projects
-├── .github/workflows/
-│   └── bump-version.yml     # Auto-versioning on push
-└── scripts/                 # Utility scripts
-    └── init-project.sh      # Project initializer (submodule-based)
+│   └── SYNC.md.template
+├── scripts/
+│   └── init-project.sh      # Project initializer
+├── VERSION
+├── CHANGELOG.md
+└── .github/workflows/
+    └── bump-version.yml     # Auto-versioning
 ```
 
 ## Project structure (after init)
@@ -209,30 +213,25 @@ ai-spec-driven-generator/
 ```
 my-project/
 ├── framework/              # Git submodule → ai-spec-driven-generator
-│   ├── agents/
-│   ├── prompts/
-│   ├── rules/
-│   ├── stacks/
-│   └── ...
-├── specs/                  # Project-specific specs
-│   ├── my-project.yaml     # YAML spec (Phase 0)
-│   ├── my-project-ux.md    # UX design (Phase 0.5)
-│   └── my-project-architecture.md  # Architecture plan (Phase 1)
+├── specs/
+│   ├── constitution.md     # Non-negotiable project principles
+│   ├── my-project.yaml     # YAML spec
+│   ├── my-project-clarifications.md  # Resolved ambiguities
+│   ├── my-project-ux.md    # UX design (if UI project)
+│   ├── my-project-arch.md  # Architecture plan
+│   ├── feature-tracker.yaml # Per-feature state (pending→validated)
+│   └── stories/            # Build contracts per feature
+│       ├── auth.yaml
+│       └── todos-crud.yaml
 ├── memory/
-│   ├── my-project.md       # Project memory (updated by agents)
-│   ├── LESSONS.md          # Failure memory (logged mistakes, read by all agents)
-│   └── SYNC.md             # Framework version sync tracker (from template)
-├── stacks/                 # Stack profiles (Phase 1)
-│   ├── typescript-nestjs.md
-│   └── typescript-react.md
-├── apps/                   # Application code (Phase 2+)
-│   ├── api/
-│   └── web/
-├── packages/               # Shared packages (Phase 2+)
-│   └── shared/
-├── CLAUDE.md               # AI rules (generated from template)
-├── .cursorrules            # Cursor rules (generated from template)
-└── .gitignore
+│   ├── my-project.md       # Project memory (with feature status table)
+│   ├── LESSONS.md          # Failure memory
+│   └── SYNC.md             # Framework version sync
+├── stacks/                 # Stack profiles
+├── apps/                   # Application code
+├── packages/               # Shared packages
+├── CLAUDE.md               # AI rules
+└── .cursorrules            # Cursor rules
 ```
 
 ## Contributing

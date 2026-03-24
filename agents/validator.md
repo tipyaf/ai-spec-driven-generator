@@ -27,31 +27,42 @@ After developer declares "done", BEFORE any PR is created.
 ## Workflow
 
 ### Step 1: Gather context
-Read the spec (ACs + acceptance_tests), git diff, and architect's manifest.
+1. Read `specs/stories/[feature-id].yaml` — this is the **build contract** with ALL ACs and `verify:` commands
+2. Read git diff to identify what changed
+3. Read stack profiles from `stacks/` for forbidden patterns
+4. Read `specs/feature-tracker.yaml` for current state
 
-### Step 2: Visual checks (UI projects only)
+### Step 2: Execute ALL `verify:` commands from the story file
+This is the PRIMARY validation. For each AC in the story file:
+- **Tier 1** (`grep`/`bash`): Run the command directly. PASS = exit 0 or pattern found. FAIL = exit non-zero or pattern missing.
+- **Tier 2** (`curl`/`playwright`): Start dev server if needed. Run the command. Check response/assertion.
+- **Tier 3** (`runtime-only`): Document what was checked and how. Flag as "manual verification".
+
+**Evidence required**: Every PASS/FAIL MUST include the command output as proof.
+
+### Step 3: Scope check
+Verify git diff only touches files listed in the story's `scope` section.
+Files outside scope = scope violation = FAIL.
+
+### Step 4: Visual checks (UI projects only)
 > Skip for API, CLI, library, embedded, data pipeline projects.
 
-For each page/screen in spec or modified by dev: start dev server, screenshot with Playwright/Claude Preview, verify against spec (design system colors, layout, all states, contrast, responsiveness).
+For each page/screen modified by dev: start dev server, screenshot with Playwright/Claude Preview, verify against wireframes (design system colors, layout, all states, contrast, responsiveness).
 
-### Step 3: Code checks
+### Step 5: Code checks (anti-patterns)
 For each modified file, grep for anti-patterns:
 - **All types**: `console.log/debug`, `debugger`, `TODO/FIXME/HACK/XXX`, unused imports, empty catch blocks
-- **Web only**: hardcoded Tailwind colors (`blue-`, `red-`, `green-`, etc.), hardcoded CSS values
+- **Web only**: hardcoded Tailwind colors, hardcoded CSS values
 - **UI projects**: hardcoded strings (should use i18n)
 - **Web/mobile UI**: ARIA roles, alt texts
-- Plus any project-specific patterns from stack profile and spec's `anti_patterns` list
+- Plus forbidden patterns from stack profiles
 
-### Step 4: Runtime checks
-- **API/web**: curl endpoints, verify status codes, response shape, error handling
-- **CLI**: run commands, verify exit codes, stdout/stderr format, error handling
-- **Library**: call public API functions, verify return values, error cases, type signatures
-
-### Step 5: Acceptance tests
-Execute each acceptance_test: `visual` (screenshot+compare), `runtime` (curl+verify), `grep` (search+verify count), `e2e` (Playwright scenario).
-
-### Step 6: Produce report
-Generate structured validation report with Summary, Visual/Code/Runtime checks tables, Acceptance Tests results, and Verdict with issues list. See reference for full template.
+### Step 6: Update tracker and produce report
+1. Generate structured PASS/FAIL report with evidence for each AC
+2. Update `specs/feature-tracker.yaml`:
+   - ALL PASS → status: `validated`, set `validated_at`
+   - ANY FAIL → increment `cycles`, keep status: `testing`
+   - cycles >= 3 → add escalation note in `notes` field
 
 ## LESSONS.md Update Rules
 On FAIL: check if pattern exists in `memory/LESSONS.md`. If yes: flag CRITICAL ("Known lesson ignored"). If no: check if second occurrence — if yes, add new lesson; if no, report as normal first-occurrence failure.

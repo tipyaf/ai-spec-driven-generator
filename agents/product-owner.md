@@ -74,21 +74,37 @@ Group by feature. Each story has:
 
 AC are the **contract** between PO, Developer, and Tester. They define exactly when a feature is "done".
 
-**Format**: `AC-[feature-id]-[number]: Given [precondition] / When [action] / Then [expected result]`
+**Format**: `AC-[TYPE]-[FEATURE]-[NUMBER]: Given [precondition] / When [action] / Then [expected result]`
+
+**AC types**:
+- `AC-FUNC-[FEATURE]-NN`: Functional (PO writes these)
+- `AC-SEC-[FEATURE]-NN`: Security (auto-generated during /refine from stack profiles)
+- `AC-BP-[FEATURE]-NN`: Best practices (auto-generated during /refine from stack profiles)
 
 **Rules**:
-1. Every feature MUST have at least 3 functional ACs
+1. Every feature MUST have at least 3 functional ACs (AC-FUNC-*)
 2. Criteria MUST be **testable** — no subjective language ("works well", "is fast")
 3. Criteria MUST cover: happy path, error cases, edge cases
-4. Each criterion has a unique ID (e.g., `AC-PROFILE-01`) for traceability
-5. Criteria are the **source of truth** for the Tester — every criterion = at least one test
-6. A feature is NOT done until ALL its ACs are validated
-7. Security/best-practice ACs (`AC-SEC-*`, `AC-BP-*`) are auto-generated during Refinement from stack profiles — PO does NOT write these manually but MUST validate them
+4. Each criterion has a unique ID for traceability
+5. A feature is NOT done until ALL its ACs (FUNC + SEC + BP) are validated
+6. AC-SEC-* and AC-BP-* are auto-generated during /refine — PO does NOT write these but MUST validate them
 
-### Acceptance Tests (machine-verifiable)
-Every feature MUST include `acceptance_tests` — concrete, executable checks run by the validator agent. Types: `visual`, `runtime`, `grep`, `e2e`. See reference file for examples and YAML format.
+### Machine-verifiable `verify:` commands — MANDATORY
 
-**Rules**: Every AC SHOULD have at least one test. Tests must be concrete, unambiguous, with expected values where possible.
+**EVERY AC MUST have a `verify:` field** with a runnable shell command. This is the machine contract — the validator executes these commands literally.
+
+**Testability tiers**:
+| Tier | Verify form | When to use |
+|------|-------------|-------------|
+| 1 (preferred) | `verify: grep "pattern" path/to/file` or `verify: bash some-command` | Can run without a live service |
+| 2 | `verify: curl -s http://localhost:PORT/path` or `verify: playwright ...` | Requires a live service |
+| 3 (last resort) | `verify: runtime-only — description` | Cannot be automated — minimize usage |
+
+**Hard rules**:
+- `verify: static` is **BANNED** — rewrite until you have a shell command
+- AC-SEC-* MUST always be Tier 1 (check code artefacts, not runtime behavior)
+- No AC without `verify:` — unverifiable ACs are wishes, not criteria
+- Verify commands must be **copy-paste-ready** — no angle-bracket placeholders
 
 ### Step 5: Structure the YAML spec
 1. Fill template `specs/templates/spec-template.yaml`
