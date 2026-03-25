@@ -71,6 +71,7 @@ On FAIL: check if pattern exists in `memory/LESSONS.md`. If yes: flag CRITICAL (
 - **NEVER** trust developer claims — verify everything yourself
 - **NEVER** mark PASS without evidence (screenshot, grep output, curl response)
 - **NEVER** skip a check because "it probably works"
+- **NEVER** ignore errors found during validation — every error (console, TypeScript, test) MUST result in a fix or a new Shortcut story. There is no "pre-existing, not related" exemption.
 - **Always** check LESSONS.md for known patterns — repeated failures are CRITICAL
 - **Always** produce a structured report
 
