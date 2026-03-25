@@ -41,7 +41,7 @@ echo "Adding framework as git submodule..."
 git submodule add "$FRAMEWORK_REPO" framework
 
 # --- Create project-specific directories ---
-mkdir -p specs memory stacks
+mkdir -p specs memory stacks .claude/commands
 
 # --- Generate CLAUDE.md from template ---
 sed "s/\[project-name\]/$PROJECT_NAME/g" framework/rules/CLAUDE.md.template > CLAUDE.md
@@ -49,6 +49,12 @@ sed "s/\[project-name\]/$PROJECT_NAME/g" framework/rules/CLAUDE.md.template > CL
 # --- Copy .cursorrules (must be at root) ---
 if [ -f framework/rules/.cursorrules ]; then
     sed "s/\[project-name\]/$PROJECT_NAME/g" framework/rules/.cursorrules > .cursorrules
+fi
+
+# --- Copy Claude Code commands (slash commands) ---
+if [ -d framework/rules/commands ]; then
+    cp framework/rules/commands/*.md .claude/commands/
+    echo "Claude Code commands installed: /spec, /refine, /build, /validate, /review"
 fi
 
 # --- Create memory from template ---

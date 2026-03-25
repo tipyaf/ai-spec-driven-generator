@@ -70,6 +70,7 @@ The framework **guides and challenges** the user to build the best possible prod
 ### Infrastructure
 - **Persistent memory**: per-project markdown files tracking decisions, feedback, phase status, and feature progress
 - **Project management integration**: Shortcut.com support for ticket creation and tracking
+- **Claude Code slash commands**: `/spec`, `/refine`, `/build`, `/validate`, `/review` work as native Claude Code commands via `.claude/commands/`
 - **Tool-agnostic**: works with both Cursor (`.cursorrules`) and Claude Code (`CLAUDE.md`)
 - **Auto-versioning**: GitHub Action bumps VERSION on every push, auto-generates CHANGELOG
 - **Token-optimized agents**: core (rules) + ref (templates) split — 60% fewer tokens per session
@@ -140,13 +141,17 @@ Open the project in **Cursor** or **Claude Code**. The AI will automatically pic
 
 ### 3. Start building
 
-Describe your project idea to the AI. It will automatically guide you through:
+In Claude Code, use the slash commands directly:
 
-1. **`/spec`** — Constitution, scoping (one question at a time), clarification, UX design, architecture planning
-2. **`/refine`** — Break features into stories with structured ACs and `verify:` commands
-3. **`/build`** — Implement each story with 5 sequential quality gates
-4. **`/validate`** — Independent verification executing every `verify:` command
-5. **`/review`** — Full code review + security audit before PR
+```
+/spec                        # Define your project (constitution → scoping → design → architecture)
+/refine candidate-profile    # Break a feature into stories with verify: commands
+/build candidate-profile     # Implement the refined story
+/validate candidate-profile  # Run all verify: commands independently
+/review                      # Final review before PR
+```
+
+In Cursor, describe your task and the AI follows the same workflow via `.cursorrules`.
 
 Skills enforce phase order via filesystem checks: you can't build before the story file exists, you can't review before all features are validated. Each phase ends with clear options and next steps.
 
@@ -186,7 +191,13 @@ ai-spec-driven-generator/
 ├── rules/                   # IDE integration
 │   ├── CLAUDE.md            # Rules for Claude Code
 │   ├── CLAUDE.md.template   # Template for project init
-│   └── .cursorrules         # Rules for Cursor
+│   ├── .cursorrules         # Rules for Cursor
+│   └── commands/            # Claude Code slash command templates
+│       ├── spec.md          # /spec command
+│       ├── refine.md        # /refine command
+│       ├── build.md         # /build command
+│       ├── validate.md      # /validate command
+│       └── review.md        # /review command
 ├── specs/templates/         # YAML templates
 │   ├── spec-template.yaml   # Spec with unified AC format
 │   ├── feature-tracker.yaml # Per-feature state tracking
@@ -230,6 +241,12 @@ my-project/
 ├── stacks/                 # Stack profiles
 ├── apps/                   # Application code
 ├── packages/               # Shared packages
+├── .claude/commands/       # Claude Code slash commands (copied from framework)
+│   ├── spec.md
+│   ├── refine.md
+│   ├── build.md
+│   ├── validate.md
+│   └── review.md
 ├── CLAUDE.md               # AI rules
 └── .cursorrules            # Cursor rules
 ```

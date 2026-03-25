@@ -2,6 +2,16 @@
 
 All notable changes to the ai-spec-driven-generator framework.
 
+## [2.2.0] - 2026-03-25
+
+### Added
+- **Claude Code slash commands**: `/spec`, `/refine`, `/build`, `/validate`, `/review` now work as native Claude Code commands via `.claude/commands/` files
+- **Command templates** in `rules/commands/`: reusable templates that `init-project.sh` copies into new projects
+- **init-project.sh** now creates `.claude/commands/` directory and copies all command templates automatically
+
+### Fixed
+- Skills were documented in CLAUDE.md but not registered as Claude Code commands — Claude couldn't dispatch them as slash commands
+
 ## [2.1.0] - 2026-03-24
 
 ### Added
