@@ -69,6 +69,11 @@ For each spec feature:
 | Bug found in review/test | Create linked `bug` ticket, story returns to `In Progress` |
 | Feature blocked | Add blocker to the story |
 
+> **⚠️ CLOSING GATE**: Every story file MUST include a `closing_ac` with `AC-BP-[FEATURE]-DONE`
+> that verifies the PR is merged. The **validator** MUST call `stories-update` (state 500000010)
+> immediately after this AC passes. This is the only way to guarantee Shortcut stays in sync.
+> See `framework/specs/templates/story-template.yaml` → `closing_ac` section.
+
 ## Memory Synchronization
 
 After each Shortcut update:

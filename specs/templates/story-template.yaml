@@ -73,3 +73,25 @@ depends_on: []                            # Feature IDs that must be "validated"
 
 # Technical notes for the developer
 notes: ""
+
+# ─── Definition of Done ────────────────────────────────────────────────────
+# Standard closing gate — always included, verified by the validator.
+# Replace [PR_NUMBER] with the actual PR number when writing the story file.
+definition_of_done:
+  - "All AC verify: commands pass"
+  - "No TypeScript errors (node ace build --no-copy)"
+  - "All unit tests pass"
+  - "PR merged into develop"
+  - "Shortcut story moved to Done"
+
+# AC-BP-DONE — Mandatory closing AC (Tier 1, always last)
+# Verifies the PR was merged — signals to the validator that Shortcut can be closed.
+# The validator MUST update Shortcut to Done after this AC passes.
+closing_ac:
+  - id: "AC-BP-[FEATURE]-DONE"
+    type: "BP"
+    description: |
+      PR is merged into develop — story closure gate.
+      After this passes, the validator MUST move the Shortcut story to Done (state 500000010).
+    verify: "gh pr list --state merged --base develop --json title | grep -q '[feature-id]'"
+    tier: 1
