@@ -106,6 +106,24 @@ PHASE 5 — RELEASE — ✅ Human
 ═══════════════════════════════════════════════════════════
 ```
 
+## Validation model
+
+| Phase | Skill | Agent | Validation | Gate (file must exist) |
+|-------|-------|-------|------------|------------------------|
+| 0: Constitution | /spec | — | Human | `specs/constitution.md` |
+| 0.1: Scoping | /spec | PO | Human | `specs/[project].yaml` |
+| 0.2: Clarify | /spec | PO | Human | `specs/[project]-clarifications.md` |
+| 0.3: Design | /spec | UX/UI | Human | `specs/[project]-ux.md` |
+| 0.5: Ordering | /spec | PO+Arch | Human | Features ordered in arch doc |
+| 1: Plan | /spec | Architect | Human | `specs/[project]-arch.md` |
+| 2: Scaffold | /build | Developer | Auto | Project compiles/starts |
+| 2.5: Refine | /refine | Refinement | Human | `specs/stories/[feature].yaml` |
+| 3: Implement | /build | Developer | Auto | Code + tests written |
+| 3.5: Validate | /validate | Validator | Auto | ALL `verify:` commands PASS |
+| 4: Review | /review | Reviewer+Security+Tester | Auto | Quality + security PASS |
+| 5: Deploy | — | DevOps | Human | Infrastructure decision |
+| 6: Release | — | — | Human | Go/no-go decision |
+
 ## Enforcement mechanisms
 
 | Mechanism | What it enforces |

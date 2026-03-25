@@ -73,6 +73,24 @@ Phase 6: Deploy Config   →           devops.md          → ✅ Human
 Phase 7: Release         →           orchestrator.md    → ✅ Human
 ```
 
+## Validation model
+
+| Phase | Skill | Agent | Validation | Gate (file must exist) |
+|-------|-------|-------|------------|------------------------|
+| 0: Constitution | /spec | — | Human | `specs/constitution.md` |
+| 0.1: Scoping | /spec | PO | Human | `specs/[project-name].yaml` |
+| 0.2: Clarify | /spec | PO | Human | `specs/[project-name]-clarifications.md` |
+| 0.3: Design | /spec | UX/UI | Human | `specs/[project-name]-ux.md` |
+| 0.5: Ordering | /spec | PO+Arch | Human | Features ordered in arch doc |
+| 1: Plan | /spec | Architect | Human | `specs/[project-name]-arch.md` |
+| 2: Scaffold | /build | Developer | Auto | Project compiles/starts |
+| 2.5: Refine | /refine | Refinement | Human | `specs/stories/[feature].yaml` |
+| 3: Implement | /build | Developer | Auto | Code + tests written |
+| 3.5: Validate | /validate | Validator | Auto | ALL `verify:` commands PASS |
+| 4: Review | /review | Reviewer+Security+Tester | Auto | Quality + security PASS |
+| 5: Deploy | — | DevOps | Human | Infrastructure decision |
+| 6: Release | — | — | Human | Go/no-go decision |
+
 ## Strict rules
 1. **Always read memory** at session start
 2. **Always update memory** after each phase
