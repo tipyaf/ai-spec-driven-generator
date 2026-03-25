@@ -79,7 +79,7 @@ notes: ""
 # Replace [PR_NUMBER] with the actual PR number when writing the story file.
 definition_of_done:
   - "All AC verify: commands pass"
-  - "No TypeScript errors (node ace build --no-copy)"
+  - "No TypeScript errors (node ace build)"
   - "All unit tests pass"
   - "PR merged into develop"
   - "Shortcut story moved to Done"

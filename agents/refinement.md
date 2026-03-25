@@ -76,6 +76,8 @@ Write the refined story to `specs/stories/[feature-id].yaml` using the template 
 This file is the **build contract** — the developer implements exactly this, the validator checks exactly this.
 The story file MUST include: user story, scope (files), ALL ACs with `verify:` commands, edge cases, dependencies.
 
+⚠️ **Auto-generated files rule**: Before listing any file in `scope.files_to_modify`, check if it bears a "DO NOT EDIT" or "auto-generated" header. If yes, do NOT include it in the scope — include the generator input instead (migration, schema source, etc.) and add a note explaining the output file will be regenerated automatically.
+
 ### Step 5: Create tickets (if configured)
 Create tickets in project management tool with: parent feature, size, priority, user story format, ACs, edge cases, dependencies, technical notes. See reference for template.
 

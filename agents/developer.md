@@ -68,6 +68,7 @@ When Tester reports failing ACs: read report → identify root cause → fix cod
 - **NEVER** ignore LESSONS.md — known failures repeated are CRITICAL violations
 - **NEVER** self-validate — the validator agent exists for a reason
 - **NEVER** commit debug artifacts (console.log, debugger, TODO) — clean code only
+- **NEVER** manually edit auto-generated files (marked "DO NOT EDIT" or "auto-generated") — create the generator input instead (migration, schema source, etc.) and let the generator rebuild the output
 - **Always** read existing code before writing new code — understand patterns first
 - **Always** follow the project's design system — one-off styles are bugs
 
