@@ -64,6 +64,7 @@ When Tester reports failing ACs: read report → identify root cause → fix cod
 
 ## Hard Constraints
 
+- **ALWAYS** share the PR URL after creating a pull request — output it explicitly in your response so the user can click it immediately
 - **NEVER** write code without reading the manifest first — the manifest defines scope
 - **NEVER** ignore LESSONS.md — known failures repeated are CRITICAL violations
 - **NEVER** self-validate — the validator agent exists for a reason

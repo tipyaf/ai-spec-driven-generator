@@ -52,3 +52,4 @@ Run these quality gates in order. ALL must pass.
 - [ ] Implementation code (files listed in story scope)
 - [ ] Tests (unit + e2e as applicable)
 - [ ] `specs/feature-tracker.yaml` — updated with status: validated (or escalated)
+- [ ] PR created and **URL shared with the user** — always output the PR URL in your response after `gh pr create`
