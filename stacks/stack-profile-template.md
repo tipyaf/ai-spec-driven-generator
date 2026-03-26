@@ -12,6 +12,10 @@
 ### Conventions
 - [Naming conventions, formatting, linting rules]
 - [Type system usage]
+  - In typed languages, distinguish between ABSENT values (property not in object) and NULL values (property present, value is null). Never conflate the two.
+  - Use optional (`field?: T`) only when the property can genuinely be absent (undefined) — e.g. optional input params, conditional API response fields.
+  - Use nullable (`field: T | null`) when the property is always present but its value can be null — e.g. nullable DB columns.
+  - Never use `field?: T | null` — this conflates both concepts.
 - [Import/export patterns]
 
 ### Anti-patterns
