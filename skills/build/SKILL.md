@@ -51,5 +51,6 @@ Run these quality gates in order. ALL must pass.
 ## Artefact checklist (must exist after /build)
 - [ ] Implementation code (files listed in story scope)
 - [ ] Tests (unit + e2e as applicable)
+- [ ] UX spec updated if new pages/flows introduced (wireframes, sitemap, design doc)
 - [ ] `specs/feature-tracker.yaml` — updated with status: validated (or escalated)
 - [ ] PR created and **URL shared with the user** — always output the PR URL in your response after `gh pr create`
