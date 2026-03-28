@@ -1,5 +1,17 @@
 # Changelog
 
+## [2.3.0] - 2026-03-28
+
+### Added
+- **Git Flow branching model**: `main` (production, releases only) + `develop` (integration, all feature work) — enforced as agent rule 10
+- **Pre-flight PR check**: agents must verify `--base develop` and `git log origin/develop..HEAD` before every `gh pr create`
+- **Worktree isolation updated**: worktrees now branch from `origin/develop` instead of `origin/main`, PR targets updated to integration branch
+
+### Changed
+- **Worktree rule**: `origin/main` → `origin/develop` as default base branch for worktrees
+- **CLAUDE.md.template**: added Git Flow and worktree sections for new projects
+- **README**: added Git & Infrastructure section documenting branching model and worktree isolation
+
 ## [2.2.1] - 2026-03-28
 
 - Update bump-version.yml

@@ -67,7 +67,9 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Failure memory (LESSONS.md)**: recurring mistakes logged and read by all agents before starting
 - **Language-agnostic hooks**: configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders
 
-### Infrastructure
+### Git & Infrastructure
+- **Git Flow branching model**: `main` (production, releases only) + `develop` (integration, all feature work) — enforced by agent rules
+- **Git worktree isolation**: parallel work on multiple features without mixing branches — agents auto-create worktrees for unrelated tasks
 - **Persistent memory**: per-project markdown files tracking decisions, feedback, phase status, and feature progress
 - **Project management integration**: Shortcut.com support for ticket creation and tracking
 - **Claude Code slash commands**: `/spec`, `/refine`, `/build`, `/validate`, `/review` work as native Claude Code commands via `.claude/commands/`
