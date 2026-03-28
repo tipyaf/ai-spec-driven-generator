@@ -91,6 +91,31 @@ Phase 7: Release         →           orchestrator.md    → ✅ Human
 | 5: Deploy | — | DevOps | Human | Infrastructure decision |
 | 6: Release | — | — | Human | Go/no-go decision |
 
+## Git branching model (recommended)
+
+This project uses a **Git Flow** branching model:
+
+| Branch | Role | Merges into |
+|--------|------|-------------|
+| `main` | **Production** — releases only (changelog, version, tag) | — |
+| `develop` | **Integration** — all feature work merges here first | `main` (at release time) |
+
+### Rules
+- **All feature branches start from `develop`** — `git checkout -b feat/XXX origin/develop`
+- **All PRs target `develop`** — `gh pr create --base develop` (NEVER `--base main` except releases)
+- **`main` is read-only for agents** — only release PRs merge into `main`
+
+## Git worktree rule — parallel work isolation
+
+When a feature branch is checked out, all unrelated work MUST be done in a **git worktree**:
+
+| Situation | Action |
+|-----------|--------|
+| On `feat/123` and need to work on `456` | `git worktree add .worktrees/feat-456 -b feat/456 origin/develop` |
+| Worktree work done | Commit, push, PR targeting `develop`. Then `git worktree remove .worktrees/feat-456` |
+
+**Rules**: Worktrees in `.worktrees/` (gitignored). Branch from `origin/develop`. One per task. Clean up after merge.
+
 ## Strict rules
 1. **Always read memory** at session start
 2. **Always update memory** after each phase
@@ -98,6 +123,8 @@ Phase 7: Release         →           orchestrator.md    → ✅ Human
 4. **Never load all agents** — use skills to load only what's needed
 5. **Never over-engineer** — follow the spec, nothing more
 6. **Never code before** scoping + design + plan are validated
+7. **Never mix branches** — unrelated work goes in a worktree
+8. **All PRs target the integration branch** — NEVER `main` directly (except releases)
 
 ## Phase guards
 
