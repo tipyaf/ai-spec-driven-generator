@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.2.1] - 2026-03-28
+
+- Update bump-version.yml
+
+
 All notable changes to the ai-spec-driven-generator framework.
 
 ## [2.2.0] - 2026-03-25
