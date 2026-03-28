@@ -81,6 +81,7 @@ definition_of_done:
   - "All AC verify: commands pass"
   - "No TypeScript errors (node ace build)"
   - "All unit tests pass"
+  - "Zero console errors/stacktraces (front: browser console, back: server logs)"
   - "PR merged into develop"
   - "Shortcut story moved to Done"
 

@@ -49,6 +49,17 @@ Files outside scope = scope violation = FAIL.
 
 For each page/screen modified by dev: start dev server, screenshot with Playwright/Claude Preview, verify against wireframes (design system colors, layout, all states, contrast, responsiveness).
 
+### Step 4b: Console errors / stacktraces (BLOCKING)
+Check for runtime errors in both frontend and backend. **Any error or stacktrace = FAIL.**
+
+- **Frontend (web/mobile UI)**: Use `preview_console_logs` (Claude Preview MCP) to capture browser console output. Filter for `error`, `Error`, `stacktrace`, `Uncaught`, `MISSING_MESSAGE`. Warnings are noted but do not block.
+- **Backend (API)**: Use `preview_logs` or check server output for stacktraces, unhandled exceptions, or error-level log entries triggered by the modified feature.
+
+**Rules**:
+- A page that renders with a console error is NOT validated — even if all other ACs pass.
+- Pre-existing console errors unrelated to the current story MUST be fixed (< 30 min) or tracked in a new Shortcut story. There is no "acceptable background noise" exemption.
+- Console warnings are reported but do not block validation.
+
 ### Step 5: Code checks (anti-patterns)
 For each modified file, grep for anti-patterns:
 - **All types**: `console.log/debug`, `debugger`, `TODO/FIXME/HACK/XXX`, unused imports, empty catch blocks
