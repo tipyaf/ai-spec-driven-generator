@@ -1,5 +1,10 @@
 # Changelog
 
+## [2.3.1] - 2026-03-28
+
+- feat: add Git Flow branching model and update worktree rules
+
+
 ## [2.3.0] - 2026-03-28
 
 ### Added
