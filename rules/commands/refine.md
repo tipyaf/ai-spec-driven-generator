@@ -9,6 +9,11 @@ You are executing the `/refine` skill from the SDD framework.
 
 **Argument**: $ARGUMENTS (the feature ID to refine, e.g., "candidate-profile")
 
+**Step 0 — Worktree check**
+If a feature branch is currently checked out (not `main`/`develop`), create a worktree before proceeding:
+`git worktree add .worktrees/chore-refine-[id] -b chore/refine-[id] origin/main`
+All refinement artefacts (story files, tracker updates, CLAUDE.md changes) go in the worktree branch.
+
 **Step 1 — Load the skill definition**
 Read `framework/skills/refine/SKILL.md` and follow its instructions exactly.
 

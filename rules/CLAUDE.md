@@ -174,6 +174,23 @@ acceptance_criteria:
 | **Extract constants** | Group related constants in a dedicated file or block at the top of the module. Never scatter literals across business logic. | `const CACHE_TTL_DAYS = 30` at top, not `30` inline |
 | **Commits in English** | Commit messages, PR titles, and PR descriptions MUST always be in English. Code comments in English. This ensures consistency across international teams and tools. | ❌ `fix: correction du tri` → ✅ `fix: sorting order` |
 
+## Git worktree rule — parallel work isolation
+
+**When a feature branch is checked out**, all unrelated work (refinement, bug fixes, chores, other features) MUST be done in a **git worktree** to avoid mixing changes across branches.
+
+| Situation | Action |
+|-----------|--------|
+| On `feat/sc-123` and user asks to refine sc-456 | Create worktree: `git worktree add .worktrees/chore-refine-456 -b chore/refine-sc-456 origin/main` |
+| On `feat/sc-123` and a bug is found unrelated to sc-123 | Create worktree: `git worktree add .worktrees/fix-sc-789 -b fix/sc-789 origin/main` |
+| Worktree work is done | Commit, push, create PR from the worktree. Then `git worktree remove .worktrees/[name]` |
+
+**Rules**:
+- Worktrees go in `.worktrees/` (gitignored)
+- Branch from `origin/main` (or the project's base branch) — never from the current feature branch
+- One worktree per task — don't reuse across unrelated tasks
+- Clean up after merge: `git worktree remove .worktrees/[name]`
+- Never mix changes from different stories/features on the same branch
+
 ## Strict rules
 1. **Always read memory** at session start — `memory/[project-name].md` + `memory/LESSONS.md` + `specs/feature-tracker.yaml`
 2. **Always update memory** after each phase
@@ -183,6 +200,7 @@ acceptance_criteria:
 6. **Never over-engineer** — follow the spec, nothing more
 7. **Never code before** conception phases are complete (spec + arch + tracker must exist)
 8. **Never skip verify: commands** — they are the machine contract
+9. **Never mix branches** — unrelated work goes in a worktree (see worktree rule above)
 
 ## Agent role guards
 
