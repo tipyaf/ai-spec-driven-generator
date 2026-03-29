@@ -113,7 +113,23 @@ Once the stack is selected, propose best practices tailored to the **project typ
    - Accept all: "ok" or "good"
    ```
 5. **WAIT for user input.** Do not auto-proceed.
-6. Store validated practices in the stack profile under `## Validated Best Practices`
+6. Apply user changes (removals, additions, modifications)
+7. **Present the final recap** — show the complete validated list with changes applied:
+   ```
+   Here is your validated best practices list:
+
+   ✅ 1. [Practice] — [rationale]
+   ✅ 2. [Practice] — [rationale]
+   ❌ 3. [Removed practice] — removed (reason: [user's reason])
+   ✅ 4. [Modified practice] — [rationale] (modified)
+   ✅ 5. [User-added practice] — [rationale] (added by you)
+   ...
+
+   Total: N practices validated, M removed, P added.
+   Do you confirm this list? (yes / more changes)
+   ```
+8. **WAIT for user confirmation.** Do not proceed to Step 2 until the user explicitly confirms.
+9. Store validated practices in the stack profile under `## Validated Best Practices`
 
 **Rules:**
 - Propose 10-20 practices max — enough to be useful, not overwhelming
@@ -121,6 +137,7 @@ Once the stack is selected, propose best practices tailored to the **project typ
 - Each practice must be **actionable and verifiable** — not vague advice
 - The user's word is final — if they remove a practice, it's removed. No arguing.
 - If the user adds a practice, format it consistently and include it
+- **Always show the final recap** before moving on — the user must see exactly what they're committing to
 
 ### Step 2: Stack Profile Generation
 For each technology, **create a stack profile** in `stacks/` using `stacks/stack-profile-template.md`. Fill all sections (coding best practices, security, performance, testing rules, AC templates). **Include the validated best practices from Step 1b.** Profiles become the **coding and security contract** for the entire project.
