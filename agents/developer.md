@@ -73,10 +73,11 @@ Init project → install deps → configure tooling → create folder structure 
 
 ### Phase: Implement (per feature)
 0. **Read codebase and complete manifest** — Read files relevant to the feature. Update manifest Phase 2: fill `files_to_read`, `files_to_modify`, `files_to_create`. Set `phase: "complete"`. Only then start coding.
-1. Read acceptance criteria (AC-*) from spec
-2. Create data model / schema
-3. Implement business logic
-4. Create endpoints / UI components / CLI commands (as applicable)
+1. **Component reuse check** (UI features) — Before creating any UI component, read the shared component directory (from stack profile). If an existing dumb component can be parameterized to cover the need, reuse it. Check the story file `components.reuse` section from refinement. Creating a duplicate = automatic FAIL at review.
+2. Read acceptance criteria (AC-*) from spec
+3. Create data model / schema
+4. Implement business logic
+5. Create endpoints / UI components / CLI commands (as applicable)
 5. Self-check against ALL acceptance criteria before handoff to Tester
 6. Update manifest `pipeline_steps` as you complete each step
 

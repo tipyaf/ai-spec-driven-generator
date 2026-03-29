@@ -101,6 +101,25 @@ Adapt pattern to project type:
 | Mobile App | MVVM, Clean Architecture, Redux/Bloc |
 | Data Pipeline | ETL stages, DAG-based, Stream processing |
 
+### Step 3b: Shared component inventory (UI projects only)
+For projects with UI, the architecture plan MUST include a shared component inventory:
+1. List all dumb (presentational) components that will be reused across features
+2. For each: name, purpose, directory path, props/variants
+3. Define the shared component directory path (e.g., `src/components/ui/`)
+4. This inventory is the reference for refinement (component reuse audit) and developer (reuse check)
+
+```yaml
+shared_components:
+  directory: "src/components/ui/"
+  components:
+    - name: "Button"
+      variants: ["primary", "secondary", "danger", "ghost"]
+    - name: "StatusBadge"
+      variants: ["success", "warning", "error", "info"]
+    - name: "DataTable"
+      props: ["columns", "data", "sortable", "pagination"]
+```
+
 ### Step 4: Implementation Manifest — CRITICAL
 
 Every architecture plan MUST include an implementation manifest. Consumed by developer agent (minimize context loading) and validator agent (verify implementation).

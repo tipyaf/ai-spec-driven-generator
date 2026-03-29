@@ -64,6 +64,30 @@ Activated by `/refine` skill when a feature has status `pending` in `specs/featu
 2. Break into atomic user stories (implementable in 1 session)
 3. Per story: description, ACs (Given/When/Then), required data, UI components, API endpoints, dependencies
 
+### Step 1a-bis: Component reuse audit (UI projects only)
+**MANDATORY for web, mobile, or desktop projects with UI components:**
+1. List all UI components mentioned or implied in the story
+2. Check existing shared component directory (defined in stack profile) for components that already cover the need
+3. For each match: reference the existing component in the story instead of requesting a new one
+4. For each new component needed: mark whether it is **dumb** (presentational, reusable) or **smart** (feature-specific container)
+5. If a new dumb component is similar to an existing one: prefer parameterizing the existing component (via props/slots) over creating a new one — note this in the story
+
+**Add to the story file:**
+```yaml
+components:
+  reuse:
+    - name: "StatusBadge"
+      path: "src/components/ui/StatusBadge.tsx"
+      note: "Add 'warning' variant via prop"
+  create:
+    - name: "PaymentSummaryCard"
+      type: dumb
+      reason: "No existing component covers this layout"
+    - name: "CheckoutFlow"
+      type: smart
+      reason: "Orchestrates payment steps, manages cart state"
+```
+
 ### Step 1b: Auto-generate Security & Best Practice ACs
 **MANDATORY** after decomposing functional stories:
 1. Read active **stack profiles** from `stacks/`
