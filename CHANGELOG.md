@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.4] - 2026-03-29
+
+- feat: add frontend rules sections to stack profile template
+
+
 ## [3.0.3] - 2026-03-29
 
 - feat: add component reuse checks across the pipeline (UI projects)
