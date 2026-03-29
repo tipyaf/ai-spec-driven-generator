@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.10] - 2026-03-29
+
+- feat: add build state gates to manifest — persist gate results between sessions
+
+
 ## [3.0.9] - 2026-03-29
 
 - docs: update README with component reuse pipeline and interactive best practices
