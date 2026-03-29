@@ -83,6 +83,10 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Model tier recommendations**: Opus for reasoning-heavy agents (developer, tester), Sonnet for systematic agents (validator, reviewer Pass 2)
 - **UX gate**: frontend stories require UX spec before coding begins
 - **ADR gate**: architecture decisions documented before implementation proceeds
+- **Smart/Dumb component architecture**: classification rules, reuse-before-create, extract at 2nd occurrence (UI projects)
+- **Component reuse pipeline**: architect inventories shared components → refinement audits reuse → developer checks before creating → reviewer catches duplicates
+- **Interactive best practices proposal**: architect proposes stack-specific practices as checklist, user validates/customizes, stored as coding contract in stack profile
+- **Best Practices Catalog**: 55+ practices across 6 project types (frontend web, mobile native, cross-platform, backend API, data pipeline, CLI/library)
 
 ### Git & Infrastructure
 - **Git Flow branching model**: `main` (production, releases only) + `develop` (integration, all feature work) — enforced by agent rules
@@ -191,9 +195,9 @@ ai-spec-driven-generator/
 │   ├── orchestrator.md      # Orchestration rules reference (enforced by skills)
 │   ├── product-owner.md     # Scoping, spec writing, AC format
 │   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA
-│   ├── architect.md         # Architecture + implementation manifest
-│   ├── refinement.md        # Feature breakdown, story files, verify: commands, UX gate, ADR gate
-│   ├── developer.md         # Code implementation (manifest-scoped, stale detection, deployment reminder)
+│   ├── architect.md         # Architecture + implementation manifest + shared component inventory + interactive best practices
+│   ├── refinement.md        # Feature breakdown, story files, verify: commands, UX gate, ADR gate, component reuse audit
+│   ├── developer.md         # Code implementation (manifest-scoped, component reuse check, stale detection, deployment reminder)
 │   ├── validator.md         # Independent verification (spec contract, forbidden patterns, manifest scope)
 │   ├── tester.md            # Test writing (batch sizing, kill-tests, ensemble assessment)
 │   ├── reviewer.md          # Quality audit (3-pass, manifest scope enforcement, recurring failure logging)
@@ -212,7 +216,7 @@ ai-spec-driven-generator/
 │   ├── CLAUDE.md.template   # Template for project init
 │   ├── .cursorrules         # Rules for Cursor
 │   ├── agent-conduct.md     # Cross-agent behavior rules (single source of truth)
-│   ├── coding-standards.md  # SOLID, CQRS, DRY, YAGNI, readability gates, API design
+│   ├── coding-standards.md  # SOLID, CQRS, DRY, YAGNI, readability gates, API design, smart/dumb components
 │   ├── test-quality.md      # Oracle computation, coverage audit, test anti-patterns
 │   └── commands/            # Claude Code slash command templates
 │       ├── spec.md          # /spec command
@@ -304,6 +308,12 @@ Before writing code, the developer creates a manifest declaring scope (artifacts
 
 ### Coding Standards
 Language-agnostic SOLID/CQRS/DRY/YAGNI with concrete thresholds: max 40 lines/function, max 3 levels nesting, max 400 lines/file, max 10 cyclomatic complexity, max 5 function parameters. See `rules/coding-standards.md`.
+
+### Smart/Dumb Component Architecture (UI projects)
+Every UI component is classified as **Dumb** (presentational — receives data via props, zero service imports, high reusability) or **Smart** (container — orchestrates logic, fetches data, manages state). Enforced across the pipeline: architect inventories shared components, refinement audits reuse before requesting new ones, developer checks the shared directory before creating, reviewer catches duplicates. Extract to shared dumb component at 2nd occurrence — stricter than logic DRY. See `rules/coding-standards.md` §10.
+
+### Interactive Best Practices
+During architecture phase, the framework proposes best practices tailored to the project type and stack as a numbered checklist. The user reviews, removes, adds, or modifies practices. A final recap requires explicit confirmation. Validated practices are stored in the stack profile as the project's coding contract. The catalog (`agents/architect.ref.md`) covers 6 project types with 55+ practices.
 
 ## Contributing
 
