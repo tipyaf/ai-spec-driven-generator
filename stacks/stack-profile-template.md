@@ -21,48 +21,6 @@
 ### Anti-patterns
 - [Common mistakes to avoid with this stack]
 
-## UI Rules (projects with user interface only)
-
-> Skip this entire section for API-only, CLI, library, embedded, or data pipeline projects.
-> Fill in with your stack's specifics. Examples given for multiple platforms.
-
-### Markup / View structure
-- [Semantic structure policy for this platform]
-  - Web: semantic HTML (`<header>`, `<nav>`, `<main>`, `<section>`) over generic `<div>`
-  - Mobile native: proper view hierarchy (UIStackView, ConstraintLayout, Column/Row)
-  - Cross-platform: framework widgets (Flutter Widget tree, React Native View hierarchy)
-- [Heading / content hierarchy rules]
-- [Image accessibility: alt text (web), contentDescription (Android), accessibilityLabel (iOS/RN)]
-- [Form input labeling for this platform]
-
-### Styling
-- [Styling approach for this stack]
-  - Web: CSS methodology (BEM, Modules, Tailwind, styled-components), selector rules, `!important` policy
-  - Mobile native: theme system (Material Theme, UIAppearance, SwiftUI modifiers)
-  - Cross-platform: styling system (Flutter ThemeData, RN StyleSheet, Compose MaterialTheme)
-- [Design tokens: how colors, spacing, typography are centralized in this stack — no hardcoded values]
-- [Layout system: which layout primitives to use (Flexbox, Grid, StackView, ConstraintLayout, Row/Column)]
-- [Units: relative vs absolute sizing policy for this platform]
-
-### Language best practices
-- [Language-specific idioms and rules for this stack]
-  - Variable declarations, modern syntax, error handling patterns
-  - Framework-specific patterns to follow and anti-patterns to avoid
-  - Module / import system conventions
-- [Direct view/DOM manipulation policy: banned when using a declarative framework — let the framework handle rendering]
-
-### Performance
-- [Asset optimization for this platform: minification, image formats, compression, tree-shaking]
-- [Lazy loading: deferred loading of non-critical views, routes, images, or modules]
-- [Rendering optimization: framework-specific memoization, virtualization, efficient re-renders]
-- [Network optimization: caching strategy, request batching, prefetching]
-- [Bundle / binary size: code splitting (web), ProGuard/R8 (Android), bitcode (iOS), tree shaking]
-
-### Adaptive layout
-- [Approach: mobile-first, responsive, adaptive, or platform-specific]
-- [Breakpoints or size classes for this platform]
-- [Sizing units: relative units preferred over fixed values]
-- [Testing: real devices in addition to emulators/simulators/DevTools]
 
 ## Security Rules
 
