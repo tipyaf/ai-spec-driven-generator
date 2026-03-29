@@ -85,8 +85,45 @@ When spec has a predefined stack, validate it first. When stack is open/TBD, sel
 - **Always present at least 3 options** for main backend framework with comparison table
 - **Batteries-included vs modular is a real tradeoff** — evaluate explicitly for project scope
 
+### Step 1b: Best Practices Proposal (interactive — ✅ Human validation)
+
+Once the stack is selected, propose best practices tailored to the **project type + stack**. The user validates, removes, adds, or customizes before they become the project's coding contract.
+
+**Process:**
+1. Identify the project categories that apply (a project can match multiple):
+   - Frontend UI (web, mobile, desktop with user interface)
+   - Backend API (REST, GraphQL, RPC)
+   - Data / Pipeline (ETL, streaming, batch)
+   - CLI / Library / Embedded
+2. For each matching category, read the corresponding best practices reference from `agents/architect.ref.md` § Best Practices Catalog
+3. Filter practices relevant to the chosen stack (e.g., skip CSS rules for Flutter, skip ProGuard for web)
+4. Present to the user as a numbered checklist:
+   ```
+   Based on your stack ([stack name]) and project type ([type]), here are
+   the recommended best practices. Review and customize:
+
+   ✅ 1. [Practice] — [one-line rationale]
+   ✅ 2. [Practice] — [one-line rationale]
+   ...
+
+   Options:
+   - Remove: "remove 3, 7" (with reason)
+   - Add: describe your practice, I'll format it
+   - Modify: "change 5 to [your version]"
+   - Accept all: "ok" or "good"
+   ```
+5. **WAIT for user input.** Do not auto-proceed.
+6. Store validated practices in the stack profile under `## Validated Best Practices`
+
+**Rules:**
+- Propose 10-20 practices max — enough to be useful, not overwhelming
+- Group by concern (structure, styling, performance, security, testing)
+- Each practice must be **actionable and verifiable** — not vague advice
+- The user's word is final — if they remove a practice, it's removed. No arguing.
+- If the user adds a practice, format it consistently and include it
+
 ### Step 2: Stack Profile Generation
-For each technology, **create a stack profile** in `stacks/` using `stacks/stack-profile-template.md`. Fill all sections (coding best practices, security, performance, testing rules, AC templates). Profiles become the **coding and security contract** for the entire project.
+For each technology, **create a stack profile** in `stacks/` using `stacks/stack-profile-template.md`. Fill all sections (coding best practices, security, performance, testing rules, AC templates). **Include the validated best practices from Step 1b.** Profiles become the **coding and security contract** for the entire project.
 
 ### Step 3: Architecture Design
 
