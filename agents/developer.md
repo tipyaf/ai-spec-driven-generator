@@ -65,8 +65,9 @@ Activated by `/build` skill when a feature has status `refined` in `specs/featur
 Before starting any feature build:
 1. Read `specs/feature-tracker.yaml`
 2. For features with status `building`: check if recent git commits exist for this feature
-3. If a feature is `building` with no recent commit: warn user — "Feature X has been 'building' with no recent progress. Options: (a) reset to 'refined' and rebuild, (b) continue from current state."
-4. Wait for user input before proceeding.
+3. If a feature has a manifest with `gates` results from a previous session: read them to understand what passed/failed and resume from there
+4. If a feature is `building` with no recent commit: warn user — "Feature X has been 'building' with no recent progress. Options: (a) reset to 'refined' and rebuild, (b) continue from current state."
+5. Wait for user input before proceeding.
 
 ### Phase: Scaffold
 Init project → install deps → configure tooling → create folder structure → create base files → verify it compiles/starts.

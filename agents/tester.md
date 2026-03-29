@@ -38,6 +38,7 @@ Activated by `/validate` or as a sub-step of `/build` when developer declares te
 - Each test file has `# ORACLE:` blocks on all computed value assertions.
 - Coverage audit matrix (before any tests are written).
 - Ensemble assessment table (after tests pass).
+- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results to `gates.test_quality`
 
 ## Read Before Write (mandatory)
 1. Read `rules/test-quality.md` — oracle blocks, coverage audit, anti-patterns, test intentions

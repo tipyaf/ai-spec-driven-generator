@@ -136,6 +136,7 @@ PHASE 5 — RELEASE — ✅ Human
 | **Implementation manifest** | Scope control — developer declares files before coding, reviewer verifies git diff matches |
 | **Code review hook** | Automated Pass 2 — `stacks/hooks/code_review.py` runs anti-patterns + external checks |
 | **Enforcement scripts** | Quality gates — `scripts/check_*.py` block commits on violations |
+| **Build state (gates)** | Per-feature gate results (validation, code review, security, test quality, scope) persisted in manifest — agents resume from last state between sessions |
 
 ## Model tier recommendations (token optimization)
 

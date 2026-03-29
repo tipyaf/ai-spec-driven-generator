@@ -48,6 +48,7 @@ Not triggered directly — rules are embedded in skills. Skills check prerequisi
 | **verify: commands** | Machine-verifiable acceptance criteria | Executed by /validate and /review |
 | **Cycle counter** | Max 3 validation cycles before human escalation | feature-tracker.yaml `cycles` field |
 | **Enforcement scripts** | Quality gates — `scripts/check_*.py` block commits on violations | Run by developer, tester, validator |
+| **Build state (gates)** | Per-feature gate results persist between sessions — agents resume from last state | `specs/stories/[feature-id]-manifest.yaml` `gates` section |
 
 ## Validation Model
 

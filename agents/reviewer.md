@@ -36,6 +36,7 @@ Activated by `/review` skill when ALL features have status `validated` in `specs
 
 ## Output
 - Structured PASS/FAIL review report with severity levels
+- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results to `gates.code_review`
 - Updated `memory/LESSONS.md` if recurring failure pattern detected
 - **NEVER** modifies source code directly (except auto-fixable: unused imports, formatting)
 

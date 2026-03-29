@@ -72,4 +72,56 @@ pipeline_steps: []
 
 deployment_note: ""           # e.g. "Rebuild: api, frontend. Run: docker compose up -d --build api frontend"
 
+# ========================
+# BUILD STATE — Gate results
+# ========================
+# Written by validator, reviewer, security, tester agents during /validate and /review.
+# Persists between sessions — agents resume from last known state.
+# Each gate: pending → pass | fail | skip | escalated
+
+gates:
+  validation:
+    status: pending            # pending | pass | fail | escalated
+    cycle: 0                   # incremented on each attempt
+    passed: []                 # AC IDs that passed
+    failed: []                 # [{id, criterion, evidence}]
+    not_verifiable: []         # AC IDs that are runtime-only (Tier 3)
+    validated_at: ""           # ISO date of last run
+
+  code_review:
+    status: pending            # pending | pass | fail
+    pass_1: pending            # KISS & readability
+    pass_2: pending            # Static analysis (automated)
+    pass_3: pending            # Safety & correctness
+    findings: []               # [{file, line, rule, severity, text}] — only on fail
+    reviewed_at: ""
+
+  security_audit:
+    status: pending            # pending | pass | fail | skip
+    risk_level: ""             # CRITICAL | HIGH | MEDIUM | LOW | PASS
+    critical: []               # [{file, line, description, remediation}]
+    high: []
+    medium: []
+    low: []
+    audited_at: ""
+
+  test_quality:
+    status: pending            # pending | pass | fail
+    mutation_score: 0          # percentage (0-100)
+    mutation_cycle: 0
+    survivors: []              # [{file, line, original, mutated}] — only on fail
+    ensemble:
+      strong: 0
+      weak: 0
+      useless: 0
+      useless_tests: []        # function names that must be rewritten
+    fault_scenarios_generated: 0
+    tested_at: ""
+
+  scope_check:
+    status: pending            # pending | pass | fail
+    undeclared_files: []       # files in git diff not in manifest
+    missing_artifacts: []      # declared artifacts not found in code
+    checked_at: ""
+
 notes: ""                     # Developer notes, decisions, trade-offs

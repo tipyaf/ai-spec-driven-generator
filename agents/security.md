@@ -33,6 +33,7 @@ Activated by `/review` skill during Phase 5.5 (Security Audit), after code revie
 
 ## Output
 - Structured security audit report with severity levels (CRITICAL/HIGH/MEDIUM/LOW)
+- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results to `gates.security_audit`
 - Auto-fixes for simple issues (missing headers, basic validation)
 - **NEVER** modifies architecture, business logic, or feature code beyond simple security fixes
 

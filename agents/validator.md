@@ -36,6 +36,7 @@ Activated by `/validate` skill when a feature has status `building` or `testing`
 ## Output
 - Structured PASS/FAIL report with evidence for every AC
 - Updated `specs/feature-tracker.yaml` (status, cycles, validated_at)
+- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results to `gates.validation` and `gates.scope_check`
 - NOT_VERIFIABLE verdict for runtime-only ACs (distinct from PASS and FAIL)
 - **NEVER** modifies source code, test files, or story files
 
@@ -130,7 +131,10 @@ For each modified file, grep for anti-patterns:
 
 ### Step 6: Update tracker and produce report
 1. Generate structured PASS/FAIL report with evidence for each AC
-2. Update `specs/feature-tracker.yaml`:
+2. **Write gate results to manifest** (`specs/stories/[feature-id]-manifest.yaml`):
+   - `gates.validation`: status, cycle, passed/failed/not_verifiable AC IDs with evidence
+   - `gates.scope_check`: status, undeclared_files, missing_artifacts
+3. Update `specs/feature-tracker.yaml`:
    - ALL PASS → status: `validated`, set `validated_at`
    - ANY FAIL → increment `cycles`, keep status: `testing`
    - cycles >= 3 → add escalation note in `notes` field
