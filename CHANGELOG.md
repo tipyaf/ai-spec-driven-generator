@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.1] - 2026-03-29
+
+- feat: wave 2 — advanced quality pipeline, implementation manifest, agent restructuring
+
+
 ## [2.3.1] - 2026-03-28
 
 - feat: add Git Flow branching model and update worktree rules
