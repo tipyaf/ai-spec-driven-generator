@@ -21,45 +21,48 @@
 ### Anti-patterns
 - [Common mistakes to avoid with this stack]
 
-## Frontend Rules (web/mobile/desktop UI projects only)
+## UI Rules (projects with user interface only)
 
 > Skip this entire section for API-only, CLI, library, embedded, or data pipeline projects.
+> Fill in with your stack's specifics. Examples given for multiple platforms.
 
-### HTML / Markup
-- [Semantic elements policy: which elements to use (`<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<footer>`) vs generic `<div>`]
-- [Heading hierarchy: h1 → h2 → h3, no skipped levels]
-- [Image `alt` attributes: always required, `alt=""` for decorative only]
-- [Form labels: every input has a visible `<label>` or `aria-label`]
-- [Framework-specific: JSX rules (React), template syntax (Vue/Angular/Svelte), etc.]
+### Markup / View structure
+- [Semantic structure policy for this platform]
+  - Web: semantic HTML (`<header>`, `<nav>`, `<main>`, `<section>`) over generic `<div>`
+  - Mobile native: proper view hierarchy (UIStackView, ConstraintLayout, Column/Row)
+  - Cross-platform: framework widgets (Flutter Widget tree, React Native View hierarchy)
+- [Heading / content hierarchy rules]
+- [Image accessibility: alt text (web), contentDescription (Android), accessibilityLabel (iOS/RN)]
+- [Form input labeling for this platform]
 
-### CSS / Styling
-- [Methodology: BEM, CSS Modules, Tailwind utility-first, styled-components, scoped styles, etc.]
-- [Selector specificity: prefer classes over IDs for styling, max nesting depth]
-- [`!important` policy: banned except [justified cases]]
-- [Design tokens: use CSS variables / theme tokens for colors, spacing, typography — no hardcoded values]
-- [Modern layout: Flexbox / CSS Grid preferred over floats and positioning hacks]
-- [Units: `rem` / `%` / `vw`/`vh` for responsive sizes, `px` only for borders and fine details]
+### Styling
+- [Styling approach for this stack]
+  - Web: CSS methodology (BEM, Modules, Tailwind, styled-components), selector rules, `!important` policy
+  - Mobile native: theme system (Material Theme, UIAppearance, SwiftUI modifiers)
+  - Cross-platform: styling system (Flutter ThemeData, RN StyleSheet, Compose MaterialTheme)
+- [Design tokens: how colors, spacing, typography are centralized in this stack — no hardcoded values]
+- [Layout system: which layout primitives to use (Flexbox, Grid, StackView, ConstraintLayout, Row/Column)]
+- [Units: relative vs absolute sizing policy for this platform]
 
-### JavaScript / TypeScript
-- [Variable declarations: `const` by default, `let` when reassignment needed, `var` banned]
-- [Modern syntax: destructuring, template literals, async/await, optional chaining (`?.`), nullish coalescing (`??`)]
-- [DOM manipulation: banned when using a framework (React, Vue, etc.) — let the framework handle it]
-- [Error handling: try/catch on network calls, explicit error messages, no silent failures]
-- [Module system: ES modules (`import`/`export`), no CommonJS (`require`) unless Node.js backend requires it]
+### Language best practices
+- [Language-specific idioms and rules for this stack]
+  - Variable declarations, modern syntax, error handling patterns
+  - Framework-specific patterns to follow and anti-patterns to avoid
+  - Module / import system conventions
+- [Direct view/DOM manipulation policy: banned when using a declarative framework — let the framework handle rendering]
 
 ### Performance
-- [Asset optimization: minification (JS/CSS), modern image formats (WebP/AVIF), compression]
-- [Lazy loading: images, routes, and non-critical components]
-- [Critical rendering path: inline critical CSS, `defer`/`async` on scripts]
-- [Bundle splitting: code-split by route or feature, avoid monolithic bundles]
-- [HTTP optimization: minimize requests, leverage browser cache (Cache-Control, ETag)]
-- [Framework-specific: React.memo/useMemo, Vue computed, Svelte reactivity, etc.]
+- [Asset optimization for this platform: minification, image formats, compression, tree-shaking]
+- [Lazy loading: deferred loading of non-critical views, routes, images, or modules]
+- [Rendering optimization: framework-specific memoization, virtualization, efficient re-renders]
+- [Network optimization: caching strategy, request batching, prefetching]
+- [Bundle / binary size: code splitting (web), ProGuard/R8 (Android), bitcode (iOS), tree shaking]
 
-### Responsive Design
-- [Approach: mobile-first with media queries]
-- [Breakpoints: define project breakpoints (e.g., 320px, 768px, 1024px, 1440px)]
-- [Units: relative units (`rem`, `%`, `vw`) over fixed `px` for sizing]
-- [Testing: real devices in addition to browser DevTools]
+### Adaptive layout
+- [Approach: mobile-first, responsive, adaptive, or platform-specific]
+- [Breakpoints or size classes for this platform]
+- [Sizing units: relative units preferred over fixed values]
+- [Testing: real devices in addition to emulators/simulators/DevTools]
 
 ## Security Rules
 
