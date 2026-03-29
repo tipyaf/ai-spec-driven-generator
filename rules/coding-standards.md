@@ -162,6 +162,46 @@ These are defaults. Stack profiles can override with language-specific conventio
 
 ---
 
+## 10. Component Architecture (UI projects)
+
+> Applies to web, mobile, and desktop projects with UI. Skip for API, CLI, library, embedded, data pipeline.
+
+### Smart vs Dumb components
+
+Every UI component MUST be classified as **Smart** (container) or **Dumb** (presentational):
+
+| | Dumb (Presentational) | Smart (Container) |
+|---|---|---|
+| **Purpose** | Render UI based on props/inputs. Pure display. | Orchestrate logic, fetch data, manage state. |
+| **Data** | Receives everything via props/inputs. Knows nothing about where data comes from. | Connects to stores, services, APIs, routing. Passes data down to dumb components. |
+| **State** | Local UI state only (open/closed, hover, animation). No business state. | Owns business state, side effects, data fetching. |
+| **Dependencies** | Zero service/store/API imports. Only UI primitives and other dumb components. | Imports services, stores, hooks, API clients. |
+| **Reusability** | High — can be used in any context with different data. | Low — tied to a specific feature or page. |
+| **Testing** | Snapshot + interaction tests (click, input). No mocking needed. | Integration tests with mocked services/APIs. |
+| **Examples** | Button, Card, DataTable, Avatar, StatusBadge, FormField | UserProfilePage, CheckoutFlow, DashboardContainer |
+
+### Rules
+
+| Rule | FAIL if |
+|------|---------|
+| **Reuse before create** | A new dumb component is created when an existing one can be parameterized (via props/slots/children) to cover the use case. Reviewer checks component library first. |
+| **No logic in dumb components** | A presentational component imports a service, store, API client, or router. |
+| **No rendering in smart components** | A smart component contains complex markup/styling instead of delegating to dumb components. Minimal wrapper markup is acceptable. |
+| **No duplicated UI** | The same visual pattern (card, list item, badge, form field) is implemented in 2+ places instead of extracted to a shared dumb component. |
+| **Shared components in shared directory** | A dumb component used by 2+ features lives in the feature directory instead of the shared/common component directory. |
+
+### Component extraction rule
+When the **same visual pattern appears twice**, extract it immediately into a shared dumb component. Don't wait for a third occurrence — UI duplication causes visual inconsistency and maintenance burden faster than logic duplication.
+
+### Where to define the mapping
+The **stack profile** (`stacks/`) defines how smart/dumb maps to the specific framework:
+- React: Smart = hooks + context consumers, Dumb = pure components with props
+- Vue: Smart = composables + store consumers, Dumb = props-only components
+- Svelte: Smart = store subscribers, Dumb = exported props only
+- Angular: Smart = services + observables, Dumb = `@Input()` / `@Output()` only
+
+---
+
 ## Hard Constraints
 
 - **NEVER commit code that violates readability gates** (function > 40 lines, nesting > 3, file > 400 lines)
@@ -171,3 +211,5 @@ These are defaults. Stack profiles can override with language-specific conventio
 - **NEVER return untyped data from APIs** -- always declare response model
 - **ALWAYS follow the project's stack profile conventions** -- they override these defaults
 - **ALWAYS read existing code before writing new code** -- understand patterns first
+- **NEVER duplicate a UI component** -- reuse or parameterize existing dumb components before creating new ones
+- **NEVER put business logic in dumb components** -- they receive data via props, nothing else

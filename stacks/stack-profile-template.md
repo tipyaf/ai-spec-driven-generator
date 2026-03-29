@@ -69,6 +69,22 @@
 - [Where are backend_test_dirs, integration_test_dirs, etc.]
 - [What write_path_keywords are relevant]
 
+## Component Architecture (UI projects only)
+
+> Skip this section for API-only, CLI, library, embedded, or data pipeline projects.
+
+### Smart/Dumb mapping for this stack
+- **Dumb components**: [How presentational components work in this framework — e.g., React: pure function with props, Vue: props-only SFC, Angular: @Input/@Output]
+- **Smart components**: [How container components work — e.g., React: hooks + context, Vue: composables + store, Angular: services + observables]
+- **Shared component directory**: [Path where reusable dumb components live — e.g., `src/components/ui/`, `src/shared/components/`]
+- **Feature component directory**: [Path where feature-specific smart components live — e.g., `src/features/[name]/components/`]
+
+### Component rules specific to this stack
+- [State management pattern: Redux, Zustand, Pinia, NgRx, etc.]
+- [How to pass data down: props, slots, children, content projection]
+- [How to emit events up: callbacks, custom events, @Output, emit]
+- [Styling approach: CSS modules, styled-components, Tailwind, scoped styles]
+
 ## SOLID Application in This Stack
 - [How SRP maps to this framework (e.g., controllers/services/repos)]
 - [How DIP works (dependency injection mechanism)]

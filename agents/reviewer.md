@@ -75,6 +75,8 @@ Activated by `/review` skill when ALL features have status `validated` in `specs
 | SOLID violations | God class, business logic in router, direct instantiation instead of DI |
 | YAGNI violations | Speculative features, premature abstractions, unused parameters |
 | DRY violations | Copy-pasted fixtures, repeated config, duplicated validation |
+| Component duplication (UI) | Same visual pattern in 2+ places instead of shared dumb component |
+| Smart/Dumb violation (UI) | Dumb component imports services/stores/APIs, or smart component has complex markup |
 
 ### Pass 2: Static Analysis (automated)
 Run via `stacks/hooks/code_review.py` or project tooling: linting, type checking, formatting, test suite, anti-pattern checks. **FAIL = block PR.**
