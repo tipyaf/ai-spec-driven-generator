@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.2] - 2026-03-29
+
+- fix: add missing test-methodology.md referenced by tester agent
+
+
 ## [3.0.1] - 2026-03-29
 
 - feat: wave 2 — advanced quality pipeline, implementation manifest, agent restructuring
