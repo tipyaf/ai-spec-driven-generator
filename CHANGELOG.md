@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.5] - 2026-03-29
+
+- fix: make UI rules in stack profile template platform-agnostic
+
+
 ## [3.0.4] - 2026-03-29
 
 - feat: add frontend rules sections to stack profile template
