@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.7] - 2026-03-29
+
+- feat: interactive best practices proposal during architecture phase
+
+
 ## [3.0.6] - 2026-03-29
 
 - fix: remove low-value UI Rules section from stack profile template
