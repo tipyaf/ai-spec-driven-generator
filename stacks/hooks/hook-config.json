@@ -28,6 +28,30 @@
         "filter": "*.{ts,tsx,js,jsx,py,rs,go,java,yaml,yml,json}",
         "severity": "error",
         "message": "Never hardcode secrets. Use environment variables."
+      },
+      {
+        "name": "test-skip-banned",
+        "description": ".skip() and .todo() produce tests that catch nothing",
+        "patterns": ["\\.(skip|todo)\\(", "@pytest\\.mark\\.skip\\b"],
+        "filter": "*.{test.ts,test.tsx,test.js,spec.ts,spec.tsx,py}",
+        "severity": "error",
+        "message": "Use xfail or assert broken value with // BUG: comment instead of .skip()/.todo()"
+      },
+      {
+        "name": "empty-catch-blocks",
+        "description": "Swallowed errors hide bugs",
+        "patterns": ["catch\\s*\\([^)]*\\)\\s*\\{\\s*\\}", "except:\\s*$", "except Exception:\\s*pass"],
+        "filter": "*.{ts,tsx,js,jsx,py,rs,go,java}",
+        "severity": "error",
+        "message": "Never swallow errors. Log + rethrow or handle explicitly."
+      },
+      {
+        "name": "god-functions",
+        "description": "Functions over 40 lines violate SRP",
+        "patterns": [],
+        "filter": "*.{ts,tsx,js,jsx,py,rs,go,java}",
+        "severity": "warning",
+        "message": "See rules/coding-standards.md — functions must be under 40 lines"
       }
     ],
 
@@ -86,5 +110,52 @@
       "description": "Run after editing a file. Uses {file} for the edited file path.",
       "command_template": "bash -c 'grep -n \"{pattern}\" \"{file}\" && echo \"⚠️ {name}: {message}\" || true'"
     }
+  },
+
+  "checks": {
+    "description": "External command checks run by code_review.py. Projects fill this in with their stack-specific tools. {files} is replaced with the space-separated list of matching files.",
+    "examples": [
+      {
+        "name": "lint",
+        "cmd": "ruff check {files}",
+        "filter": "*.py",
+        "auto_restage": false,
+        "timeout": 120,
+        "severity": "error",
+        "message": "Linter errors must be fixed before committing"
+      },
+      {
+        "name": "format-check",
+        "cmd": "ruff format --check {files}",
+        "filter": "*.py",
+        "auto_restage": true,
+        "timeout": 60,
+        "severity": "error",
+        "message": "Code must be formatted"
+      },
+      {
+        "name": "typecheck",
+        "cmd": "npx tsc --noEmit",
+        "filter": "*.{ts,tsx}",
+        "auto_restage": false,
+        "timeout": 180,
+        "severity": "error",
+        "message": "TypeScript type errors must be resolved"
+      }
+    ],
+    "active": []
+  },
+
+  "skip_dirs": ["node_modules", ".git", "__pycache__", ".venv", "venv", "dist", ".next", "build", "target"],
+
+  "code_review": {
+    "description": "Automated code review hook (Pass 2). Run via: python stacks/hooks/code_review.py",
+    "script": "stacks/hooks/code_review.py",
+    "modes": {
+      "pre-commit": "Check staged files before git commit",
+      "post-commit": "Check files from last commit",
+      "working": "Check unstaged working tree changes"
+    },
+    "json_verdict": "Use --json flag to get structured verdict for Claude stop hook integration"
   }
 }

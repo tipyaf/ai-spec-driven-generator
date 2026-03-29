@@ -133,6 +133,28 @@ PHASE 5 — RELEASE — ✅ Human
 | **Story files** | Build contracts with `verify:` commands — persists between sessions |
 | **verify: commands** | Machine-verifiable ACs — the validator executes these literally |
 | **Cycle counter** | Max 3 validation cycles per feature before human escalation |
+| **Implementation manifest** | Scope control — developer declares files before coding, reviewer verifies git diff matches |
+| **Code review hook** | Automated Pass 2 — `stacks/hooks/code_review.py` runs anti-patterns + external checks |
+| **Enforcement scripts** | Quality gates — `scripts/check_*.py` block commits on violations |
+
+## Model tier recommendations (token optimization)
+
+| Agent | Recommended model | Rationale |
+|-------|-------------------|-----------|
+| Developer | Opus | Must reason across files, understand data flows, write correct business logic |
+| Tester | Opus | Must understand data flows end-to-end, catch subtle mismatches |
+| Refinement | Opus | Reasons across dependency graphs, splits stories, pre-computes oracle values |
+| Reviewer (Pass 1+3) | Opus | Must understand architecture (SOLID violations) and evaluate correctness |
+| Reviewer (Pass 2) | Automated | `code_review.py` — no model needed |
+| Validator | Sonnet | Systematic execution of verify: commands |
+| Security | Sonnet (per-feature) / Opus (full audit) | Full audit requires cross-codebase reasoning |
+| Product Owner | Sonnet | Structured spec writing, scoping |
+| Architect | Opus | Cross-cutting architecture decisions |
+| UX/UI | Sonnet | Wireframes, component specs, design system — structured and well-scoped |
+| DevOps | Sonnet | Infrastructure config is well-scoped |
+| Orchestrator | Opus | Must interpret agent verdicts, manage escalation logic, coordinate dependencies |
+
+**Rule**: Skills SHOULD pass the recommended model tier when dispatching agents. Projects MAY override in their stack profile.
 
 ## Phase guards
 
@@ -166,13 +188,26 @@ acceptance_criteria:
 
 ## Coding standards (agnostic — all languages, all projects)
 
+> **Full reference**: `rules/coding-standards.md` (SOLID, CQRS, DRY, YAGNI, readability gates, API design)
+
 | Rule | Why | Example |
 |------|-----|---------|
 | **No magic strings** | Hardcoded strings buried in logic are invisible, fragile, and impossible to search for. Extract to named constants or config. | ❌ `if (status === 'accredited')` → ✅ `if (status === VISA_STATUS.ACCREDITED)` |
 | **No magic numbers** | Same as strings. Raw numbers have no meaning without context. | ❌ `slice(0, 50)` → ✅ `slice(0, BATCH_SIZE)` |
 | **Max 400 lines per file** | Files over 400 lines signal poor separation of concerns. Split into smaller, focused modules. | A 800-line service → split into core service + helpers + constants |
+| **Max 40 lines per function** | Long functions signal poor decomposition. Split into focused functions. | A 100-line handler → split into validate + process + respond |
+| **Max 3 levels of nesting** | Deep nesting is hard to follow and test. Use early returns, guard clauses. | ❌ `if (a) { if (b) { if (c) { ... }}}` → ✅ early returns |
 | **Extract constants** | Group related constants in a dedicated file or block at the top of the module. Never scatter literals across business logic. | `const CACHE_TTL_DAYS = 30` at top, not `30` inline |
+| **SOLID principles** | SRP, OCP, LSP, ISP, DIP. See `rules/coding-standards.md` for details. | Router = HTTP, Service = business logic, Repository = persistence |
 | **Commits in English** | Commit messages, PR titles, and PR descriptions MUST always be in English. Code comments in English. This ensures consistency across international teams and tools. | ❌ `fix: correction du tri` → ✅ `fix: sorting order` |
+
+## Shared rules files
+
+| File | Content | Who must read it |
+|------|---------|-----------------|
+| `rules/agent-conduct.md` | Cross-agent behavior rules (single source of truth) | ALL agents, BEFORE their playbook |
+| `rules/coding-standards.md` | SOLID, CQRS, DRY, YAGNI, readability gates, API design | Developer, reviewer, validator |
+| `rules/test-quality.md` | Oracle computation, coverage audit, test anti-patterns, test intentions | Developer, tester, reviewer, validator |
 
 ## Git branching model (recommended)
 
@@ -235,8 +270,12 @@ Before creating any PR, verify:
 6. **Never over-engineer** — follow the spec, nothing more
 7. **Never code before** conception phases are complete (spec + arch + tracker must exist)
 8. **Never skip verify: commands** — they are the machine contract
-9. **Never mix branches** — unrelated work goes in a worktree (see worktree rule above)
-10. **All PRs target the integration branch** — NEVER `main` directly (except release PRs). See Git branching model above.
+9. **Always read `rules/agent-conduct.md`** before any agent work — it overrides playbook rules
+10. **Always run enforcement scripts** before committing if the project has `test_enforcement.json`
+11. **Never assert computed values without ORACLE blocks** — see `rules/test-quality.md` Rule 2
+12. **Never skip test_intentions** from story files — every intention becomes a test
+13. **Never mix branches** — unrelated work goes in a worktree (see worktree rule above)
+14. **All PRs target the integration branch** — NEVER `main` directly (except release PRs). See Git branching model above.
 
 ## Agent role guards
 

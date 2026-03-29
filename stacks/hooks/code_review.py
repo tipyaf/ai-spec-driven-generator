@@ -2,15 +2,24 @@
 """
 Code review hook -- reads hook-config.json and checks staged files.
 
-Runs anti-pattern detection against git-staged files using configurable
-rules from hook-config.json. Supports severity levels (error vs warning),
-project-type filtering, glob-based file matching, and auto-restage.
+Runs anti-pattern detection and external command checks against changed files
+using configurable rules from hook-config.json. Supports severity levels
+(error vs warning), project-type filtering, glob-based file matching,
+auto-restage, and JSON verdict output for Claude's stop hook mechanism.
 
 Usage:
-  python3 code_review.py                    # Check all universal rules
-  python3 code_review.py --project-type web # Also run web_specific rules
-  python3 code_review.py --config path.json # Custom config path
-  python3 code_review.py --all-files        # Check all files, not just staged
+  python3 code_review.py                         # Check staged files (default)
+  python3 code_review.py --mode post-commit      # Check last commit's files
+  python3 code_review.py --mode working           # Check working tree changes
+  python3 code_review.py --project-type web       # Also run web_specific rules
+  python3 code_review.py --config path.json       # Custom config path
+  python3 code_review.py --all-files              # Check all tracked files
+  python3 code_review.py --json                   # Output JSON verdict (for Claude stop hook)
+  python3 code_review.py --files "a.py b.ts"      # Explicit file list
+
+JSON verdict format (--json):
+  {"decision": "pass"}
+  {"decision": "block", "reason": "<markdown report>"}
 """
 
 import argparse
@@ -87,38 +96,43 @@ def load_config(config_path: Optional[str] = None) -> dict:
 # ── file discovery ───────────────────────────────────────────────────────────
 
 
-def get_staged_files() -> list[str]:
-    """Return list of staged file paths (relative to repo root)."""
+def get_changed_files(mode: str = "pre-commit", explicit: str | None = None) -> list[str]:
+    """Return list of changed file paths based on mode.
+
+    Modes:
+      pre-commit  — staged files (default)
+      post-commit — files changed in last commit
+      working     — unstaged working tree changes
+      all         — all tracked files
+    """
+    if explicit:
+        return explicit.split()
+
+    cmd_map = {
+        "pre-commit": ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
+        "post-commit": ["git", "diff", "--name-only", "HEAD~1", "--diff-filter=ACMR"],
+        "working": ["git", "diff", "--name-only", "--diff-filter=ACMR"],
+        "all": ["git", "ls-files"],
+    }
+    cmd = cmd_map.get(mode, cmd_map["pre-commit"])
+
     try:
-        result = subprocess.run(
-            ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-            capture_output=True, text=True, timeout=10,
-        )
+        result = subprocess.run(cmd, capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
             return []
-        return [
-            line.strip() for line in result.stdout.splitlines()
-            if line.strip()
-        ]
+        return [line.strip() for line in result.stdout.splitlines() if line.strip()]
     except (subprocess.TimeoutExpired, FileNotFoundError):
         return []
+
+
+def get_staged_files() -> list[str]:
+    """Return list of staged file paths (relative to repo root)."""
+    return get_changed_files("pre-commit")
 
 
 def get_all_tracked_files() -> list[str]:
     """Return all tracked files (for --all-files mode)."""
-    try:
-        result = subprocess.run(
-            ["git", "ls-files"],
-            capture_output=True, text=True, timeout=10,
-        )
-        if result.returncode != 0:
-            return []
-        return [
-            line.strip() for line in result.stdout.splitlines()
-            if line.strip()
-        ]
-    except (subprocess.TimeoutExpired, FileNotFoundError):
-        return []
+    return get_changed_files("all")
 
 
 def expand_brace_glob(pattern: str) -> list[str]:
@@ -385,9 +399,26 @@ def parse_args() -> argparse.Namespace:
         default=None,
     )
     parser.add_argument(
+        "--mode", "-m",
+        choices=["pre-commit", "post-commit", "working"],
+        default="pre-commit",
+        help="How to discover changed files (default: pre-commit)",
+    )
+    parser.add_argument(
+        "--files",
+        type=str,
+        default=None,
+        help="Explicit space-separated file list (overrides --mode and --all-files)",
+    )
+    parser.add_argument(
         "--all-files",
         action="store_true",
         help="Check all tracked files, not just staged ones",
+    )
+    parser.add_argument(
+        "--json",
+        action="store_true",
+        help="Output JSON verdict for Claude stop hook (always exits 0)",
     )
     parser.add_argument(
         "--timeout", "-t",
@@ -408,13 +439,18 @@ def main() -> None:
         sys.exit(0)
 
     # Get files to check
-    if args.all_files:
-        files = get_all_tracked_files()
+    if args.files:
+        files = get_changed_files(explicit=args.files)
+    elif args.all_files:
+        files = get_changed_files("all")
     else:
-        files = get_staged_files()
+        files = get_changed_files(args.mode)
 
     if not files:
-        print("No staged files to check.", file=sys.stderr)
+        if args.json:
+            print(json.dumps({"decision": "pass", "note": "no changed files"}))
+        else:
+            print("No files to check.", file=sys.stderr)
         sys.exit(0)
 
     # Collect applicable rules
@@ -461,9 +497,59 @@ def main() -> None:
             "message": check.get("message", ""),
         })
 
-    # Print report and exit
-    all_errors_passed = print_report(results)
-    sys.exit(0 if all_errors_passed else 1)
+    # Output
+    if args.json:
+        verdict = generate_json_verdict(results, files)
+        print(json.dumps(verdict))
+        sys.exit(0)  # Always 0 in JSON mode — verdict is in stdout
+    else:
+        all_errors_passed = print_report(results)
+        sys.exit(0 if all_errors_passed else 1)
+
+
+def generate_json_verdict(results: list[dict], files: list[str]) -> dict:
+    """Generate a JSON verdict for Claude's stop hook mechanism.
+
+    Returns:
+      {"decision": "pass"} if no errors
+      {"decision": "block", "reason": "<markdown report>"} if errors found
+    """
+    has_errors = any(
+        not r["passed"] and r["severity"] == "error" for r in results
+    )
+
+    if not has_errors:
+        return {"decision": "pass"}
+
+    file_list = ", ".join(files[:20])
+    if len(files) > 20:
+        file_list += f" ... and {len(files) - 20} more"
+
+    report_lines = [
+        "## Code Review — automated static analysis (Pass 2)",
+        "",
+        "### Verdict: FAIL",
+        "",
+        f"### Files reviewed: {file_list}",
+        "",
+        "### Findings:",
+    ]
+
+    finding_num = 0
+    for r in results:
+        if not r["passed"]:
+            finding_num += 1
+            violations = r.get("violations", [])
+            viols_text = "\n".join(violations[:20])
+            if len(violations) > 20:
+                viols_text += f"\n   ... and {len(violations) - 20} more"
+            severity_tag = "ERROR" if r["severity"] == "error" else "WARNING"
+            report_lines.append(
+                f"\n{finding_num}. **{r['name']}** [{severity_tag}] — "
+                f"{r.get('message', '')}\n```\n{viols_text}\n```"
+            )
+
+    return {"decision": "block", "reason": "\n".join(report_lines)}
 
 
 if __name__ == "__main__":

@@ -9,6 +9,7 @@ Implement all features defined in the spec, in the implementation plan's order.
 ## Prerequisites
 - Phase 2 (Scaffold) validated
 - Project that compiles and starts
+- Read `rules/coding-standards.md` and `rules/test-quality.md` before writing any code
 
 ## Instructions
 
@@ -42,6 +43,8 @@ You are in **Phase 3 — Implementation**. You must code all project features.
 #### Step 5: Automated tests (MANDATORY — NOT OPTIONAL)
 Tests are part of the feature, not a separate phase. A feature without tests is not done.
 
+**Before writing any test**, read `test_intentions` from the story file (`specs/stories/[feature-id].yaml`). Each intention = one test function. Copy oracle values, never guess.
+
 **API / backend tests:**
 1. Write integration tests for every endpoint added or modified:
    - Happy path: valid data → correct response (status code + body)
@@ -49,16 +52,57 @@ Tests are part of the feature, not a separate phase. A feature without tests is 
    - Auth: authenticated endpoints return 401 without token, correct data with token
    - Edge cases: duplicate entries, not found, etc.
 2. Write unit tests for any non-trivial business logic in services
+3. **Every numeric assertion on a computed value MUST have an `# ORACLE:` comment** showing step-by-step math (see `rules/test-quality.md` Rule 2)
+4. **Write-path tests must call real write functions**, then query to verify — not INSERT fixture data + GET
 
 **UI tests (if applicable):**
-3. Write component tests for key interactions (form submit, navigation, error display)
+5. Write component tests for key interactions (form submit, navigation, error display)
+6. API mocks must return what the backend actually sends, not what the frontend expects
 
 **Run all tests** — they must all pass before proceeding.
 
 > **Tests are NOT skippable.** Do not defer tests to "later" or a separate phase. Every feature ships with its tests. The test suite is the non-regression safety net for all subsequent features.
+> **Oracle blocks are NOT optional.** Every `pytest.approx()`, `toBeCloseTo()`, or numeric `==` on a computed field needs an ORACLE comment.
+
+#### Step 5b: Test reconciliation (MANDATORY)
+After writing tests, reconcile against CURRENT spec and quality rules:
+1. Re-read story file `specs/stories/[feature-id].yaml` — specs may have changed since you started
+2. Re-read `rules/test-quality.md` — quality rules may have evolved
+3. Identify gaps: missing tests, tests not matching current ACs, tests violating current rules
+4. Fix all gaps before proceeding
+5. Run enforcement scripts (`scripts/check_*.py`)
+
+#### Step 5c: LLM fault scenario generation (backend/business logic only)
+For each business rule or formula in the feature:
+1. Generate 3-5 realistic fault scenarios (wrong field, missing accumulation, off-by-one, null propagation, stale state, wrong aggregation, boundary confusion, type coercion)
+2. Each scenario: target file, target function, business rule, fault description, test oracle (concrete inputs -> correct vs faulty output)
+3. Write a targeted test for each scenario
+4. Run tests — verify targeted tests pass against real code
+
+Skip for: UI-only, infra, migration-only, stories with no business logic.
+
+#### Step 5d: Ensemble test assessment
+Score each test function:
+
+| Question | STRONG | FAIL |
+|----------|--------|------|
+| Calls real production code? | Yes | Only fixture/mock |
+| Verifies a business rule from spec? | ORACLE traces to formula | Only assert not-None/status |
+| Would fail if fault scenario introduced? | Checks exact value | Too loose |
+| ORACLE computation correct? | Math verified | Error or missing |
+
+- **STRONG**: all 4 pass
+- **WEAK**: fails 1-2 (log warning, proceed)
+- **USELESS**: fails 3-4 (**MUST rewrite before proceeding**)
 
 #### Step 6: Code quality gate (MANDATORY)
 Before considering a feature done, you MUST pass **all** checks below. Fix and re-run until every check passes.
+
+**6.0 Manifest validation:**
+1. Verify manifest `phase` is `"complete"`
+2. Verify all files in git diff are declared in manifest (`files_to_modify` or `files_to_create`)
+3. Verify `pipeline_steps` are all `"done"`
+4. If manifest scope violation: fix manifest or revert undeclared changes
 
 **Static checks:**
 1. Run the linter (`lint` command) — **must pass with zero errors**

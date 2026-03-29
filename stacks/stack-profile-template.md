@@ -50,9 +50,29 @@
 - [Async patterns if applicable]
 
 ## Testing Rules
-- [Test framework and tools]
-- [Test patterns specific to this stack]
-- [Coverage expectations]
+
+### Framework and tools
+- [Test framework: pytest, vitest, jest, go test, etc.]
+- [Integration test approach: real DB, test client, etc.]
+- [Mutation testing tool: mutmut, stryker, etc.]
+- [Coverage tool and minimum threshold]
+- [Property-based testing tool: Hypothesis, fast-check, etc.]
+
+### Test patterns
+- [How to write integration tests in this stack]
+- [How to mock external APIs (not internal DB)]
+- [How to write fixtures/factories]
+- [How to set up test databases]
+
+### Enforcement configuration
+- [What to put in test_enforcement.json for this stack]
+- [Where are backend_test_dirs, integration_test_dirs, etc.]
+- [What write_path_keywords are relevant]
+
+## SOLID Application in This Stack
+- [How SRP maps to this framework (e.g., controllers/services/repos)]
+- [How DIP works (dependency injection mechanism)]
+- [Common SOLID violations specific to this stack]
 
 ## Auto-generated AC Templates
 

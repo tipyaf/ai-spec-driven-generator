@@ -48,6 +48,12 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Machine-verifiable ACs**: every acceptance criterion has a `verify:` shell command executed by the validator
 - **Persistent build contracts**: `specs/stories/[feature].yaml` files survive between sessions — refinement output is never lost
 - **Cycle counter with escalation**: max 3 validation attempts per feature, then mandatory human escalation
+- **Implementation manifest**: 2-phase build contract — developer declares scope + artifacts BEFORE coding, reviewer verifies git diff matches
+- **Spec contract verification**: validator checks every declared artifact (endpoint, table, component) actually exists in code
+- **Manifest scope enforcement**: reviewer fails any PR with files modified outside the declared manifest scope
+- **Forbidden pattern scanning**: validator greps committed files against stack profile forbidden patterns
+- **Stale feature detection**: developer agent warns when features are stuck in "building" with no recent commits
+- **Recurring failure auto-logging**: reviewer automatically logs patterns to `LESSONS.md` when same failure appears in 2+ stories
 
 ### Development
 - **Spec-driven**: YAML specs as the single source of truth
@@ -61,11 +67,22 @@ The framework **guides and challenges** the user to build the best possible prod
 - **5 sequential quality gates**: Security → Tests → UI → AC Validation → Review
 
 ### Quality
-- **3-pass code review**: KISS & readability → static analysis → safety & correctness
+- **3-pass code review**: KISS & readability → static analysis (automated hook) → safety & correctness
 - **Independent validation**: the agent that writes code is never the agent that validates it
 - **Test quality standards**: explicit "real test vs mock-soup" checklists, forbidden test patterns
 - **Failure memory (LESSONS.md)**: recurring mistakes logged and read by all agents before starting
 - **Language-agnostic hooks**: configurable `hook-config.json` with `{files}`, `filter`, `cwd` placeholders
+- **Automated code review hook**: Python script (`code_review.py`) runs anti-patterns + external checks with JSON verdict output
+- **Oracle computation blocks**: every numeric assertion on a computed value requires step-by-step math proof
+- **Test intentions**: refinement agent pre-computes oracle values; developer copies, never guesses
+- **Mutation testing**: tests must achieve 70%+ mutation score; surviving mutants get targeted kill-tests
+- **LLM fault scenarios**: 3-5 realistic business-logic faults generated per rule (wrong field, missing accumulation, off-by-one, etc.)
+- **Ensemble test assessment**: each test scored STRONG/WEAK/USELESS — USELESS tests must be rewritten
+- **3 enforcement scripts** blocking commits: test quality, oracle assertions, write coverage
+- **SOLID/CQRS/DRY/YAGNI**: language-agnostic coding standards with concrete thresholds (40 lines/function, 3 levels nesting, 400 lines/file)
+- **Model tier recommendations**: Opus for reasoning-heavy agents (developer, tester), Sonnet for systematic agents (validator, reviewer Pass 2)
+- **UX gate**: frontend stories require UX spec before coding begins
+- **ADR gate**: architecture decisions documented before implementation proceeds
 
 ### Git & Infrastructure
 - **Git Flow branching model**: `main` (production, releases only) + `develop` (integration, all feature work) — enforced by agent rules
@@ -175,11 +192,11 @@ ai-spec-driven-generator/
 │   ├── product-owner.md     # Scoping, spec writing, AC format
 │   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA
 │   ├── architect.md         # Architecture + implementation manifest
-│   ├── refinement.md        # Feature breakdown, story files, verify: commands
-│   ├── developer.md         # Code implementation (scoped to story files)
-│   ├── validator.md         # Independent verification (executes verify: commands)
-│   ├── tester.md            # Test writing & execution
-│   ├── reviewer.md          # Quality audit (3-pass)
+│   ├── refinement.md        # Feature breakdown, story files, verify: commands, UX gate, ADR gate
+│   ├── developer.md         # Code implementation (manifest-scoped, stale detection, deployment reminder)
+│   ├── validator.md         # Independent verification (spec contract, forbidden patterns, manifest scope)
+│   ├── tester.md            # Test writing (batch sizing, kill-tests, ensemble assessment)
+│   ├── reviewer.md          # Quality audit (3-pass, manifest scope enforcement, recurring failure logging)
 │   ├── security.md          # Security audit — OWASP Top 10
 │   ├── devops.md            # CI/CD & deployment
 │   └── *.ref.md             # Templates and examples (loaded on demand)
@@ -190,10 +207,13 @@ ai-spec-driven-generator/
 │   ├── validate/SKILL.md    # /validate — execute verify: commands
 │   └── review/SKILL.md      # /review — final quality gate
 ├── prompts/phases/          # Phase-specific detailed instructions
-├── rules/                   # IDE integration
-│   ├── CLAUDE.md            # Rules for Claude Code
+├── rules/                   # IDE integration + shared rules
+│   ├── CLAUDE.md            # Rules for Claude Code (model tiers, enforcement mechanisms)
 │   ├── CLAUDE.md.template   # Template for project init
 │   ├── .cursorrules         # Rules for Cursor
+│   ├── agent-conduct.md     # Cross-agent behavior rules (single source of truth)
+│   ├── coding-standards.md  # SOLID, CQRS, DRY, YAGNI, readability gates, API design
+│   ├── test-quality.md      # Oracle computation, coverage audit, test anti-patterns
 │   └── commands/            # Claude Code slash command templates
 │       ├── spec.md          # /spec command
 │       ├── refine.md        # /refine command
@@ -203,9 +223,12 @@ ai-spec-driven-generator/
 ├── specs/templates/         # YAML templates
 │   ├── spec-template.yaml   # Spec with unified AC format
 │   ├── feature-tracker.yaml # Per-feature state tracking
-│   └── story-template.yaml  # Refinement output (build contract)
+│   ├── story-template.yaml  # Refinement output (build contract)
+│   └── manifest-template.yaml # Implementation manifest (2-phase build contract)
 ├── stacks/                  # Stack profiles & quality hooks
 │   ├── hooks/               # Claude Code quality gate hooks
+│   │   ├── hook-config.json # Anti-patterns, external checks, skip dirs
+│   │   └── code_review.py   # Automated code review hook (Pass 2) — JSON verdict
 │   └── stack-profile-template.md
 ├── examples/                # Example specs
 │   └── todo-app-spec.yaml   # With structured ACs and verify: commands
@@ -213,8 +236,14 @@ ai-spec-driven-generator/
 │   ├── memory-template.md   # With feature status table
 │   ├── LESSONS.md.template
 │   └── SYNC.md.template
+├── _docs/
+│   └── test-methodology.md  # Two-loop test approach (spec→oracle + mutation feedback)
 ├── scripts/
-│   └── init-project.sh      # Project initializer
+│   ├── init-project.sh      # Project initializer
+│   ├── check_test_quality.py    # Enforcement: no .skip(), no mock-soup, no weak assertions
+│   ├── check_oracle_assertions.py # Enforcement: ORACLE blocks on numeric assertions
+│   ├── check_write_coverage.py   # Enforcement: write-path coverage verification
+│   └── test_enforcement.json.example # Config template for enforcement scripts
 ├── VERSION
 ├── CHANGELOG.md
 └── .github/workflows/
@@ -252,6 +281,29 @@ my-project/
 ├── CLAUDE.md               # AI rules
 └── .cursorrules            # Cursor rules
 ```
+
+## Code Quality & Test Robustness
+
+The framework generates production-ready code by enforcing quality at every pipeline stage — not just at review time.
+
+### Two-Loop Test Generation
+- **Loop 1 (Proactive)**: Refinement agent pre-computes oracle values with step-by-step math. Developer copies these into `# ORACLE:` comment blocks. Tests verify exact expected values, not vague assertions.
+- **Loop 2 (Reactive)**: After tests pass, mutation testing introduces faults (flip operators, change values). If tests don't catch the mutations (score < 70%), they're weak — targeted kill-tests are written for each surviving mutant.
+
+### Enforcement Pipeline
+Three Python scripts block commits if violations are found:
+- `check_test_quality.py` — no `.skip()`, no mock-soup in integration tests, no fixture-only tests
+- `check_oracle_assertions.py` — every numeric assertion needs an ORACLE comment with step-by-step math
+- `check_write_coverage.py` — every data store with a read endpoint must have production write code
+
+### Automated Code Review Hook
+`stacks/hooks/code_review.py` runs anti-pattern detection + external command checks (lint, format, typecheck) on changed files. Returns a JSON verdict (`pass`/`block`) for Claude's stop hook mechanism. Language-agnostic — configured via `hook-config.json`.
+
+### Implementation Manifest
+Before writing code, the developer creates a manifest declaring scope (artifacts, files to modify/create, anti-patterns to avoid). The validator verifies declared artifacts exist in code. The reviewer verifies the git diff matches the declared scope. Undeclared modifications = automatic FAIL.
+
+### Coding Standards
+Language-agnostic SOLID/CQRS/DRY/YAGNI with concrete thresholds: max 40 lines/function, max 3 levels nesting, max 400 lines/file, max 10 cyclomatic complexity, max 5 function parameters. See `rules/coding-standards.md`.
 
 ## Contributing
 

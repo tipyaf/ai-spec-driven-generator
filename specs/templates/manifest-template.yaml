@@ -1,0 +1,75 @@
+# IMPLEMENTATION MANIFEST
+# ========================
+# Created by developer during /build, BEFORE writing any code.
+#
+# Two-phase process:
+#   Phase 1 (skeleton): Developer fills scope, artifacts, ac_verifications, anti_patterns
+#   Phase 2 (complete): Developer reads codebase, adds files_to_read/modify/create
+#
+# Consumers:
+#   - Validator: verifies declared artifacts exist in code (spec contract)
+#   - Reviewer: verifies git diff matches declared file scope (scope enforcement)
+#
+# Location: specs/stories/[feature-id]-manifest.yaml
+
+manifest:
+  feature_id: ""              # e.g. "auth-login"
+  story_file: ""              # e.g. "specs/stories/auth-login.yaml"
+  phase: "skeleton"           # skeleton | complete — MUST be "complete" before coding starts
+  created_at: ""              # ISO date
+
+scope:
+  artifacts:
+    endpoints: []
+      # - method: GET
+      #   path: /api/v1/users/{id}
+      #   auth: true
+      #   response_model: UserResponse
+      #   status_code: 200
+
+    migrations: []
+      # - table: users
+      #   operation: create       # create | alter | drop
+
+    components: []
+      # - name: UserProfile
+      #   file: src/components/UserProfile.tsx
+      #   status: new             # new | modified
+
+    services: []
+      # - name: UserService
+      #   file: src/services/user.service.ts
+      #   status: new             # new | modified
+
+  ac_verifications: []
+    # Copied verbatim from story file verify: commands
+    # - id: "AC-FUNC-AUTH-01"
+    #   verify: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/auth/login"
+
+  anti_patterns: []
+    # From stack profile forbidden_patterns — checked by validator
+    # - pattern: 'mock\('
+    #   scope: "tests/integration/"
+    #   message: "Integration tests must not mock the DB"
+
+files:
+  files_to_read: []           # Existing files to read for context (Phase 2)
+  files_to_modify: []         # Existing files that will be changed (Phase 2)
+  files_to_create: []         # New files that will be created (Phase 2)
+
+pipeline_steps: []
+  # Filled during build — each step marked done as completed
+  # - step: "data-model"
+  #   status: "done"
+  # - step: "business-logic"
+  #   status: "done"
+  # - step: "api-endpoints"
+  #   status: "done"
+  # - step: "tests"
+  #   status: "done"
+  # - step: "quality-gate"
+  #   status: "done"
+
+deployment_note: ""           # e.g. "Rebuild: api, frontend. Run: docker compose up -d --build api frontend"
+
+notes: ""                     # Developer notes, decisions, trade-offs

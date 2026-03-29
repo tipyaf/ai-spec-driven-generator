@@ -64,6 +64,27 @@ For every modified page/screen:
 3. Check for flaky tests — re-run any failures to confirm they are deterministic
 4. Fix any flaky tests
 
+### Step 5b: Mutation testing (if configured in stack profile)
+1. Run the mutation testing tool against production code modified in this feature
+2. If mutation score < 70%, tests are weak — add stronger assertions (exact values, boundary conditions, error paths)
+3. Parse surviving mutants → write one kill-test per survivor
+4. Max 2 mutation cycles. If score still < 70% after 2 cycles, document and proceed.
+
+### Step 5c: LLM fault scenarios
+For each business rule in the feature:
+1. Generate 3-5 realistic fault scenarios (wrong field reference, missing accumulation, off-by-one scaling, null propagation)
+2. For each scenario: concrete inputs, correct output, faulty output
+3. Write a targeted test for each scenario
+4. Run tests — verify the targeted tests pass against the real code
+
+### Step 5d: Ensemble test assessment
+After all tests pass:
+1. Review each test function and score it: STRONG / WEAK / USELESS
+2. STRONG: calls real production code, verifies business rule, ORACLE math correct
+3. WEAK: has gaps (wrong formula, too loose assertion) — improve if time permits
+4. USELESS: only asserts is-not-None or status code — MUST be rewritten
+5. Rewrite all USELESS tests before proceeding
+
 ### Step 6: Code quality gate (MANDATORY)
 After writing all tests, you MUST pass the code quality gate:
 
@@ -71,7 +92,11 @@ After writing all tests, you MUST pass the code quality gate:
 2. Run the formatter — **must produce no changes**
 3. Run the build/compile step — **must succeed**
 4. Run the full test suite — **must pass with zero failures**
-5. If any of the above fails: **fix the issues immediately and re-run until all pass**
+5. **Run enforcement scripts** (if `test_enforcement.json` exists):
+   - `python scripts/check_test_quality.py --config test_enforcement.json`
+   - `python scripts/check_oracle_assertions.py --config test_enforcement.json`
+   - `python scripts/check_write_coverage.py --config test_enforcement.json`
+6. If any of the above fails: **fix the issues immediately and re-run until all pass**
 
 > **This is a blocking gate.** Test code must meet the same quality standards as production code.
 

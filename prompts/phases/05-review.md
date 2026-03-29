@@ -17,6 +17,9 @@ Analyze the project's overall quality and identify issues to fix. This phase is 
 
 You are in **Phase 5 — Review**. You must audit the project's complete code using automated checks.
 
+> Read `rules/coding-standards.md` for full quality thresholds (SOLID, CQRS, DRY, YAGNI, readability gates, API design).
+> Read `rules/test-quality.md` for test anti-patterns to check.
+
 ### Step 1: Compliance review
 1. Verify each spec feature is implemented
 2. Verify the data model matches the spec
@@ -30,6 +33,8 @@ You are in **Phase 5 — Review**. You must audit the project's complete code us
 5. Check for unused imports, dead code
 6. Check for hardcoded strings (i18n violation) — **projects with user-facing output (web, mobile, CLI, desktop)**
 7. Check for hardcoded colors/values (design system violation) — **web projects only**
+8. **Verify SOLID compliance** — SRP (no business logic in routers), DIP (dependency injection), OCP (no modification of existing modules for new features)
+9. **Verify readability gates** — function length (< 40), nesting (< 3), file length (< 400), cyclomatic complexity (< 10)
 
 ### Step 3: Security review (automated)
 1. Look for OWASP Top 10 vulnerabilities
