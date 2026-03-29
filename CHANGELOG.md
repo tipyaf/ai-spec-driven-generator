@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.8] - 2026-03-29
+
+- fix: add mandatory final recap with user confirmation to best practices proposal
+
+
 ## [3.0.7] - 2026-03-29
 
 - feat: interactive best practices proposal during architecture phase
