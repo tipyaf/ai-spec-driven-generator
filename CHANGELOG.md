@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.6] - 2026-03-29
+
+- fix: remove low-value UI Rules section from stack profile template
+
+
 ## [3.0.5] - 2026-03-29
 
 - fix: make UI rules in stack profile template platform-agnostic
