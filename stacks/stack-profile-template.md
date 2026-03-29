@@ -21,6 +21,46 @@
 ### Anti-patterns
 - [Common mistakes to avoid with this stack]
 
+## Frontend Rules (web/mobile/desktop UI projects only)
+
+> Skip this entire section for API-only, CLI, library, embedded, or data pipeline projects.
+
+### HTML / Markup
+- [Semantic elements policy: which elements to use (`<header>`, `<nav>`, `<main>`, `<section>`, `<article>`, `<footer>`) vs generic `<div>`]
+- [Heading hierarchy: h1 → h2 → h3, no skipped levels]
+- [Image `alt` attributes: always required, `alt=""` for decorative only]
+- [Form labels: every input has a visible `<label>` or `aria-label`]
+- [Framework-specific: JSX rules (React), template syntax (Vue/Angular/Svelte), etc.]
+
+### CSS / Styling
+- [Methodology: BEM, CSS Modules, Tailwind utility-first, styled-components, scoped styles, etc.]
+- [Selector specificity: prefer classes over IDs for styling, max nesting depth]
+- [`!important` policy: banned except [justified cases]]
+- [Design tokens: use CSS variables / theme tokens for colors, spacing, typography — no hardcoded values]
+- [Modern layout: Flexbox / CSS Grid preferred over floats and positioning hacks]
+- [Units: `rem` / `%` / `vw`/`vh` for responsive sizes, `px` only for borders and fine details]
+
+### JavaScript / TypeScript
+- [Variable declarations: `const` by default, `let` when reassignment needed, `var` banned]
+- [Modern syntax: destructuring, template literals, async/await, optional chaining (`?.`), nullish coalescing (`??`)]
+- [DOM manipulation: banned when using a framework (React, Vue, etc.) — let the framework handle it]
+- [Error handling: try/catch on network calls, explicit error messages, no silent failures]
+- [Module system: ES modules (`import`/`export`), no CommonJS (`require`) unless Node.js backend requires it]
+
+### Performance
+- [Asset optimization: minification (JS/CSS), modern image formats (WebP/AVIF), compression]
+- [Lazy loading: images, routes, and non-critical components]
+- [Critical rendering path: inline critical CSS, `defer`/`async` on scripts]
+- [Bundle splitting: code-split by route or feature, avoid monolithic bundles]
+- [HTTP optimization: minimize requests, leverage browser cache (Cache-Control, ETag)]
+- [Framework-specific: React.memo/useMemo, Vue computed, Svelte reactivity, etc.]
+
+### Responsive Design
+- [Approach: mobile-first with media queries]
+- [Breakpoints: define project breakpoints (e.g., 320px, 768px, 1024px, 1440px)]
+- [Units: relative units (`rem`, `%`, `vw`) over fixed `px` for sizing]
+- [Testing: real devices in addition to browser DevTools]
+
 ## Security Rules
 
 ### Input validation (OWASP A03)
