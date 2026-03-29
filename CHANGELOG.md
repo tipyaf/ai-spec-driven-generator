@@ -1,5 +1,10 @@
 # Changelog
 
+## [3.0.9] - 2026-03-29
+
+- docs: update README with component reuse pipeline and interactive best practices
+
+
 ## [3.0.8] - 2026-03-29
 
 - fix: add mandatory final recap with user confirmation to best practices proposal
