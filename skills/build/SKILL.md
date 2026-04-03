@@ -48,9 +48,63 @@ Run these quality gates in order. ALL must pass.
 - **ANY FAIL**: Increment `cycles` in tracker. Fix and re-validate.
 - **cycles >= 3**: ESCALATE to human. Do NOT attempt a 4th cycle. Update tracker notes with what failed and why.
 
+## Specialized builder dispatch
+
+Based on story type or epic, dispatch to the appropriate builder agent:
+
+| Story type / Epic | Builder agent |
+|---|---|
+| Backend service / API | `agents/builder-service.md` |
+| Frontend / UI | `agents/builder-frontend.md` |
+| Infrastructure / DevOps | `agents/builder-infra.md` |
+| Database migration | `agents/builder-migration.md` |
+| External integration / exchange | `agents/builder-exchange.md` |
+| General / unknown | `agents/developer.md` (default) |
+
+Read the story's `epic` or `type` field to determine which builder to dispatch. If uncertain, use the default developer agent.
+
+## TDD pipeline — 6 enforcement gates
+
+All builds follow strict TDD. The pipeline has two phases with enforcement scripts:
+
+### RED phase (Test Engineer writes tests first)
+1. Dispatch `agents/test-engineer.md` to write failing tests based on story ACs
+2. Run `scripts/check_red_phase.py` — confirms tests exist AND fail (red)
+3. Run `scripts/check_test_intentions.py` — confirms test intentions match AC verify commands
+
+### GREEN phase (Builder makes tests pass)
+4. Dispatch the appropriate builder agent (see table above)
+5. Run `scripts/check_tdd_order.py` — confirms test files were committed before implementation files
+6. Run `scripts/check_test_tampering.py` — confirms test assertions were NOT weakened to pass
+
+### Post-build
+- Run `scripts/check_coverage_audit.py` — confirms coverage meets threshold
+- Dispatch `agents/story-reviewer.md` for per-story AC verification
+
+## Build file creation
+
+Before starting implementation, create a build state file:
+1. Copy `specs/templates/build-template.yaml` to `_work/build/sc-[ID].yaml`
+2. Populate with story ID, gate statuses (all initially `pending`), timestamps
+3. Update gate statuses as each enforcement gate passes or fails
+4. This file persists build state between sessions
+
+## Stale story detection
+
+Before starting a new build, check for stale stories:
+- Query stories with status `building` that have no commits in the last 48 hours
+- Warn the user about stale stories and suggest resolution (resume or reset)
+
+## Dev comment checking
+
+Before building, check the story for dev comments (from Shortcut or tracker):
+- Read any `dev_comments` field in the story file
+- Apply dev comments as additional constraints during implementation
+
 ## Artefact checklist (must exist after /build)
 - [ ] Implementation code (files listed in story scope)
 - [ ] Tests (unit + e2e as applicable)
+- [ ] `_work/build/sc-[ID].yaml` — build state file with all gates recorded
 - [ ] UX spec updated if new pages/flows introduced (wireframes, sitemap, design doc)
 - [ ] `specs/feature-tracker.yaml` — updated with status: validated (or escalated)
 - [ ] PR created and **URL shared with the user** — always output the PR URL in your response after `gh pr create`

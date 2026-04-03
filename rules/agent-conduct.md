@@ -133,3 +133,65 @@ After coding:
 **Why**: without a manifest, the developer can modify files outside scope, and the reviewer has
 no reference for scope enforcement. The manifest is the build contract that the validator and
 reviewer consume to verify completeness and scope compliance.
+
+---
+
+## Rule 8: TDD gates are run by the orchestrator, not self-certified
+
+An agent saying "I verified" is NOT evidence. The script exit code IS evidence.
+
+| Gate | Script | Who runs it |
+|------|--------|-------------|
+| After RED | `check_red_phase.py` | Orchestrator |
+| After RED | `check_test_intentions.py` | Orchestrator |
+| After RED | `check_coverage_audit.py` | Orchestrator |
+| After RED | `check_msw_contracts.py` | Orchestrator |
+| After GREEN | `check_test_tampering.py` | Orchestrator |
+| After GREEN | `check_tdd_order.py` | Orchestrator |
+
+TDD gates are machine-enforced. The orchestrator runs enforcement scripts at each gate
+boundary. Agents cannot self-certify -- only the script exit code is trusted.
+
+**Why**: agents will claim tests pass without running them, or claim they verified quality
+without the enforcement script. Trust the exit code, not the prose.
+
+---
+
+## Rule 9: Enforcement scripts are non-negotiable
+
+Every enforcement script in `scripts/` (or `ai-framework/scripts/`) is a hard gate. No agent
+may skip, defer, or work around an enforcement script. If a script exits non-zero, the pipeline
+stops until the violation is fixed.
+
+This applies to ALL scripts:
+- `check_red_phase.py` -- tests must fail in RED phase (no trivial failures, real production imports)
+- `check_test_intentions.py` -- every spec intention must have a matching test
+- `check_coverage_audit.py` -- every endpoint/table/component must be tested
+- `check_msw_contracts.py` -- MSW handlers must use backend field names
+- `check_test_tampering.py` -- no deleted or weakened tests after GREEN phase
+- `check_tdd_order.py` -- RED commit must precede GREEN commit in git history
+- `check_test_quality.py` -- no .skip(), no mock-soup, no fixture-only tests
+- `check_write_coverage.py` -- tables with readers must have tested writers
+
+**Why**: every workaround that bypasses a script creates a class of bugs that the script was
+designed to prevent. The scripts exist because agents found creative ways to satisfy the letter
+of the rule while violating its spirit.
+
+---
+
+## Rule 10: Read the playbook before acting -- no exceptions
+
+Before performing ANY work, the agent MUST read its full playbook file. This is not optional
+and not satisfied by "I already know the steps." The playbook may have been updated since the
+last session. The agent must:
+
+1. Read the ENTIRE playbook (not just the first section)
+2. Identify the "Read Before Write" section and follow it completely
+3. Check for any anti-patterns or lessons specific to this task
+4. Only then begin executing
+
+If the skill file says "read agent playbook X," that is a blocking instruction. Do not proceed
+until the playbook has been read in full and its steps have been listed (see Rule 3).
+
+**Why**: agents skip playbook sections they consider irrelevant and then miss critical steps.
+The playbook is the contract. Reading it is not a suggestion.

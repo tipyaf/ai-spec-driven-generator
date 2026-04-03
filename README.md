@@ -46,7 +46,9 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Filesystem-based phase gates**: a phase is "done" when its artefact file exists on disk — not a checkbox in the LLM's memory
 - **Per-feature state tracking**: `feature-tracker.yaml` tracks every feature (pending → refined → building → testing → validated)
 - **Machine-verifiable ACs**: every acceptance criterion has a `verify:` shell command executed by the validator
-- **Persistent build contracts**: `specs/stories/[feature].yaml` files survive between sessions — refinement output is never lost
+- **Persistent build contracts**: `_work/spec/sc-[feature].yaml` files survive between sessions — refinement output is never lost
+- **Build file system**: `_work/build/sc-[ID].yaml` tracks pipeline gates (RED/GREEN/review/security) per story — state persists between sessions
+- **TDD enforcement (machine, not honor)**: 6 scripts enforce RED→GREEN→no-tampering — agents cannot self-certify
 - **Cycle counter with escalation**: max 3 validation attempts per feature, then mandatory human escalation
 - **Implementation manifest**: 2-phase build contract — developer declares scope + artifacts BEFORE coding, reviewer verifies git diff matches
 - **Spec contract verification**: validator checks every declared artifact (endpoint, table, component) actually exists in code
@@ -57,8 +59,8 @@ The framework **guides and challenges** the user to build the best possible prod
 
 ### Development
 - **Spec-driven**: YAML specs as the single source of truth
-- **10 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, Validator, Tester, Reviewer, Security, DevOps
-- **Skills system**: `/spec`, `/refine`, `/build`, `/validate`, `/review` — each loads only the agents needed
+- **19 specialized agents**: Product Owner, UX/UI Designer, Architect, Refinement, Developer, Validator, Tester, Reviewer, Security, DevOps, Test Engineer, Spec Generator, Story Reviewer, Builder (Service, Frontend, Infra, Migration, Exchange)
+- **Skills system**: `/spec`, `/refine`, `/build`, `/validate`, `/review`, `/scan`, `/scan-full`, `/sonar`, `/ux`, `/migrate` — each loads only the agents needed
 - **Constitution pattern**: non-negotiable project principles defined before any code
 - **Clarification phase**: ambiguities resolved before planning, not discovered during implementation
 - **Unified AC format**: `AC-[TYPE]-[FEATURE]-[NUMBER]` with `verify:` command and testability tier
@@ -78,7 +80,7 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Mutation testing**: tests must achieve 70%+ mutation score; surviving mutants get targeted kill-tests
 - **LLM fault scenarios**: 3-5 realistic business-logic faults generated per rule (wrong field, missing accumulation, off-by-one, etc.)
 - **Ensemble test assessment**: each test scored STRONG/WEAK/USELESS — USELESS tests must be rewritten
-- **3 enforcement scripts** blocking commits: test quality, oracle assertions, write coverage
+- **9 enforcement scripts** blocking commits: test quality, oracle assertions, write coverage, RED phase, test intentions, coverage audit, MSW contracts, TDD order, test tampering
 - **SOLID/CQRS/DRY/YAGNI**: language-agnostic coding standards with concrete thresholds (40 lines/function, 3 levels nesting, 400 lines/file)
 - **Model tier recommendations**: Opus for reasoning-heavy agents (developer, tester), Sonnet for systematic agents (validator, reviewer Pass 2)
 - **UX gate**: frontend stories require UX spec before coding begins
@@ -105,12 +107,12 @@ The framework **guides and challenges** the user to build the best possible prod
 PHASE 0 — CONCEPTION (/spec) — Human validation at each step
 ═══════════════════════════════════════════════════════════
   Constitution    → specs/constitution.md
-  Scoping (PO)    → specs/[project].yaml
+  Scoping (PO)    → specs/[project].yaml → _work/spec/sc-0000-initial.yaml
   Clarify         → specs/[project]-clarifications.md
-  Design (UX/UI)  → specs/[project]-ux.md (skip if non-UI)
+  Design (UX/UI)  → _work/ux/[project]-ux-spec.md (skip if non-UI)
   Ordering        → features ordered in arch doc
   Architecture    → specs/[project]-arch.md
-  Initialize      → specs/feature-tracker.yaml
+  Initialize      → _work/feature-tracker.yaml
 
 ═══════════════════════════════════════════════════════════
 PHASE 1 — SCAFFOLD (/build first run) — Auto
@@ -121,8 +123,8 @@ PHASE 2 — CONSTRUCTION (per feature loop)
 ═══════════════════════════════════════════════════════════
   For each feature [pending → refined → building → testing → validated]:
 
-  /refine   → story file written (build contract with verify: commands)
-  /build    → code + tests
+  /refine   → spec overlay + story file (_work/spec/sc-[ID].yaml)
+  /build    → TDD: RED (test-engineer) → GREEN (builder) → review → security
   /validate → 5 gates: Security → Tests → UI → ACs → Review
   → PASS: feature validated
   → FAIL: fix + re-validate (max 3 cycles, then escalate)
@@ -156,7 +158,9 @@ cd ai-spec-driven-generator
 This creates a new project with:
 - A **git submodule** pointing to this framework
 - A `CLAUDE.md` configured for the project
-- Project-specific directories (`specs/`, `memory/`, `stacks/`)
+- Project-specific directories (`specs/`, `memory/`, `_work/`)
+- Skills symlinked to `.claude/skills/`
+- Hook configuration (`hook-config.json`, `.claude/settings.json`)
 
 ### 2. Open in your AI IDE
 
@@ -169,9 +173,14 @@ In Claude Code, use the slash commands directly:
 ```
 /spec                        # Define your project (constitution → scoping → design → architecture)
 /refine candidate-profile    # Break a feature into stories with verify: commands
-/build candidate-profile     # Implement the refined story
-/validate candidate-profile  # Run all verify: commands independently
+/build candidate-profile     # TDD pipeline: RED → GREEN → review → security
+/validate candidate-profile  # Run all verify: commands independently (max 3 cycles)
 /review                      # Final review before PR
+/ux candidate-profile        # UX design (spec + YAML components + HTML prototype)
+/scan                        # SonarQube scan on local changes
+/scan-full                   # Full codebase SonarQube analysis
+/sonar                       # SonarQube status dashboard
+/migrate                     # Migrate v3.x project to v4.0 structure
 ```
 
 In Cursor, describe your task and the AI follows the same workflow via `.cursorrules`.
@@ -191,25 +200,38 @@ git submodule update --remote framework
 
 ```
 ai-spec-driven-generator/
-├── agents/                  # 10 specialized agent definitions (core + ref split)
+├── agents/                  # 19 specialized agent definitions (core + ref split)
 │   ├── orchestrator.md      # Orchestration rules reference (enforced by skills)
 │   ├── product-owner.md     # Scoping, spec writing, AC format
 │   ├── ux-ui.md             # UX/UI design — WCAG 2.1 AA
-│   ├── architect.md         # Architecture + implementation manifest + shared component inventory + interactive best practices
-│   ├── refinement.md        # Feature breakdown, story files, verify: commands, UX gate, ADR gate, component reuse audit
-│   ├── developer.md         # Code implementation (manifest-scoped, component reuse check, stale detection, deployment reminder)
-│   ├── validator.md         # Independent verification (spec contract, forbidden patterns, manifest scope)
-│   ├── tester.md            # Test writing (batch sizing, kill-tests, ensemble assessment)
-│   ├── reviewer.md          # Quality audit (3-pass, manifest scope enforcement, recurring failure logging)
+│   ├── architect.md         # Architecture + implementation manifest + shared component inventory
+│   ├── refinement.md        # Feature breakdown, story files, verify: commands, AC-SEC/AC-BP auto
+│   ├── developer.md         # Code implementation (manifest-scoped, generic builder)
+│   ├── validator.md         # Independent verification (spec contract, forbidden patterns)
+│   ├── tester.md            # Test writing (mutation, kill-tests, ensemble assessment)
+│   ├── reviewer.md          # Code quality audit (3-pass + manifest scope enforcement)
 │   ├── security.md          # Security audit — OWASP Top 10
 │   ├── devops.md            # CI/CD & deployment
-│   └── *.ref.md             # Templates and examples (loaded on demand)
+│   ├── test-engineer.md     # TDD RED phase — writes failing tests before code (Opus)
+│   ├── spec-generator.md    # YAML overlay merging to markdown documentation
+│   ├── story-reviewer.md    # Per-story AC verification (separated from code review)
+│   ├── builder-service.md   # Specialized backend builder (Python/FastAPI)
+│   ├── builder-frontend.md  # Specialized frontend builder (React/TS, MSW contracts)
+│   ├── builder-infra.md     # Docker/CI-CD specialist
+│   ├── builder-migration.md # Database migration expert (Alembic)
+│   ├── builder-exchange.md  # Safety-critical exchange integration (Opus)
+│   └── *.ref.md             # Templates and examples per agent (loaded on demand)
 ├── skills/                  # Skill dispatchers with phase guards
 │   ├── spec/SKILL.md        # /spec — constitution → scoping → clarify → design → arch
-│   ├── refine/SKILL.md      # /refine — break feature into story file
-│   ├── build/SKILL.md       # /build — implement from story file
-│   ├── validate/SKILL.md    # /validate — execute verify: commands
-│   └── review/SKILL.md      # /review — final quality gate
+│   ├── refine/SKILL.md      # /refine — break feature into story file + AC-SEC/AC-BP
+│   ├── build/SKILL.md       # /build — TDD pipeline (RED→GREEN) with specialized builders
+│   ├── validate/SKILL.md    # /validate — execute verify: commands (max 3 cycles)
+│   ├── review/SKILL.md      # /review — story review + code review + security audit
+│   ├── scan/SKILL.md        # /scan — SonarQube scan on local changes
+│   ├── scan-full/SKILL.md   # /scan-full — full codebase SonarQube analysis
+│   ├── sonar/SKILL.md       # /sonar — SonarQube status dashboard
+│   ├── ux/SKILL.md          # /ux — UX design (spec + YAML components + HTML prototype)
+│   └── migrate/SKILL.md     # /migrate — upgrade v3.x projects to v4.0
 ├── prompts/phases/          # Phase-specific detailed instructions
 ├── rules/                   # IDE integration + shared rules
 │   ├── CLAUDE.md            # Rules for Claude Code (model tiers, enforcement mechanisms)
@@ -226,27 +248,47 @@ ai-spec-driven-generator/
 │       └── review.md        # /review command
 ├── specs/templates/         # YAML templates
 │   ├── spec-template.yaml   # Spec with unified AC format
+│   ├── spec-overlay-template.yaml # Per-story spec overlay for domain changes
 │   ├── feature-tracker.yaml # Per-feature state tracking
 │   ├── story-template.yaml  # Refinement output (build contract)
-│   └── manifest-template.yaml # Implementation manifest (2-phase build contract)
+│   ├── manifest-template.yaml # Implementation manifest (2-phase build contract)
+│   └── build-template.yaml  # Pipeline state tracker with gates (RED/GREEN/review/security)
 ├── stacks/                  # Stack profiles & quality hooks
 │   ├── hooks/               # Claude Code quality gate hooks
 │   │   ├── hook-config.json # Anti-patterns, external checks, skip dirs
-│   │   └── code_review.py   # Automated code review hook (Pass 2) — JSON verdict
-│   └── stack-profile-template.md
+│   │   ├── code_review.py   # Automated code review hook (Pass 2) — JSON verdict
+│   │   └── sonar_check.py   # SonarQube stop hook — blocks on new violations
+│   ├── templates/           # Stack profile examples
+│   │   ├── python-fastapi.md    # Backend: AC-SEC, AC-BP, forbidden patterns
+│   │   ├── typescript-react.md  # Frontend: MSW contracts, component architecture
+│   │   └── postgres.md          # Database: migration patterns, constraints
+│   └── stack-profile-template.md # Generic template for any stack
 ├── examples/                # Example specs
 │   └── todo-app-spec.yaml   # With structured ACs and verify: commands
 ├── memory/                  # Memory templates
 │   ├── memory-template.md   # With feature status table
 │   ├── LESSONS.md.template
 │   └── SYNC.md.template
-├── _docs/
+├── _docs/                   # Framework documentation
+│   ├── INDEX.md             # Navigation hub
+│   ├── agents.md            # Agent catalog with sequence diagram
+│   ├── process.md           # Story lifecycle documentation
+│   ├── workflow.md          # Board conventions, build order, branches
+│   ├── skills.md            # Skills system guide
+│   ├── sonarqube.md         # SonarQube integration guide
 │   └── test-methodology.md  # Two-loop test approach (spec→oracle + mutation feedback)
 ├── scripts/
-│   ├── init-project.sh      # Project initializer
-│   ├── check_test_quality.py    # Enforcement: no .skip(), no mock-soup, no weak assertions
-│   ├── check_oracle_assertions.py # Enforcement: ORACLE blocks on numeric assertions
-│   ├── check_write_coverage.py   # Enforcement: write-path coverage verification
+│   ├── init-project.sh          # Project initializer (creates _work/, symlinks skills, hooks)
+│   ├── migrate-v3-to-v4.sh     # Migration script for existing v3.x projects
+│   ├── check_test_quality.py    # Pre-commit: no .skip(), no mock-soup
+│   ├── check_oracle_assertions.py # Pre-commit: ORACLE blocks on numeric assertions
+│   ├── check_write_coverage.py   # Pre-commit: write-path coverage verification
+│   ├── check_red_phase.py       # Gate: tests must FAIL in RED phase
+│   ├── check_test_intentions.py # Gate: every spec intention has a test
+│   ├── check_coverage_audit.py  # Gate: every endpoint/table/component tested
+│   ├── check_msw_contracts.py   # Gate: MSW mocks match Pydantic fields
+│   ├── check_tdd_order.py       # Gate: RED commit before GREEN commit
+│   ├── check_test_tampering.py  # Gate: builder cannot weaken tests
 │   └── test_enforcement.json.example # Config template for enforcement scripts
 ├── VERSION
 ├── CHANGELOG.md
@@ -259,30 +301,37 @@ ai-spec-driven-generator/
 ```
 my-project/
 ├── framework/              # Git submodule → ai-spec-driven-generator
+├── _work/                  # Working artifacts (per-story state)
+│   ├── spec/               # Spec overlays
+│   │   ├── sc-0000-initial.yaml  # Baseline spec (from project YAML)
+│   │   ├── sc-auth.yaml          # Per-story overlay (domain changes + ACs)
+│   │   └── sc-todos-crud.yaml
+│   ├── build/              # Pipeline state per story
+│   │   ├── sc-auth.yaml          # Gates: RED/GREEN/review/security
+│   │   └── sc-todos-crud.yaml
+│   ├── ux/                 # UX design artifacts
+│   │   ├── auth-ux-spec.md       # Wireframes + flows
+│   │   ├── auth-components.yaml  # Component definitions
+│   │   └── auth-prototype.html   # Interactive prototype
+│   └── stacks/             # Project-specific stack profiles
+│       ├── python-fastapi.md     # Backend coding + security contract
+│       └── typescript-react.md   # Frontend coding + MSW rules
 ├── specs/
 │   ├── constitution.md     # Non-negotiable project principles
-│   ├── my-project.yaml     # YAML spec
-│   ├── my-project-clarifications.md  # Resolved ambiguities
-│   ├── my-project-ux.md    # UX design (if UI project)
+│   ├── my-project.yaml     # YAML spec (source of truth)
 │   ├── my-project-arch.md  # Architecture plan
-│   ├── feature-tracker.yaml # Per-feature state (pending→validated)
-│   └── stories/            # Build contracts per feature
-│       ├── auth.yaml
-│       └── todos-crud.yaml
+│   └── feature-tracker.yaml # Per-feature state (pending→validated)
 ├── memory/
-│   ├── my-project.md       # Project memory (with feature status table)
-│   ├── LESSONS.md          # Failure memory
+│   ├── my-project.md       # Project memory (decisions, phase status)
+│   ├── LESSONS.md          # Recurring failure patterns
 │   └── SYNC.md             # Framework version sync
-├── stacks/                 # Stack profiles
 ├── apps/                   # Application code
 ├── packages/               # Shared packages
-├── .claude/commands/       # Claude Code slash commands (copied from framework)
-│   ├── spec.md
-│   ├── refine.md
-│   ├── build.md
-│   ├── validate.md
-│   └── review.md
-├── CLAUDE.md               # AI rules
+├── .claude/
+│   ├── skills/             # Symlinks → framework skills
+│   └── settings.json       # Hook configuration (code_review + sonar)
+├── hook-config.json        # Language-agnostic lint/test checks
+├── CLAUDE.md               # AI rules (generated from framework template)
 └── .cursorrules            # Cursor rules
 ```
 
@@ -295,10 +344,20 @@ The framework generates production-ready code by enforcing quality at every pipe
 - **Loop 2 (Reactive)**: After tests pass, mutation testing introduces faults (flip operators, change values). If tests don't catch the mutations (score < 70%), they're weak — targeted kill-tests are written for each surviving mutant.
 
 ### Enforcement Pipeline
-Three Python scripts block commits if violations are found:
+Nine Python scripts block commits and pipeline stages if violations are found:
+
+**Pre-commit (general quality):**
 - `check_test_quality.py` — no `.skip()`, no mock-soup in integration tests, no fixture-only tests
 - `check_oracle_assertions.py` — every numeric assertion needs an ORACLE comment with step-by-step math
 - `check_write_coverage.py` — every data store with a read endpoint must have production write code
+
+**Orchestrator gates (TDD pipeline per story):**
+- `check_red_phase.py` — tests must FAIL before code is written (no trivial failures, must import production code)
+- `check_test_intentions.py` — every `test_intention` from spec has a matching test
+- `check_coverage_audit.py` — every endpoint, table, and component has at least one test
+- `check_msw_contracts.py` — MSW mocks return exact Pydantic field names (catches frontend/backend mismatches)
+- `check_tdd_order.py` — RED commit must precede GREEN commit in git history
+- `check_test_tampering.py` — builder cannot delete, weaken, or bypass tests written by test engineer
 
 ### Automated Code Review Hook
 `stacks/hooks/code_review.py` runs anti-pattern detection + external command checks (lint, format, typecheck) on changed files. Returns a JSON verdict (`pass`/`block`) for Claude's stop hook mechanism. Language-agnostic — configured via `hook-config.json`.

@@ -38,6 +38,36 @@ Only read `agents/validator.ref.md` if you need the report template format.
    - ANY FAIL → increment `cycles`, keep status: `testing`
    - cycles >= 3 → add escalation note, keep status: `testing`
 
+## Escalation limit
+
+**Maximum 3 validation cycles** before mandatory human escalation:
+- Cycle 1-3: fix issues found, re-validate
+- After cycle 3: STOP. Do NOT attempt a 4th cycle. Escalate to the user with:
+  - List of ACs still failing
+  - Evidence collected so far
+  - Suggested manual investigation steps
+
+## Structured verdicts
+
+Every AC receives one of three verdicts:
+
+| Verdict | Meaning |
+|---|---|
+| **PASS** | Verify command succeeded, output matches expected oracle |
+| **FAIL** | Verify command ran but output does not match, or command returned non-zero |
+| **NOT_VERIFIABLE** | Verify command cannot run in current environment (e.g., missing service, Tier 3 runtime-only) |
+
+NOT_VERIFIABLE is not a failure — it is flagged for manual checking. The overall validation passes only if there are zero FAILs.
+
+## Build file gate updates
+
+After validation completes, update the build state file:
+1. Read `_work/build/sc-[ID].yaml`
+2. Set each gate status to the corresponding verdict (PASS / FAIL / NOT_VERIFIABLE)
+3. Set `validation_timestamp` to current time
+4. Set `validation_cycle` to the current cycle number
+
 ## Artefact checklist
-- [ ] Validation report (structured PASS/FAIL with evidence)
+- [ ] Validation report (structured PASS/FAIL/NOT_VERIFIABLE with evidence)
+- [ ] `_work/build/sc-[ID].yaml` — gate statuses updated
 - [ ] `specs/feature-tracker.yaml` — updated

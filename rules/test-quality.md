@@ -26,6 +26,19 @@ Referenced by: `developer.md`, `tester.md`, `reviewer.md`, `validator.md`.
 
    **Never read the frontend code first and write mocks from it.** Read the backend first. Always.
 
+   ### MSW 6-step procedure (mandatory for frontend tests)
+
+   The #1 cause of false-green tests: MSW mocks that match what the frontend expects instead of what the backend sends. For every MSW handler, follow this procedure -- no shortcuts:
+
+   1. Find the backend router file (grep for the URL path in the routers directory)
+   2. Read the router function -- find `response_model=XXX` and the exact URL path including prefix
+   3. Read the Pydantic model XXX -- note every field name, type, and wrapper structure
+   4. Write the MSW handler using the Pydantic field names and the exact backend URL
+   5. Cross-check: if frontend TypeScript types have different field names than the Pydantic model, that IS a bug the test must catch
+   6. Run the API contract checker (e.g. `python scripts/check_msw_contracts.py`) first -- every MISMATCH becomes a failing test
+
+   This procedure is enforced by: `check_msw_contracts.py` (blocks camelCase fields not in Pydantic models), the test engineer's Read Before Write step, and the code reviewer Pass 1 (MSW field/URL mismatch = ERROR).
+
 4. **Follow the plan.** If a story file says "test X, assert Y", the agent tests X and asserts Y. Not something else. Not a fixture check. Not a skip.
 
 5. **Run tests and check the results.** If tests designed to catch bugs all pass, the tests are wrong. Stop. Investigate. Fix the tests before committing.

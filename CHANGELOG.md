@@ -1,9 +1,58 @@
 # Changelog
 
+## [4.0.0] - 2026-04-04
+
+### Added — Machine-Enforced TDD Pipeline
+- **6 new enforcement scripts** blocking the pipeline: `check_red_phase.py` (tests must fail in RED), `check_test_intentions.py` (every spec intention has a test), `check_coverage_audit.py` (every endpoint/table/component tested), `check_msw_contracts.py` (MSW mocks match Pydantic fields), `check_tdd_order.py` (RED commit before GREEN), `check_test_tampering.py` (builder cannot weaken tests)
+- **Build file system**: `_work/build/sc-[ID].yaml` tracks pipeline gates per story (RED/GREEN/review/security/validation)
+- **SonarQube integration**: `sonar_check.py` hook, `/scan`, `/scan-full`, `/sonar` skills
+
+### Added — New Agents (8)
+- **test-engineer**: Opus-only agent for TDD RED phase — writes failing tests before code
+- **spec-generator**: YAML overlay merging to markdown documentation
+- **story-reviewer**: Per-story AC verification (separated from code reviewer)
+- **builder-service**: Specialized backend builder (Python/FastAPI)
+- **builder-frontend**: Specialized frontend builder (React/TypeScript, MSW contracts)
+- **builder-infra**: Docker/CI-CD specialist
+- **builder-migration**: Database migration expert (Alembic)
+- **builder-exchange**: Safety-critical exchange integration (Opus-only)
+
+### Added — New Skills (5)
+- `/scan` — SonarQube scan on local changes
+- `/scan-full` — Full codebase SonarQube analysis
+- `/sonar` — SonarQube status dashboard
+- `/ux` — UX design with 3 mandatory artefacts (spec + YAML + HTML prototype)
+- `/migrate` — Migrate v3.x projects to v4.0 structure
+
+### Added — Documentation & Templates
+- **7 documentation files** in `_docs/`: INDEX, agents catalog, process lifecycle, workflow conventions, skills guide, SonarQube guide (+ existing test-methodology)
+- **Build template** (`specs/templates/build-template.yaml`): pipeline state tracker with gates
+- **Spec overlay template** (`specs/templates/spec-overlay-template.yaml`)
+- **Stack profile examples**: `python-fastapi.md`, `typescript-react.md`, `postgres.md`
+- **Migration script** (`scripts/migrate-v3-to-v4.sh`): idempotent, dry-run, backup, macOS/Linux compatible
+
+### Changed — Structural
+- **`_work/` directory convention**: specs at `_work/spec/`, build state at `_work/build/`, UX at `_work/ux/`, stacks at `_work/stacks/`
+- **Skills enriched**: `/build` now dispatches to specialized builders with TDD gates; `/refine` auto-generates AC-SEC/AC-BP from stack profiles; `/review` separates story review from code review; `/validate` enforces max 3 cycles
+- **agent-conduct.md**: added 3 rules (TDD gates by orchestrator, enforcement scripts non-negotiable, read playbook first)
+- **test-quality.md**: added MSW 6-step procedure for frontend API mocking
+- **CLAUDE.md**: added _work/ conventions, full agent/skill/script catalog, agent model overrides section
+- **init-project.sh**: creates `_work/` structure, symlinks skills, creates hook-config.json and .claude/settings.json
+
+### Fixed
+- **Git grep escaping bug**: 4 enforcement scripts had unescaped `[sc-{id}]` in `--grep` (matched all commits instead of specific story)
+
+### Summary
+- Agents: 11 → 19 (all with .ref.md companions)
+- Skills: 5 → 10
+- Enforcement scripts: 3 → 9
+- Hooks: 1 → 2
+- Documentation files: 1 → 7
+- Templates: 5 → 8
+
 ## [3.0.10] - 2026-03-29
 
 - feat: add build state gates to manifest — persist gate results between sessions
-
 
 ## [3.0.9] - 2026-03-29
 

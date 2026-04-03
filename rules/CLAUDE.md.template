@@ -164,3 +164,151 @@ Before executing a skill, verify its prerequisites are met:
 - **Project lessons**: `memory/LESSONS.md`
 - **Project stack profiles**: `stacks/`
 - **Application code**: `apps/` and `packages/`
+
+## Workflow state IDs (board state mapping)
+
+<!-- Fill in with your project management tool's state IDs -->
+
+| State name | State ID |
+|------------|----------|
+| Backlog | `<!-- FILL -->` |
+| To Do | `<!-- FILL -->` |
+| In Progress | `<!-- FILL -->` |
+| In Review | `<!-- FILL -->` |
+| Done | `<!-- FILL -->` |
+
+## Epic priority table (epic-to-agent mapping)
+
+<!-- Fill in with your project's epics. The build orchestrator uses this to determine build order and dispatch to the correct builder agent. -->
+
+| Epic | Epic ID | Agent | Priority |
+|------|---------|-------|----------|
+| <!-- Epic name --> | `<!-- FILL -->` | <!-- service_builder / frontend_builder / infra_engineer / alembic_engineer / exchange_adapter --> | <!-- 1-N, lower = higher priority --> |
+
+## Agent model overrides
+
+Override the default model (Sonnet/Opus) per agent. Leave empty to use defaults from the model tier recommendations above.
+
+| Agent | Default model | Override |
+|-------|---------------|----------|
+| Developer / Builder | Opus | <!-- leave blank for default --> |
+| Test Engineer | Opus | |
+| Refinement | Opus | |
+| Reviewer (Pass 1+3) | Opus | |
+| Reviewer (Pass 2) | Automated | |
+| Validator | Sonnet | |
+| Security | Sonnet (per-feature) / Opus (full) | |
+| Product Owner | Sonnet | |
+| Architect | Opus | |
+| UX/UI | Sonnet | |
+| DevOps | Sonnet | |
+| Orchestrator | Opus | |
+
+## `_work/` directory convention
+
+All live agent working state lives under the `_work/` directory. This is project-specific content produced by agents during the build lifecycle.
+
+| Path | Purpose | Who writes it |
+|------|---------|---------------|
+| `_work/spec/sc-0000-initial.yaml` | Baseline product spec (never modified by agents) | Dev (once, at project start) |
+| `_work/spec/sc-[ID].yaml` | Per-story overlay (new/changed entries only) | Story Refiner |
+| `_work/build/sc-[ID].yaml` | Build file: domain_context, ac_verifications, anti_patterns, gate results | Build Orchestrator (creates), Builder (extends) |
+| `_work/stacks/` | Project-owned stack profiles (copied from templates) | Dev (initial), customized per project |
+| `_work/ux/` | UX agent working files (prototype HTML, components YAML) | UX Designer |
+
+### Build file schema
+
+The build file (`_work/build/sc-[ID].yaml`) is written by the orchestrator at dispatch time and extended by the builder before writing code. All pipeline state lives here.
+
+```yaml
+story: sc-123
+agent: service_builder
+dispatched_at: "YYYY-MM-DD"
+domain_context: {}        # relevant slice of spec
+ac_verifications:         # copied from _work/spec/sc-[ID].yaml
+  - id: AC-FUNC-01
+    criterion: "description"
+    verify: 'shell command'
+anti_patterns: [...]      # from stack profile forbidden_patterns
+test_patterns: [...]      # from stack profile test patterns
+lessons: [...]            # from LESSONS.md if applicable
+files:
+  modified: []            # builder fills before coding
+  created: []
+  deleted: []
+gates:
+  tdd_red:     {status: pending, commit: "", test_count: 0, failing: 0}
+  tdd_green:   {status: pending, commit: "", tampering: []}
+  code_review: {status: pending}
+  validation:  {status: pending}
+```
+
+## Agents
+
+### Workflow agents (invoked directly via skills)
+
+| Agent | Skill | What it does |
+|-------|-------|-------------|
+| Story Refiner / Refinement | `/refine` | Refines stories: adds ACs, creates spec overlay, sets priority |
+| Build Orchestrator | `/build` | Finds refined stories, sorts by priority, dispatches to builder, runs quality gates |
+| Story Reviewer | `/review` | Verifies ACs against committed code, posts PASS/FAIL verdict |
+| UX Designer | `/ux` | Produces IA, user flows, design tokens, wireframe specs |
+| Spec Generator | `/spec` | Merges YAML spec overlays into readable markdown |
+| Validator | `/validate` | Independent AC verification using verify: commands |
+
+### Builder agents (dispatched by the orchestrator)
+
+| Agent | Scope | When used |
+|-------|-------|-----------|
+| Service Builder (builder-service) | Backend services: models, routers, schemas, tests | Most backend stories |
+| Frontend Builder (builder-frontend) | Pages, components, hooks, API client, tests | Frontend stories |
+| Infra Engineer (builder-infra) | Docker, CI/CD, proxy, config | Infrastructure stories |
+| Migration Engineer (builder-migration) | Database migrations, schema alignment tests | Alembic/migration stories |
+| Exchange Adapter (builder-exchange) | Exchange integrations, order logic (safety-critical) | CCXT/exchange stories |
+
+### Quality gate agents (run automatically)
+
+| Agent | Trigger | What it does |
+|-------|---------|-------------|
+| Test Engineer (test-engineer) | TDD RED phase (before builder) | Writes failing tests from spec before code exists |
+| Code Reviewer | After every build commit | 3-pass review: KISS, lint/security, safety/correctness |
+| Security Auditor | After backend/exchange builds | OWASP Top 10 checks; CRITICAL/HIGH blocks story |
+| Validator | After code review passes | Independent AC verification; max 3 retry cycles |
+
+## Skills (full list)
+
+| Skill | When to use | Agents loaded |
+|-------|-------------|---------------|
+| `/spec` | Start a new project or define a feature | product-owner, ux-ui, architect |
+| `/refine` | Break a feature into actionable stories | refinement, product-owner |
+| `/build` | Implement a refined story | build-orchestrator, builder agents |
+| `/validate` | Verify implementation against story file | validator |
+| `/review` | Review all validated features before PR | reviewer, security, tester |
+| `/scan` | Scan local changes only (staged + unstaged vs integration branch) | (inline) |
+| `/scan-full` | Full codebase SonarQube analysis with hotspots and trends | (inline) |
+| `/sonar` | SonarQube scan of local changes | (inline) |
+| `/ux` | Design UI before building frontend stories | ux-ui |
+| `/migrate` | Migrate a v3.x project to v4.0 structure | (inline — runs `scripts/migrate-v3-to-v4.sh`) |
+
+## Enforcement scripts (all 9)
+
+Scripts live in `scripts/` (or `ai-framework/scripts/`). All read `test_enforcement.json` at the project root.
+
+### Orchestrator gates (run at TDD boundary -- agents cannot self-certify)
+
+| Script | Gate | Blocks when |
+|--------|------|-------------|
+| `check_red_phase.py` | After RED | Tests pass, trivial failures, no production imports |
+| `check_test_intentions.py` | After RED | Spec intentions without matching tests |
+| `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests |
+| `check_msw_contracts.py` | After RED | MSW handlers using frontend field names instead of backend |
+| `check_test_tampering.py` | After GREEN | Deleted tests, weakened assertions |
+| `check_tdd_order.py` | After GREEN | Code commits without preceding RED commit |
+
+### Pre-commit checks (agents run before every commit)
+
+| Script | Blocks when |
+|--------|-------------|
+| `check_test_quality.py` | .skip(), mock-soup, fixture-only tests |
+| `check_write_coverage.py` | Tables with readers but no tested writers |
+| `check_oracle_assertions.py` | Numeric assertions without ORACLE comment blocks |

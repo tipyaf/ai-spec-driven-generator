@@ -23,14 +23,33 @@ description: Review code quality, security, and test coverage for all validated 
 
 Only read `.ref.md` files if you need detailed checklists or report templates.
 
-## Workflow
+## Two review modes
+
+This skill covers two distinct review types:
+
+### Story review (per-story, runs after each build)
+- Dispatches `agents/story-reviewer.md`
+- Runs immediately after a single story's build completes
+- Verifies every AC in that story's file one by one
+- Posts a structured PASS/FAIL verdict per AC
+- Does NOT look at other stories or cross-feature concerns
+
+### Code review (all features, runs at end)
+- Dispatches `agents/reviewer.md`
+- Runs when ALL features are validated and ready for PR
+- Reviews all changes together for cross-cutting concerns
+- Covers code quality, security, architecture, and test quality
+
+## Workflow (Code review — full)
 
 1. Read the git diff or PR changes
 2. **Pass 1 — KISS & Readability**: function length, nesting, naming, dead code, duplication
 3. **Pass 2 — Static Analysis**: linting, type checking, formatting, anti-patterns
 4. **Pass 3 — Safety & Correctness**: secrets, error handling, input validation, SQL safety
-5. Run security audit (OWASP Top 10, auth, secrets, dependencies)
-6. Verify test quality (no mock-soup, real integration tests, forbidden patterns)
-7. **Verify ALL ACs across ALL stories**: re-run every `verify:` command from every story file
-8. Produce structured PASS/FAIL report
-9. If FAIL → return issues to developer with file:line references → suggest `/build` to fix
+5. **Pass 4 — Anti-patterns check**: read `anti_patterns` from stack profiles (`stacks/*.md`), grep for violations in changed files
+6. Run security audit (OWASP Top 10, auth, secrets, dependencies)
+7. Verify test quality (no mock-soup, real integration tests, forbidden patterns)
+8. **MSW contract validation**: if the project uses MSW (Mock Service Worker), verify that mock handlers match the actual API contracts defined in the spec
+9. **Verify ALL ACs across ALL stories**: re-run every `verify:` command from every story file
+10. Produce structured PASS/FAIL report
+11. If FAIL → return issues to developer with file:line references → suggest `/build` to fix

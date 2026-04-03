@@ -1,0 +1,50 @@
+# Build file template — created by orchestrator for each story
+# Location: _work/build/sc-[ID].yaml
+#
+# This file tracks the pipeline state for a single story.
+# Each gate must pass before the story can move to Done.
+
+story: sc-[ID]
+cycle: 1
+dispatched_at: YYYY-MM-DD
+agent: developer  # or builder-service, builder-frontend, builder-infra, builder-migration
+
+files:
+  created: []
+  modified: []
+  deleted: []
+
+ac_verifications: []    # Copied from spec overlay
+anti_patterns: []       # From stack profile
+domain_context: {}      # Slice of baseline for this story's service/tables
+test_patterns: []       # From stack profile
+lessons: []             # Applicable entries from LESSONS.md
+
+gates:
+  tdd_red:
+    status: pending     # pending | done | fail
+    commit: null
+    test_count: 0
+    failing: 0
+  tdd_green:
+    status: pending     # pending | pass | fail
+    commit: null
+    tampering: []
+  code_review:
+    status: pending     # pending | pass | fail
+    pass_1: null        # KISS & readability
+    pass_2: null        # Static analysis (automated)
+    pass_3: null        # Safety & correctness
+    findings: []
+  security_audit:
+    status: pending     # pending | pass | fail
+    critical: 0
+    high: 0
+    medium: 0
+    low: 0
+  story_review:
+    status: pending     # pending | pass | fail
+    findings: []
+  validation:
+    status: pending     # pending | pass | fail
+    cycle: 0

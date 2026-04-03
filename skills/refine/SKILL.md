@@ -47,6 +47,50 @@ Only read `.ref.md` files if you need ticket templates or AC examples.
     - Update `specs/feature-tracker.yaml`: set feature status to `refined`, set `story_file` path
     - Create tickets in Shortcut (if configured)
 
+## Stack profile integration
+
+Before writing ACs, read the stack profiles to auto-generate security and best-practice criteria:
+
+1. Read all stack profiles from `_work/stacks/*.md` (or `stacks/*.md` if `_work/stacks/` does not exist)
+2. Extract `security_rules` from each applicable stack profile
+3. Extract `best_practices` from each applicable stack profile
+4. **Auto-generate AC-SEC-[FEATURE]-NN** from each security rule that applies to the story's scope
+5. **Auto-generate AC-BP-[FEATURE]-NN** from each best practice that applies to the story's scope
+
+These auto-generated ACs supplement (not replace) any hand-written ACs.
+
+## Testability tier classification
+
+Every AC MUST be classified into a testability tier:
+
+| Tier | Verify method | When to use |
+|---|---|---|
+| **Tier 1** (preferred) | `grep`, `bash`, `jq` | Static checks against code artefacts — no running service needed |
+| **Tier 2** | `curl`, `playwright`, `cypress` | Requires a live service or browser |
+| **Tier 3** (last resort) | `runtime-only` | Cannot be automated — minimize usage |
+
+Rules:
+- **AC-SEC-* MUST be Tier 1** — always check code artefacts, not runtime behavior
+- **AC-BP-* SHOULD be Tier 1** — prefer static verification
+- **`verify: static` is BANNED** — rewrite until you have a shell command
+
+## Test intentions generation
+
+For each AC, generate a `test_intentions` block containing:
+- **Intent**: what the test proves (one sentence)
+- **Oracle value**: the pre-computed expected result (e.g., expected HTTP status, expected string in output, expected file content)
+- **Verify command**: the shell command that produces the actual value to compare against the oracle
+
+This ensures the builder and test engineer have unambiguous pass/fail criteria.
+
+## Spec overlay creation
+
+After writing the story file, create a spec overlay:
+1. Write to `_work/spec/sc-[ID].yaml`
+2. The overlay captures any spec changes implied by this story (new endpoints, schema changes, config additions)
+3. The overlay will be merged with the baseline spec during `/spec` regeneration
+
 ## Artefact checklist (must exist after /refine)
 - [ ] `specs/stories/[feature-id].yaml` — the build contract
+- [ ] `_work/spec/sc-[ID].yaml` — spec overlay (even if empty)
 - [ ] `specs/feature-tracker.yaml` — updated with status: refined

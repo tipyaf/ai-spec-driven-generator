@@ -59,6 +59,26 @@ Create the feature tracker from `specs/templates/feature-tracker.yaml`.
 Populate with all features from the spec (status: pending).
 → Write to `specs/feature-tracker.yaml`
 
+## Spec regeneration from YAML overlays
+
+The `/spec` command also supports regenerating markdown specs from YAML overlays:
+
+### Directory convention
+- **Baseline spec**: `specs/[project-name].yaml` — the original spec
+- **Story overlays**: `_work/spec/sc-[ID].yaml` — per-story spec changes created during `/refine`
+- **Generated docs**: `specs/docs/*.md` — regenerated markdown (one per domain)
+
+### Invocation modes
+- `/spec` (no args) — full regeneration: merge baseline + all overlays, regenerate all domain docs
+- `/spec [domain]` — regenerate only that domain (e.g., `/spec backend`)
+- `/spec sc-[ID]` — regenerate only domains touched by a specific story overlay
+
+### Merge process
+1. Read the baseline spec YAML
+2. Read all overlay files from `_work/spec/`
+3. Deep-merge overlays onto baseline (overlays win on conflict)
+4. Dispatch `agents/spec-generator.md` (if it exists) to produce markdown from merged YAML
+
 ### Artefact checklist (all must exist before /spec is "done")
 - [ ] `specs/constitution.md`
 - [ ] `specs/[project-name].yaml`
@@ -66,3 +86,4 @@ Populate with all features from the spec (status: pending).
 - [ ] `specs/[project-name]-ux.md` (or skipped for non-UI)
 - [ ] `specs/[project-name]-arch.md`
 - [ ] `specs/feature-tracker.yaml`
+- [ ] `_work/spec/` directory created (even if empty — ready for overlays)

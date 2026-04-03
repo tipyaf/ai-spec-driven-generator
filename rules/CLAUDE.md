@@ -24,6 +24,11 @@ Use skills to dispatch to the right agent(s). Each skill loads ONLY the agents i
 | `/build` | Implement a refined story | developer, validator |
 | `/validate` | Verify implementation against story file | validator |
 | `/review` | Review all validated features before PR | reviewer, security, tester |
+| `/scan` | Scan local changes only (staged + unstaged vs integration branch) | (inline) |
+| `/scan-full` | Full codebase SonarQube analysis with hotspots and trends | (inline) |
+| `/sonar` | SonarQube scan of local changes | (inline) |
+| `/ux` | Design UI before building frontend stories | ux-ui |
+| `/migrate` | Migrate a v3.x project to v4.0 structure | (inline — runs `scripts/migrate-v3-to-v4.sh`) |
 
 **Default workflow**: `/spec` → `/refine` (per feature) → `/build` (per feature) → `/validate` (per feature) → `/review` (all features)
 
@@ -292,6 +297,52 @@ Before creating any PR, verify:
 | Reviewer | Audit quality, flag issues | Modify files directly |
 | Security | Audit security, flag vulns | Modify files directly |
 | DevOps | Configure CI/CD, deployment | Modify feature code |
+| Test Engineer | TDD RED phase: write failing tests from spec | Write production code, modify existing tests in GREEN phase |
+| Spec Generator | Merge YAML spec overlays into markdown | Modify spec YAML files, write code |
+| Story Reviewer | Verify ACs against committed code, post PASS/FAIL | Modify files, execute tests |
+| Builder (Service) | Build backend services: models, routers, schemas, tests | Self-validate, skip manifest |
+| Builder (Frontend) | Build pages, components, hooks, API client, tests | Self-validate, skip manifest |
+| Builder (Infra) | Build Docker, CI/CD, proxy, config | Modify feature code |
+| Builder (Migration) | Database migrations, schema alignment tests | Modify feature code |
+| Builder (Exchange) | Exchange integrations, order logic (safety-critical) | Skip safety checks |
+| Build Orchestrator | Find refined stories, dispatch to builders, run gates | Skip quality gates, bypass TDD |
+
+## `_work/` directory convention
+
+All live agent working state lives under the `_work/` directory. This is project-specific content produced by agents during the build lifecycle.
+
+| Path | Purpose | Who writes it |
+|------|---------|---------------|
+| `_work/spec/sc-0000-initial.yaml` | Baseline product spec (never modified by agents) | Dev (once, at project start) |
+| `_work/spec/sc-[ID].yaml` | Per-story overlay (new/changed entries only) | Story Refiner / Refinement |
+| `_work/build/sc-[ID].yaml` | Build file: domain_context, ac_verifications, anti_patterns, gate results | Build Orchestrator (creates), Builder (extends) |
+| `_work/stacks/` | Project-owned stack profiles (copied from templates) | Dev (initial), customized per project |
+| `_work/ux/` | UX agent working files (prototype HTML, components YAML) | UX Designer |
+
+The build file (`_work/build/sc-[ID].yaml`) is the pipeline state for a story. The orchestrator creates it at dispatch, the builder extends it with file lists, and each quality gate updates its status. The validator reads `ac_verifications` from the build file directly.
+
+## Enforcement scripts
+
+Scripts live in `scripts/` (or `ai-framework/scripts/`). All read `test_enforcement.json` at the project root.
+
+### Orchestrator gates (run at TDD boundary -- agents cannot self-certify)
+
+| Script | Gate | Blocks when |
+|--------|------|-------------|
+| `check_red_phase.py` | After RED | Tests pass, trivial failures, no production imports |
+| `check_test_intentions.py` | After RED | Spec intentions without matching tests |
+| `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests |
+| `check_msw_contracts.py` | After RED | MSW handlers using frontend field names instead of backend |
+| `check_test_tampering.py` | After GREEN | Deleted tests, weakened assertions |
+| `check_tdd_order.py` | After GREEN | Code commits without preceding RED commit |
+
+### Pre-commit checks (agents run before every commit)
+
+| Script | Blocks when |
+|--------|-------------|
+| `check_test_quality.py` | .skip(), mock-soup, fixture-only tests |
+| `check_write_coverage.py` | Tables with readers but no tested writers |
+| `check_oracle_assertions.py` | Numeric assertions without ORACLE comment blocks |
 
 ## File locations
 - **Agents**: `agents/*.md` (core) + `agents/*.ref.md` (templates)

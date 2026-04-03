@@ -1,17 +1,36 @@
 {
-  "backend_test_dirs": ["tests/"],
-  "integration_test_dirs": ["tests/integration/"],
-  "frontend_test_dir": "src",
-  "production_dirs": ["src/", "app/"],
-  "router_dirs": ["app/routers/", "src/routes/"],
-  "model_dirs": ["app/models/", "src/models/"],
-  "schema_files": ["schema.sql"],
-  "migration_dirs": ["migrations/versions/", "prisma/migrations/"],
-  "oracle_check": {
-    "enabled": true,
-    "write_path_keywords": ["order", "payment", "invoice", "total", "balance", "score", "rate", "price", "amount", "fee", "tax", "discount"],
-    "python_search_window": 5,
-    "known_files_without_oracle": []
-  },
-  "known_mock_files": []
+  "project_root": ".",
+  "schema_files": [
+    "platform/db/init/01_postgres.sql",
+    "platform/db/init/02_timescaledb.sql"
+  ],
+  "migration_dirs": [
+    "platform/db/alembic/versions"
+  ],
+  "production_dirs": [
+    "platform/services/api/app",
+    "platform/services/engine/app"
+  ],
+  "router_dirs": [
+    "platform/services/api/app/routers",
+    "platform/services/api/app/services"
+  ],
+  "model_dirs": [
+    "platform/services/api/app/models",
+    "platform/services/engine/app/models",
+    "platform/shared/models"
+  ],
+  "backend_test_dirs": [
+    "platform/services/api/tests",
+    "platform/services/engine/tests"
+  ],
+  "integration_test_dirs": [
+    "platform/services/api/tests/integration",
+    "platform/services/engine/tests/integration"
+  ],
+  "frontend_test_dir": "platform/frontend/src",
+  "known_mock_files": [
+    "test_auth_endpoints.py",
+    "test_health.py"
+  ]
 }
