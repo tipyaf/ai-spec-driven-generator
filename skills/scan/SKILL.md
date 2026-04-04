@@ -10,7 +10,11 @@ Run SonarQube analysis scoped to local changes only (staged + unstaged files in 
 ## Prerequisites
 
 - `sonar-scanner` or `npx sonar-scanner` must be available
-- Environment variables set: `SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`
+- SonarQube credentials configured via **one of**:
+  - `.env` file at project root (recommended — per-project)
+  - Shell environment variables (`~/.zshrc`, `~/.bashrc`, or Windows User env)
+
+Required variables: `SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`
 
 ## Workflow
 
@@ -19,13 +23,10 @@ Run SonarQube analysis scoped to local changes only (staged + unstaged files in 
    git diff origin/main --name-only --diff-filter=ACMR
    ```
 
-2. **Read environment variables**:
-   ```bash
-   # Use environment variables directly
-   echo "SONAR_TOKEN=$SONAR_TOKEN"
-   echo "SONAR_HOST_URL=$SONAR_HOST_URL"
-   echo "SONAR_PROJECT_KEY=$SONAR_PROJECT_KEY"
-   ```
+2. **Read SonarQube credentials** (`.env` first, then shell environment):
+   - Read `.env` file at project root if it exists — parse `KEY=value` lines
+   - Fall back to shell environment variables for any missing values
+   - If all three variables are missing, tell the user: "Copy `.env.example` to `.env` and fill in your SonarQube credentials" and stop
 
 3. **Run sonar-scanner scoped to changed files**:
    ```bash

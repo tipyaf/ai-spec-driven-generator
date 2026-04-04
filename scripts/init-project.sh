@@ -276,6 +276,12 @@ git submodule update --remote framework
 \`\`\`
 EOF
 
+# --- Copy .env.example ---
+if [ -f framework/stacks/hooks/.env.example ]; then
+  cp framework/stacks/hooks/.env.example .env.example
+  echo "Created .env.example — copy to .env and fill in your SonarQube credentials"
+fi
+
 # --- Initial commit ---
 git add -A
 git commit -m "Initialize project from ai-spec-driven-generator framework"

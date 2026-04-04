@@ -48,7 +48,26 @@ docker stop sonarqube && docker rm sonarqube
 
 ## 3. Store Credentials
 
-Store as persistent environment variables so they survive shell restarts.
+### Recommended: `.env` at project root (per-project)
+
+Each project can have its own SonarQube configuration. Copy the example and fill in your values:
+
+```bash
+cp framework/stacks/hooks/.env.example .env
+```
+
+```env
+# .env (gitignored — never commit this file)
+SONAR_TOKEN=squ_your_token_here
+SONAR_HOST_URL=http://localhost:9000
+SONAR_PROJECT_KEY=your-project-key
+```
+
+The hook `sonar_check.py` reads `.env` first, then falls back to shell environment variables. This allows per-project configuration (different SonarQube instances, different project keys).
+
+### Alternative: shell profile (global fallback)
+
+If you prefer a single global config for all projects:
 
 **macOS/Linux (~/.zshrc or ~/.bashrc):**
 
@@ -66,7 +85,7 @@ export SONAR_PROJECT_KEY="your-project-key"
 [System.Environment]::SetEnvironmentVariable("SONAR_PROJECT_KEY", "your-project-key",        "User")
 ```
 
-Do NOT commit these values to the repo or store them in `.env` files.
+**Priority**: `.env` at project root > shell environment variables. If both exist, `.env` wins.
 
 ---
 

@@ -9,6 +9,8 @@ Exit codes:
   0 + JSON out  = FAIL — decision:block feeds report back to Claude, forcing a fix
 """
 
+from __future__ import annotations
+
 import base64
 import json
 import os
@@ -21,19 +23,42 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent.parent
 
 
+def load_dotenv(root: Path) -> dict[str, str]:
+    """Load .env file from project root. No external dependency."""
+    env_file = root / ".env"
+    if not env_file.exists():
+        return {}
+    values: dict[str, str] = {}
+    for line in env_file.read_text().splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if "=" not in line:
+            continue
+        key, _, val = line.partition("=")
+        key = key.strip()
+        val = val.strip().strip("\"'")
+        values[key] = val
+    return values
+
+
+_dotenv_cache: dict[str, str] | None = None
+
+
+def get_env(name: str) -> str:
+    """Read from .env first, then fall back to os.environ."""
+    global _dotenv_cache
+    if _dotenv_cache is None:
+        _dotenv_cache = load_dotenv(ROOT)
+    return _dotenv_cache.get(name, "") or os.environ.get(name, "")
+
+
 def run(cmd: str, **kwargs) -> tuple[int, str]:
     r = subprocess.run(
         cmd, shell=True, capture_output=True, text=True,
         cwd=str(ROOT), env=os.environ, **kwargs
     )
     return r.returncode, (r.stdout + r.stderr).strip()
-
-
-def get_env(name: str) -> str:
-    code, val = run(
-        f'powershell -command "[Environment]::GetEnvironmentVariable(\'{name}\',\'User\')"'
-    )
-    return val.strip().strip("\r\n") if code == 0 else ""
 
 
 def get_changed_files() -> str:

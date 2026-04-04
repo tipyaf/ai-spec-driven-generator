@@ -187,7 +187,25 @@ In Cursor, describe your task and the AI follows the same workflow via `.cursorr
 
 Skills enforce phase order via filesystem checks: you can't build before the story file exists, you can't review before all features are validated. Each phase ends with clear options and next steps.
 
-### 4. Update the framework
+### 4. Configure SonarQube (optional)
+
+Create a `.env` file at your project root with your SonarQube credentials:
+
+```bash
+cp framework/stacks/hooks/.env.example .env
+```
+
+```env
+SONAR_TOKEN=squ_your_token_here
+SONAR_HOST_URL=http://localhost:9000
+SONAR_PROJECT_KEY=your-project-key
+```
+
+The `.env` file is gitignored — each developer and each project can have its own configuration. The hook and skills read `.env` first, then fall back to shell environment variables (`~/.zshrc`).
+
+> Full setup guide (Docker install, token generation, coverage reporting): [`_docs/sonarqube.md`](_docs/sonarqube.md)
+
+### 5. Update the framework
 
 When the framework gets improvements, update all projects at once:
 

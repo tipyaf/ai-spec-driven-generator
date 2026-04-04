@@ -10,7 +10,10 @@ Run SonarQube analysis on the entire repository codebase.
 ## Prerequisites
 
 - `sonar-scanner` or `npx sonar-scanner` must be available
-- Environment variables set: `SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`
+- SonarQube credentials configured via **one of**:
+  - `.env` file at project root (recommended — per-project)
+  - Shell environment variables (`~/.zshrc`, `~/.bashrc`, or Windows User env)
+- Required variables: `SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`
 
 ## Workflow
 
