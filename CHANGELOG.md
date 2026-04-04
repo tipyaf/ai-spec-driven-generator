@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.8] - 2026-04-04
+
+- feat: add next-step guidance to all skills — only on manual action required
+
+
 ## [4.0.7] - 2026-04-04
 
 - feat: add SonarQube as Gate 6 in validation pipeline
