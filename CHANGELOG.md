@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.3] - 2026-04-04
+
+- fix: sonar_check.py ROOT resolution — use git toplevel instead of parent traversal
+
+
 ## [4.0.2] - 2026-04-04
 
 - fix: cross-platform SonarQube config — .env per project, Python 3.8+ compat
