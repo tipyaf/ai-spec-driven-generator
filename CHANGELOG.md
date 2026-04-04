@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.6] - 2026-04-04
+
+- docs: update README — 6 quality gates, SonarQube positioning
+
+
 ## [4.0.5] - 2026-04-04
 
 - feat: make story-reviewer a mandatory blocking gate before validated
