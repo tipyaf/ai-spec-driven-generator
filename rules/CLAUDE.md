@@ -170,6 +170,7 @@ PHASE 5 — RELEASE — ✅ Human
 | Product Owner | Sonnet | Structured spec writing, scoping |
 | Architect | Opus | Cross-cutting architecture decisions |
 | UX/UI | Sonnet | Wireframes, component specs, design system — structured and well-scoped |
+| Test Engineer | Opus | TDD RED phase — must understand data flows, write oracle-based failing tests |
 | DevOps | Sonnet | Infrastructure config is well-scoped |
 | Orchestrator | Opus | Must interpret agent verdicts, manage escalation logic, coordinate dependencies |
 
@@ -328,11 +329,11 @@ All live agent working state lives under the `_work/` directory. This is project
 |------|---------|---------------|
 | `_work/spec/sc-0000-initial.yaml` | Baseline product spec (never modified by agents) | Dev (once, at project start) |
 | `_work/spec/sc-[ID].yaml` | Per-story overlay (new/changed entries only) | Story Refiner / Refinement |
-| `_work/build/sc-[ID].yaml` | Build file: domain_context, ac_verifications, anti_patterns, gate results | Build Orchestrator (creates), Builder (extends) |
+| `_work/build/sc-[ID].yaml` | Build file: domain_context, ac_verifications, anti_patterns, dependency_map, gate results | Build Orchestrator (creates), Builder (extends) |
 | `_work/stacks/` | Project-owned stack profiles (copied from templates) | Dev (initial), customized per project |
 | `_work/ux/` | UX agent working files (prototype HTML, components YAML) | UX Designer |
 
-The build file (`_work/build/sc-[ID].yaml`) is the pipeline state for a story. The orchestrator creates it at dispatch, the builder extends it with file lists, and each quality gate updates its status. The validator reads `ac_verifications` from the build file directly.
+The build file (`_work/build/sc-[ID].yaml`) is the pipeline state for a story. The orchestrator creates it at dispatch (including `dependency_map` — a grep-based analysis of touched functions, existing tests, and connected components), the builder extends it with file lists, and each quality gate updates its status. The validator reads `ac_verifications` from the build file directly.
 
 ## Enforcement scripts
 

@@ -196,6 +196,9 @@ Feature **NOT DONE** until all three categories 100% green.
 - **NEVER** skip a test_intention from the story file — every intention becomes a test
 - **NEVER** change oracle values from test_intentions — if code differs, the code has a bug
 - **NEVER** write 40+ tests in one pass — batch in groups of 10-15
+- **NEVER** write bare existence assertions (`is not None`, `toBeDefined()`) without following concrete value assertions -- see Rule 2b in test-quality.md
+- **NEVER** write bare type/length assertions (`isinstance`, `len(x) > 0`, `toBeInstanceOf`) as the terminal assertion -- always assert concrete values
+- **NEVER** assert only `status_code == 200` in a feature test without also asserting the response body
 - **ALWAYS** run coverage audit BEFORE writing tests — this produces the test plan
 - **ALWAYS** copy oracle values from test_intentions — never compute yourself
 - **ALWAYS** run enforcement scripts before committing

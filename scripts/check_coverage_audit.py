@@ -84,16 +84,33 @@ def get_story_files(story_id: str, project_root: Path) -> list[str]:
 
 def categorize_files(
     files: list[str],
+    config: dict | None = None,
 ) -> tuple[list[str], list[str], list[str], list[str]]:
-    """Split files into routers, models, components, and test files."""
+    """Split files into routers, models, components, and test files.
+
+    When config is provided, uses project-specific directory patterns from
+    ``router_dirs`` and ``model_dirs`` for more accurate classification.
+    Falls back to generic regex patterns when config is absent.
+    """
     routers = []
     models = []
     components = []
     test_files = []
 
+    # Build matchers from config when available
+    router_patterns: list[str] = []
+    model_patterns: list[str] = []
+    if config:
+        router_patterns = config.get("router_dirs", [])
+        model_patterns = config.get("model_dirs", [])
+
     for f in files:
         if re.search(r"test_.*\.py$|_test\.py$|\.test\.(ts|tsx)$|\.spec\.(ts|tsx)$", f):
             test_files.append(f)
+        elif router_patterns and any(f.startswith(d) for d in router_patterns):
+            routers.append(f)
+        elif model_patterns and any(f.startswith(d) for d in model_patterns):
+            models.append(f)
         elif re.search(r"routers/.*\.py$", f):
             routers.append(f)
         elif re.search(r"models/.*\.py$|schemas/.*\.py$", f):
@@ -268,6 +285,7 @@ def main() -> int:
 
     project_root = find_project_root()
     story_id = args.story
+    config = load_config(project_root, args.config)
 
     # --- Step 1: Get story files ---
     story_files = get_story_files(story_id, project_root)
@@ -276,7 +294,7 @@ def main() -> int:
         return 0
 
     # --- Step 2: Categorize files ---
-    routers, models, components, test_files = categorize_files(story_files)
+    routers, models, components, test_files = categorize_files(story_files, config)
 
     print(f"Story sc-{story_id} files:")
     print(f"  Routers:    {len(routers)}")

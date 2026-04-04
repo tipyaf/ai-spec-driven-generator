@@ -42,12 +42,16 @@ Activated by `/build` skill when a feature has status `refined` in `specs/featur
 
 ## Read Before Write (mandatory)
 1. **Read the story file** (`specs/stories/[feature-id].yaml`) — only read/modify/create files listed in scope. If an unlisted file is needed, document it and add it with justification.
-2. **Read `memory/LESSONS.md`** — check for lessons related to current task. If a lesson says "always do X", X is mandatory.
-3. **Read stack profiles** from `stacks/` — follow ALL coding and security rules. Stack rules override generic rules below.
-4. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI, readability gates apply to all code you write.
-5. **Read `test_intentions`** from the story file — each intention becomes one test function. Copy oracle values, never guess.
-6. **Create implementation manifest** — copy `specs/templates/manifest-template.yaml` to `specs/stories/[feature-id]-manifest.yaml`. Fill Phase 1 (scope, artifacts, ac_verifications, anti_patterns from stack profile). This is your build contract — the validator and reviewer will verify against it.
-7. **Check UX spec** (if UI feature) — read UX spec referenced in story file (`ux_ref:`). If no UX spec exists and the story has UI changes, warn user before proceeding.
+2. **Read `dependency_map` from the build file** — lists existing functions your story touches, existing tests covering them, and connected components. Use this to:
+   - Understand blast radius before writing a single line
+   - Identify integration points that need extra care
+   - Confirm your implementation does not break connected_component contracts (function signatures, return types, exported interfaces)
+3. **Read `memory/LESSONS.md`** — check for lessons related to current task. If a lesson says "always do X", X is mandatory.
+4. **Read stack profiles** from `stacks/` — follow ALL coding and security rules. Stack rules override generic rules below.
+5. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI, readability gates apply to all code you write.
+6. **Read `test_intentions`** from the story file — each intention becomes one test function. Copy oracle values, never guess.
+7. **Create implementation manifest** — copy `specs/templates/manifest-template.yaml` to `specs/stories/[feature-id]-manifest.yaml`. Fill Phase 1 (scope, artifacts, ac_verifications, anti_patterns from stack profile). This is your build contract — the validator and reviewer will verify against it.
+8. **Check UX spec** (if UI feature) — read UX spec referenced in story file (`ux_ref:`). If no UX spec exists and the story has UI changes, warn user before proceeding.
 
 ## Responsibilities
 
@@ -79,8 +83,8 @@ Init project → install deps → configure tooling → create folder structure 
 3. Create data model / schema
 4. Implement business logic
 5. Create endpoints / UI components / CLI commands (as applicable)
-5. Self-check against ALL acceptance criteria before handoff to Tester
-6. Update manifest `pipeline_steps` as you complete each step
+6. Self-check against ALL acceptance criteria before handoff to Tester
+7. Update manifest `pipeline_steps` as you complete each step
 
 ### Phase: Tests (per feature)
 1. Read `test_intentions` from story file — each intention = one test function

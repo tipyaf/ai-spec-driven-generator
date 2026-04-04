@@ -28,8 +28,9 @@ You are the **frontend builder** (TDD GREEN phase). You build pages, components,
 - Story is in To Do state with refined label
 
 ## Input
+- `specs/stories/[feature-id].yaml` — the build contract (ACs, scope, test_intentions)
 - `_work/build/[feature-id].yaml` — domain context, anti-patterns, test patterns, AC verifications, lessons
-- `_work/spec/[feature-id].yaml` — story overlay with test_intentions
+- `_work/spec/[feature-id].yaml` — spec overlay (endpoints, schemas — NOT test_intentions)
 - `_work/ux/[feature]-components.yaml` — authoritative component contract
 - `_work/ux/[feature]-prototype.html` — layout reference
 - `_work/ux/[feature]-ux-spec.md` — interaction details, accessibility
@@ -47,13 +48,13 @@ You are the **frontend builder** (TDD GREEN phase). You build pages, components,
 1. **Read `rules/agent-conduct.md`** — hard rules
 2. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI gates
 3. **Read `rules/test-quality.md`** — all test quality rules (especially Rule 2: MSW)
-4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons
+4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons. Also read `dependency_map` — before modifying any file in scope, check `connected_components` to ensure the interface (exported signatures, return types, field names) is preserved.
 5. **Read `_work/ux/[feature]-components.yaml`** — authoritative component contract. Implement exactly.
 6. **Read `_work/ux/[feature]-prototype.html`** — confirm layout before writing
 7. **Read `_work/ux/[feature]-ux-spec.md`** — interaction details, accessibility
 8. **Read backend routers** — exact URL paths and response_model Pydantic schemas. Backend is source of truth.
 9. **Read existing components** — reuse patterns, theme tokens, routing config, layout components
-10. **Read `_work/spec/[feature-id].yaml`** — check for test_intentions (each MUST become a test)
+10. **Read `specs/stories/[feature-id].yaml`** — check for test_intentions (each MUST become a test)
 11. **Read `memory/LESSONS.md`** — check for lessons related to current task
 
 ## Responsibilities

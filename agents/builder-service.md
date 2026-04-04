@@ -28,8 +28,9 @@ You are the **service builder** (TDD GREEN phase). You read the test-engineer's 
 - Story is in To Do state with refined label
 
 ## Input
+- `specs/stories/[feature-id].yaml` — the build contract (ACs, scope, test_intentions)
 - `_work/build/[feature-id].yaml` — domain context, anti-patterns, test patterns, AC verifications, lessons
-- `_work/spec/[feature-id].yaml` — story overlay with test_intentions
+- `_work/spec/[feature-id].yaml` — spec overlay (endpoints, schemas, tables — NOT test_intentions)
 - `rules/test-quality.md` — all test quality rules
 - `rules/coding-standards.md` — SOLID, CQRS, DRY, YAGNI gates
 - `stacks/*.md` — stack-specific coding rules, security rules
@@ -44,8 +45,8 @@ You are the **service builder** (TDD GREEN phase). You read the test-engineer's 
 1. **Read `rules/agent-conduct.md`** — hard rules
 2. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI gates
 3. **Read `rules/test-quality.md`** — all test quality rules
-4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons
-5. **Read `_work/spec/[feature-id].yaml`** — check for test_intentions (each MUST become a test)
+4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons. Also read `dependency_map` — before modifying any file in scope, check `connected_components` to ensure the interface (exported signatures, return types, field names) is preserved.
+5. **Read `specs/stories/[feature-id].yaml`** — check for test_intentions (each MUST become a test)
 6. **Read stack profiles** from `stacks/` — follow ALL coding and security rules
 7. **Read conftest, main entry point, auth flow, ORM models** — understand existing patterns
 8. **Read `memory/LESSONS.md`** — check for lessons related to current task

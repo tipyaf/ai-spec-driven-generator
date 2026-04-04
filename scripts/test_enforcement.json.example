@@ -32,5 +32,11 @@
   "known_mock_files": [
     "test_auth_endpoints.py",
     "test_health.py"
-  ]
+  ],
+  "oracle_check": {
+    "enabled": true,
+    "write_path_keywords": ["order", "payment", "total", "balance", "fee", "price"],
+    "known_files_without_oracle": [],
+    "python_search_window": 5
+  }
 }

@@ -2,8 +2,13 @@
 """
 check_test_intentions.py -- Enforcement: every test_intention from spec must become a test.
 
-Reads _work/spec/sc-[ID].yaml, extracts test_intentions, then scans test files
-committed for this story to verify each intention has a corresponding test.
+Searches for test_intentions in this order:
+1. --spec-path override (if provided)
+2. specs/stories/*.yaml — story files (where refinement writes test_intentions)
+3. _work/spec/sc-[ID].yaml — spec overlay (legacy fallback)
+
+Then scans test files committed for this story to verify each intention has a
+corresponding test function.
 
 Matching logic:
 - Each intention has a `function` field (e.g. "close_trade", "useLogs (URL contract)")
@@ -15,7 +20,7 @@ Matching logic:
 
 Usage:
     python check_test_intentions.py --story 1500
-    python check_test_intentions.py --story 1500 --spec-path _work/spec/sc-1500.yaml
+    python check_test_intentions.py --story 1500 --spec-path specs/stories/user-profile.yaml
 
 Exit code: 0 = all intentions covered, 1 = missing test(s)
 """
@@ -216,20 +221,43 @@ def main() -> int:
     )
     parser.add_argument("--story", required=True, type=str, help="Story ID")
     parser.add_argument("--spec-path", type=str, help="Override spec file path")
+    parser.add_argument(
+        "--require-ui-intentions",
+        action="store_true",
+        help="Fail if test_intentions is empty (use for frontend stories with rendered fields — Trigger C)",
+    )
     args = parser.parse_args()
 
     project_root = find_project_root()
     story_id = args.story
 
-    # --- Step 1: Read spec overlay ---
+    # --- Step 1: Find the file containing test_intentions ---
+    # Priority: --spec-path override > story file in specs/stories/ > spec overlay in _work/spec/
+    # test_intentions are written by the refinement agent into the STORY file,
+    # not the spec overlay. The spec overlay contains domain context (endpoints, schemas).
+    spec_path: Path | None = None
     if args.spec_path:
         spec_path = Path(args.spec_path)
     else:
-        spec_path = project_root / "_work" / "spec" / f"sc-{story_id}.yaml"
+        # Search story files first (where refinement writes test_intentions)
+        stories_dir = project_root / "specs" / "stories"
+        if stories_dir.is_dir():
+            for candidate in stories_dir.glob("*.yaml"):
+                content_peek = candidate.read_text(errors="replace")
+                if "test_intentions:" in content_peek and f"sc-{story_id}" in content_peek.lower():
+                    spec_path = candidate
+                    break
+                # Also match by story id field
+                if f'id: "sc-{story_id}"' in content_peek or f"id: sc-{story_id}" in content_peek:
+                    spec_path = candidate
+                    break
+        # Fallback to spec overlay (legacy behavior)
+        if spec_path is None:
+            spec_path = project_root / "_work" / "spec" / f"sc-{story_id}.yaml"
 
     if not spec_path.exists():
         print(
-            f"{YELLOW}[WARN]{NC} No spec overlay at {spec_path}. "
+            f"{YELLOW}[WARN]{NC} No story file or spec overlay found for sc-{story_id}. "
             f"Cannot check test_intentions."
         )
         return 0
@@ -239,6 +267,13 @@ def main() -> int:
     # --- Step 2: Extract test_intentions ---
     intentions = parse_yaml_simple(content)
     if not intentions:
+        if args.require_ui_intentions:
+            print(
+                f"{RED}[FAIL]{NC} --require-ui-intentions is set but no test_intentions "
+                f"found in {spec_path.name}. Frontend stories with rendered fields must "
+                f"have Trigger C test_intentions."
+            )
+            return 1
         print(f"{GREEN}No test_intentions in spec. Nothing to check.{NC}")
         return 0
 

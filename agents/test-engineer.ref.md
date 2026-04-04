@@ -121,3 +121,8 @@ Before handing off to the builder, verify:
 | `expect(true).toBe(true)` | Empty test — asserts nothing | Write a real assertion against production code |
 | Snapshot-only without behavioral assertion | Snapshot drift — no correctness guarantee | Add `expect(screen.getByText(...))` alongside |
 | Hardcoded database IDs | Breaks on different seed data | Use factories or query by attribute |
+| `assert result is not None` as sole assertion | Any return value passes | Add: `assert result.field == expected` |
+| `assert len(orders) > 0` | 1 element passes when 10 expected | Use: `assert len(orders) == 3` with ORACLE |
+| `expect(x).toBeDefined()` alone | Any value passes | `expect(x.field).toBe(expectedValue)` |
+| `expect(x).toBeTruthy()` | `[]` is truthy in JS | Assert concrete value |
+| `expect(res.status).toBe(200)` alone | Never checks body | Add body assertions |

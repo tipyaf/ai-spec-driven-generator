@@ -12,7 +12,7 @@ model: opus  # Reasons across dependency graphs, splits stories, pre-computes or
 
 Critical reminders (from agent-conduct.md):
 - **ONLY this agent may refine features** — no other agent may rewrite story descriptions, ACs, or scope
-- **NEVER skip the testability gate** (Step 1b-bis) or **test intentions** (Step 1c)
+- **NEVER skip the testability gate** (Step 1b-bis) or **test intentions** (Step 1c / Trigger A, Step 1c-2 / Trigger C)
 - **NEVER REFINE A STORY MANUALLY** — bypasses testability gate, test intentions, and stack profile injection
 - **Output the step list before starting** — proves you read the playbook
 
@@ -108,7 +108,7 @@ Each story gets THREE AC types: `AC-FUNC-[FEATURE]-*` (functional), `AC-SEC-[FEA
    - Add a Tier 1 proxy AC alongside the Tier 2 intent
 6. Flag any Tier 3 explicitly
 
-### Step 1c: Generate test_intentions (MANDATORY for computed values)
+### Step 1c: Generate test_intentions — Trigger A (MANDATORY for computed values)
 
 For every formula, calculation, or business rule in the story:
 1. Pick concrete input values (realistic, not trivial)
@@ -142,6 +142,26 @@ test_intentions:
 - Include at least 2 edge cases per formula (zero values, boundary values, negative cases).
 
 See `rules/test-quality.md` Rule 8 for the full specification.
+
+### Step 1c-2: Generate test_intentions — Trigger C (MANDATORY for frontend rendering)
+
+**MANDATORY for all stories that render fields in the UI** (web, mobile, or desktop projects with UI changes):
+
+For every field displayed to the user, write a `test_intentions` entry covering:
+1. **Null/undefined** — what the component renders when the API returns null or omits the field
+2. **Format transformation** — the mapping from raw backend value to display string (dates, currencies, numbers, enums, booleans)
+3. **Sign and polarity** — negative values, zero values, and their display form
+4. **Unicode** — non-ASCII characters, special characters, emoji in string fields
+5. **Boundary values** — empty string, very long string (truncation), large numbers (layout overflow)
+6. **Error/empty states** — what the component renders on API error or empty collection
+
+The oracle is a **declared mapping**, not arithmetic:
+- `"formatDate('2026-01-15T10:00:00Z') = 'January 15, 2026'"`
+- `"formatCurrency(null) = '—'"`
+
+Use the same YAML format as Trigger A. The `inputs` values match the backend API response shape. The `assertions` describe the expected UI state using your stack's query API (e.g., Testing Library `screen.getByText` for web, Detox matchers for mobile, or your framework's equivalent).
+
+If the story is backend-only (no UI rendering), skip this step. For stories with BOTH computed values AND rendered fields, write both Trigger A and Trigger C intentions in the same `test_intentions` block.
 
 ### Step 1c-bis: UX Gate (UI projects only)
 **MANDATORY for web, mobile, or desktop projects with UI changes:**
@@ -207,7 +227,7 @@ Present breakdown and request validation before moving to dev.
 - **NEVER REFINE A STORY MANUALLY** — no agent, builder, or orchestrator may rewrite a story's description, ACs, or scope outside of this agent. This rule exists because manual "quick fixes" bypass the testability gate, test intentions, and stack profile injection.
 - **Always** estimate story size — size drives planning
 - **Always** identify dependencies — hidden dependencies cause blocks
-- **Always** generate test_intentions for stories with formulas or computed values
+- **Always** generate test_intentions for stories with formulas or computed values (Trigger A) AND for frontend stories with rendered fields (Trigger C)
 
 ## Rules
 - One feature at a time — don't refine everything at once

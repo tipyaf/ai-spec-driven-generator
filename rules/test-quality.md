@@ -104,6 +104,39 @@ If the spec has no `test_intentions` for this formula, the agent must compute th
 
 ---
 
+## Rule 2b: Weak assertion banlist -- patterns that catch zero bugs
+
+These patterns are BANNED as terminal/sole assertions on computed result fields. They always pass as long as the code returns *something*, which means they verify plumbing, not correctness.
+
+**This rule is language-agnostic.** The categories below apply to every language and test framework. Adapt the syntax to your stack.
+
+### Banned assertion categories
+
+| Category | What it looks like | Why it catches zero bugs | What to write instead |
+|----------|--------------------|--------------------------|----------------------|
+| **Existence-only** | `!= null`, `is not None`, `toBeDefined()`, `!= nil`, `!= nullptr` | Passes for any value including `{}`, `0`, `""` | Assert the actual value: `== expected` |
+| **Non-empty-only** | `len(x) > 0`, `.length > 0`, `.size() > 0`, `.Count > 0` | Passes if list has 1 item when it should have 10 | Assert exact count: `len(x) == 3` |
+| **Type-only** | `isinstance(x, dict)`, `toBeInstanceOf(Object)`, `is T`, `typeof x === "object"` | Passes for any instance of that type, even empty | Assert fields and values inside the object |
+| **Bare truthiness** | `assert x`, `expect(x).toBeTruthy()`, `assertTrue(x)`, `require.True(x)` | `0`, `""`, `[]` are falsy; `"error"` is truthy — semantics vary by language | Assert the concrete expected value |
+| **Status-code-only** | `status == 200` / `StatusCode == 200` without body assertions | Never checks if the response has correct data | Always add body/field assertions after status check |
+
+### When these patterns ARE legitimate
+
+These patterns are acceptable ONLY as **guard assertions** before subsequent value assertions, or when testing a boolean fact (not a computed value):
+
+- Existence check followed immediately by value assertion -- the guard is fine
+- DOM presence check when testing that a component renders at all (not testing data values)
+- Type check in a contract/schema test, as long as field values are also asserted downstream
+- Status code `!= 200` alone for auth rejection / error tests (e.g. 401, 403, 404 -- no body needed)
+
+**The rule: a weak pattern is banned when it is the terminal/sole assertion on a computed result field.**
+
+### Stack-specific examples
+
+Project stack profiles (in the project's `stacks/` directory) may provide language-specific banned patterns with exact regex for enforcement scripts. The categories above are the source of truth; stack-specific patterns are illustrations.
+
+---
+
 ## Rule 3: Tests must cover ALL layers
 
 **Every feature has layers. Every layer must have at least one test. No layer can be assumed to work because another layer was tested.**
@@ -251,7 +284,7 @@ test_intentions:
 
 ### Who writes test_intentions?
 
-The **refinement agent** writes them during refinement. For every formula or business rule in the story, the refiner picks concrete input values, does the step-by-step math, and writes the result. The refiner does the math so the builder doesn't have to.
+The **refinement agent** writes them during refinement. For every formula or business rule in the story, the refiner picks concrete input values, does the step-by-step math, and writes the result. The refiner does the math so the builder doesn't have to. For every field rendered in the UI (Trigger C), the refiner declares the expected display string for null, formatted, and edge-case inputs — no arithmetic needed, the oracle is the mapping.
 
 ### Who consumes test_intentions?
 
@@ -267,6 +300,27 @@ The **developer** and **tester** read `test_intentions` from the story file befo
 1. **Every test_intention MUST become a test.** Skipping an intention is a build failure.
 2. **Never change the oracle values.** They were computed from the business rules. If your test produces a different number, either the code has a bug (document with xfail) or you called the wrong function.
 3. **If the spec has no test_intentions for a formula, compute the oracle yourself.** Read the business rule from the spec or the production code, pick inputs, do the math, write the ORACLE comment.
+
+### UI rendering test intentions (Trigger C)
+
+When a story renders fields in the UI, the refinement agent MUST write test_intentions covering:
+
+| What to test | Oracle format |
+|---|---|
+| Null/undefined field | `"formatFn(null) = '—'"` or `"formatFn(undefined) = 'N/A'"` |
+| Date formatting | `"formatDate('2026-01-15T10:00:00Z') = 'January 15, 2026'"` |
+| Currency formatting | `"formatCurrency(1234.56, 'USD') = '$1,234.56'"` |
+| Negative value | `"formatCurrency(-500, 'USD') = '-$500.00'"` |
+| Boolean display | `"formatBool(true) = 'Active'"` |
+| Enum label | `"statusLabel('PENDING_REVIEW') = 'Pending Review'"` |
+| Empty collection | `"items=[] renders EmptyState component"` |
+| Unicode string | `"name='Ëlena Ñoño' renders unmangled"` |
+
+The `assertions` field describes the expected UI state using your stack's query API:
+- `"UI shows '$1,234.56'"` (adapt to your framework: `screen.getByText` for Testing Library, `by.text` for Detox, etc.)
+- `"UI shows '—' placeholder"`
+
+UI rendering intentions do NOT require ORACLE arithmetic. The oracle IS the expected display string.
 
 ---
 
@@ -338,3 +392,4 @@ Generate random inputs, check invariants hold. Use for calculations, validators,
 - **NEVER assert a computed value without an ORACLE block.** No oracle = no commit.
 - **NEVER skip a test_intention from the spec.** Every intention becomes a test. No exceptions.
 - **NEVER change oracle values from test_intentions.** If the code produces a different number, the code has a bug -- use xfail.
+- **NEVER write assertions that only check existence or type on computed results** -- see Rule 2b banlist

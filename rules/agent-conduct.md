@@ -107,7 +107,7 @@ For frontend changes, use `--frontend` instead of `--backend`.
 These scripts check:
 - **Write coverage**: every data store with a read endpoint must have production code that writes to it
 - **Oracle assertions**: every numeric assertion on a computed value must have an `# ORACLE:` comment showing step-by-step math
-- **Test quality**: no .skip(), no mock-soup in integration tests, no fixture-only tests, no weak-only assertions
+- **Test quality**: no .skip(), no mock-soup in integration tests, no fixture-only tests, no existence-only assertions (Rule 2b banlist)
 
 This applies to EVERY agent that writes code or tests (developer, tester, reviewer auto-fixes).
 

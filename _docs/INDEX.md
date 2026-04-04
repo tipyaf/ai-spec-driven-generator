@@ -81,6 +81,7 @@
 | [skills.md](skills.md) | Skill system: how skills are loaded, adding new skills, phase prerequisites |
 | [sonarqube.md](sonarqube.md) | SonarQube: install, configure, generate tokens, run scans, troubleshoot |
 | [test-methodology.md](test-methodology.md) | Two-loop test system: spec-to-oracle + mutation feedback |
+| [token-costs.md](token-costs.md) | Token analysis: per-session budgets, waste, optimization roadmap |
 
 ---
 

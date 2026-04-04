@@ -46,7 +46,7 @@ Infrastructure configuration files covering:
 ## Read Before Write (mandatory)
 1. **Read `rules/agent-conduct.md`** — hard rules
 2. **Read `rules/coding-standards.md`** — DRY, YAGNI gates apply to infra config too
-3. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, AC verifications, lessons
+3. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, AC verifications, lessons. Also read `dependency_map` — before modifying any file in scope, check `connected_components` to ensure the interface (exported signatures, return types, field names) is preserved.
 4. **Read `_work/spec/[feature-id].yaml`** — what this story adds or changes
 5. **Read `stacks/*.md`** — stack-specific infrastructure patterns
 6. **Read `memory/LESSONS.md`** — check for lessons related to current task

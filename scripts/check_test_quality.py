@@ -9,7 +9,7 @@ Checks:
 1. .skip() / .todo() / @pytest.mark.skip -- banned, use xfail/BUG pattern
 2. mock() in integration test directories -- integration tests must use real DB
 3. Fixture-only tests -- INSERT without calling production code = fake coverage
-4. Weak assertions -- "is not None" without value assertions = catches nothing
+4. Weak assertion banlist (Rule 2b) -- banned patterns that catch zero bugs
 5. Source assertions in frontend tests -- tests must test behavior, not code shape
 
 Language-agnostic: reads configuration from test_enforcement.json in the project root.
@@ -183,50 +183,143 @@ def check_fixture_only_tests(int_dirs: list[Path], root: Path) -> None:
                 )
 
 
-# -- Check 4: Weak assertions in write-path tests ---
+# -- Check 4: Weak assertion banlist (Rule 2b) ---
+
+# Python banned patterns -- terminal/sole assertions that catch zero bugs
+PYTHON_BANNED_SOLE = [
+    (re.compile(r"assert\s+\w[\w.\[\]\"']*\s+is\s+not\s+None\s*$", re.IGNORECASE), "bare 'is not None' -- assert a concrete value (Rule 2b)"),
+    (re.compile(r"assert\s+\w[\w.\[\]\"']*\s+!=\s*None\s*$", re.IGNORECASE), "bare '!= None' -- assert a concrete value (Rule 2b)"),
+    (re.compile(r"assert\s+isinstance\s*\([^)]+,\s*(?:dict|list|str|int|float)\s*\)\s*$", re.IGNORECASE), "bare isinstance() -- assert field values (Rule 2b)"),
+    (re.compile(r"assert\s+len\s*\([^)]+\)\s*[>!=]+\s*0\s*$", re.IGNORECASE), "bare len() > 0 -- assert exact count (Rule 2b)"),
+]
+
+# TypeScript banned patterns -- terminal/sole assertions that catch zero bugs
+TS_BANNED_SOLE = [
+    (re.compile(r"\.toBeDefined\s*\(\s*\)"), "toBeDefined() -- assert concrete value (Rule 2b)"),
+    (re.compile(r"\.toBeTruthy\s*\(\s*\)"), "toBeTruthy() -- assert concrete value (Rule 2b)"),
+    (re.compile(r"\.toBeFalsy\s*\(\s*\)"), "toBeFalsy() -- use concrete check (Rule 2b)"),
+    (re.compile(r"\.not\.toBeNull\s*\(\s*\)"), ".not.toBeNull() -- assert concrete value (Rule 2b)"),
+    (re.compile(r"\.toHaveLength\s*\(\s*expect\.any\s*\("), "toHaveLength(expect.any()) -- use exact count (Rule 2b)"),
+    (re.compile(r"\.toBeInstanceOf\s*\(\s*(?:Object|Array)\s*\)"), "toBeInstanceOf(Object/Array) -- assert fields (Rule 2b)"),
+]
+
+# Strong assertion patterns that indicate a guard (not sole) usage
+STRONG_PATTERNS_PY = re.compile(r"(pytest\.approx|assert\s+\w[\w.\[\]\"']*\s*==)")
+STRONG_PATTERNS_TS = re.compile(r"(\.toBe\(|\.toEqual\(|\.toBeCloseTo\(|\.toHaveLength\(\s*\d)")
+
+
+def _has_strong_followup(lines: list[str], start_idx: int, is_python: bool) -> bool:
+    """Check if the next 3 lines contain a strong assertion on the same variable (guard pattern)."""
+    strong_pat = STRONG_PATTERNS_PY if is_python else STRONG_PATTERNS_TS
+    end = min(start_idx + 4, len(lines))  # look ahead 3 lines (indices start_idx+1..start_idx+3)
+    for j in range(start_idx + 1, end):
+        if strong_pat.search(lines[j]):
+            return True
+    return False
+
+
+def _is_auth_status_check(line: str) -> bool:
+    """Return True if the line asserts a non-success status code (auth rejection tests)."""
+    m = re.search(r"status_code\s*==\s*(\d+)", line)
+    if m:
+        code = int(m.group(1))
+        return code not in (200, 201)
+    return False
+
+
+def _function_has_body_assertion(lines: list[str], func_start: int) -> bool:
+    """Check if a test function contains a body/response-data assertion after the status check."""
+    for j in range(func_start, len(lines)):
+        stripped = lines[j].strip()
+        # Stop at next function definition
+        if j > func_start and re.match(r"^(async\s+)?def\s+test_", stripped):
+            break
+        # Look for body/data/json assertions
+        if re.search(r"(\.json\(\)|resp\.data|response\.data|resp\.body|response\.body|res\.body)", stripped):
+            if re.search(r"(assert\s+|==|!=)", stripped):
+                return True
+        if re.search(r"assert\s+.*\[", stripped) and "status" not in stripped.lower():
+            return True
+    return False
 
 
 def check_weak_assertions(
-    int_dirs: list[Path], root: Path, write_path_keywords: list[str]
+    test_dirs: list[Path], root: Path, write_path_keywords: list[str]
 ) -> None:
-    """Detect tests that only assert 'is not None' without computed values."""
-    for int_dir in int_dirs:
-        if not int_dir.exists():
+    """Detect banned weak assertion patterns per Rule 2b banlist.
+
+    Scans ALL test directories (not just integration). For each banned pattern
+    match, looks ahead 3 lines for a strong assertion (guard pattern). If no
+    strong followup is found, it is a violation.
+    """
+    for test_dir in test_dirs:
+        if not test_dir.exists():
             continue
-        for f in int_dir.rglob("test_*.py"):
+        for f in test_dir.rglob("test_*.py"):
             content = f.read_text(encoding="utf-8", errors="replace")
             rel = str(f.relative_to(root))
 
             if "conftest" in f.name:
                 continue
 
-            content_lower = content.lower()
-            is_write_path = any(kw in content_lower for kw in write_path_keywords)
-            if not is_write_path:
-                continue
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
+                stripped = line.strip()
 
-            assertions = re.findall(r"assert\s+.+", content)
-            if not assertions:
-                continue
+                # Skip comments
+                if stripped.startswith("#"):
+                    continue
 
-            weak = 0
-            strong = 0
-            for a in assertions:
-                a_lower = a.lower()
-                if "is not none" in a_lower or "is none" in a_lower:
-                    weak += 1
-                elif "status_code" in a_lower:
-                    weak += 1
-                elif "pytest.approx" in a or "==" in a or ">=" in a or "<=" in a:
-                    strong += 1
-                else:
-                    strong += 1
+                # Check Python banned patterns
+                for pat, msg in PYTHON_BANNED_SOLE:
+                    if pat.search(stripped):
+                        # Check for guard pattern (strong assertion within next 3 lines)
+                        if _has_strong_followup(lines, i, is_python=True):
+                            continue
+                        violations.append(
+                            f"{rel}:{i + 1} -- {msg}"
+                        )
 
-            if weak > 0 and strong == 0:
-                warnings.append(
-                    f"{rel} -- All {weak} assertions are weak (is not None / "
-                    "status_code only). Add at least one value assertion."
-                )
+                # Special check: status_code == 200/201 without body assertion
+                if re.search(r"assert\s+\w+\.status_code\s*==\s*(200|201)\s*$", stripped):
+                    # Find the enclosing function
+                    func_start = i
+                    for k in range(i, -1, -1):
+                        if re.match(r"^(async\s+)?def\s+test_", lines[k].strip()):
+                            func_start = k
+                            break
+                    if not _function_has_body_assertion(lines, func_start):
+                        violations.append(
+                            f"{rel}:{i + 1} -- bare status_code == 200/201 without body assertion (Rule 2b)"
+                        )
+
+
+def check_weak_assertions_frontend(frontend_dir: Path, root: Path) -> None:
+    """Detect banned weak assertion patterns in TypeScript/JavaScript tests (Rule 2b)."""
+    if not frontend_dir.exists():
+        return
+
+    for ext in ["*.test.ts", "*.test.tsx", "*.test.js", "*.test.jsx", "*.spec.ts", "*.spec.tsx", "*.spec.js"]:
+        for f in frontend_dir.rglob(ext):
+            content = f.read_text(encoding="utf-8", errors="replace")
+            rel = str(f.relative_to(root))
+
+            lines = content.split("\n")
+            for i, line in enumerate(lines):
+                stripped = line.strip()
+
+                # Skip comments
+                if stripped.startswith("//") or stripped.startswith("/*"):
+                    continue
+
+                for pat, msg in TS_BANNED_SOLE:
+                    if pat.search(stripped):
+                        # Check for guard pattern (strong assertion within next 3 lines)
+                        if _has_strong_followup(lines, i, is_python=False):
+                            continue
+                        violations.append(
+                            f"{rel}:{i + 1} -- {msg}"
+                        )
 
 
 # -- Check 5: Source assertions in frontend tests ---
@@ -259,8 +352,11 @@ def main() -> int:
         print(__doc__)
         return 0
 
-    do_backend = "--backend" in args or not (args - {"--check-only", "--config"})
-    do_frontend = "--frontend" in args or not (args - {"--check-only", "--config"})
+    # Strip flag values (e.g. config path) before checking which checks to run
+    known_flags = {"--check-only", "--config", "--backend", "--frontend", "--help", "-h"}
+    flag_only = {a for a in args if a.startswith("--") or a.startswith("-")}
+    do_backend = "--backend" in args or not (flag_only - known_flags) and "--frontend" not in args
+    do_frontend = "--frontend" in args or not (flag_only - known_flags) and "--backend" not in args
 
     config_path = None
     for i, arg in enumerate(sys.argv):
@@ -285,11 +381,14 @@ def main() -> int:
         check_skip_patterns_python(backend_test_dirs, root)
         check_mock_in_integration(int_test_dirs, root, known_files)
         check_fixture_only_tests(int_test_dirs, root)
-        check_weak_assertions(int_test_dirs, root, write_path_keywords)
+        # Rule 2b: scan ALL test dirs for weak assertions, not just integration
+        all_backend_dirs = list(set(backend_test_dirs + int_test_dirs))
+        check_weak_assertions(all_backend_dirs, root, write_path_keywords)
 
     if do_frontend:
         check_skip_patterns_frontend(frontend_dir, root)
         check_source_assertions_frontend(frontend_dir, root)
+        check_weak_assertions_frontend(frontend_dir, root)
 
     if warnings:
         print(f"\n{YELLOW}Warnings (should fix):{NC}")
@@ -301,7 +400,8 @@ def main() -> int:
         for v in violations:
             print(f"  {v}")
         print(
-            f"\n{RED}[FAIL]{NC} {len(violations)} test quality violation(s) found."
+            f"\n{RED}[FAIL]{NC} {len(violations)} test quality violation(s) found. "
+            f"See rules/test-quality.md for details (Rule 2b: weak assertion banlist)."
         )
         return 1
 

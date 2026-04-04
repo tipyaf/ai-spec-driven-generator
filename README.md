@@ -7,7 +7,8 @@ An AI framework that generates production-ready code from structured YAML specs.
 ```
 /spec       Human defines the product (constitution, scoping, UX, architecture)
      ↓
-/refine     Break each feature into stories with verify: shell commands
+/refine     Break each feature into stories with verify: commands + test_intentions
+            (Trigger A: formulas with oracle math, Trigger C: UI rendering assertions)
      ↓
 /build      TDD pipeline per story:
             RED (test-engineer writes failing tests)
@@ -115,7 +116,7 @@ git submodule update --remote framework
 | Script | When | Blocks on |
 |--------|------|-----------|
 | `check_red_phase.py` | After RED | Tests pass, trivial failures, no production imports |
-| `check_test_intentions.py` | After RED | Spec intentions without matching tests |
+| `check_test_intentions.py` | After RED | Spec intentions without matching tests (supports `--require-ui-intentions` for Trigger C) |
 | `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests |
 | `check_msw_contracts.py` | After RED | MSW handlers using wrong field names |
 | `check_tdd_order.py` | After GREEN | Code committed before tests |
@@ -125,7 +126,7 @@ git submodule update --remote framework
 
 | Script | Blocks on |
 |--------|-----------|
-| `check_test_quality.py` | `.skip()`, mock-soup, fixture-only tests |
+| `check_test_quality.py` | `.skip()`, mock-soup, fixture-only tests, weak assertions (Rule 2b banlist) |
 | `check_oracle_assertions.py` | Numeric assertions without ORACLE math proof |
 | `check_write_coverage.py` | Tables with readers but no tested writers |
 
@@ -135,6 +136,7 @@ git submodule update --remote framework
 |-----------|-------------|
 | **Filesystem phase gates** | Phase is "done" when its artefact exists on disk |
 | **feature-tracker.yaml** | Per-feature state (pending → refined → building → validated) |
+| **Dependency map** | Build file maps touched functions → existing tests → connected components (TDAD) |
 | **Implementation manifest** | Developer declares scope before coding, reviewer verifies git diff matches |
 | **Cycle counter** | Max 3 validation cycles per feature, then human escalation |
 | **Code review hook** | `code_review.py` — anti-patterns + external checks, JSON verdict |
@@ -207,6 +209,7 @@ my-project/
 | [`_docs/skills.md`](_docs/skills.md) | Skills system guide |
 | [`_docs/sonarqube.md`](_docs/sonarqube.md) | SonarQube setup, config, troubleshooting |
 | [`_docs/test-methodology.md`](_docs/test-methodology.md) | Two-loop test approach (spec→oracle + mutation) |
+| [`_docs/token-costs.md`](_docs/token-costs.md) | Token cost analysis per agent and skill session |
 
 ## Contributing
 

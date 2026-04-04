@@ -144,3 +144,18 @@ AC-SEC-[FEATURE]-UPLOAD:
   When a file is uploaded
   Then file type is validated (whitelist), size is limited, and file is stored outside webroot
 ```
+
+## Story Refiner Instructions
+
+When refining a story that uses this stack, the Story Refiner MUST:
+
+1. Read this file before writing any ACs
+2. Copy all AC-SEC-* items into the story's `### Security (AC-SEC-*)` section
+3. Copy all AC-BP-* items into the story's `### Best Practice (AC-BP-*)` section
+4. Substitute placeholders (`<module>`, `<component>`, `<service>`, etc.) with actual names for this story
+5. Add project-specific overrides AFTER the standard items -- never replace them
+6. Add story-specific AC-FUNC-* items in the `### Functional (AC-FUNC-*)` section
+
+The Validator will execute each `verify:` command literally. Ensure patterns and file paths match the story's actual implementation.
+
+> **Note**: Test intentions (Trigger A for computed values, Trigger C for UI rendering) are handled by the refinement agent's playbook (`agents/refinement.md`), not by stack profiles. Stack profiles only provide AC-SEC and AC-BP templates.

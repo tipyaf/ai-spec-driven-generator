@@ -168,3 +168,5 @@ When refining a `frontend` story, the Story Refiner MUST:
 
 The Validator will execute each `verify:` command literally. Ensure grep patterns
 and file paths match the actual filenames used in this story.
+
+> **Note**: Trigger C (UI rendering test intentions) is handled by the refinement agent directly (Step 1c-2 in `agents/refinement.md`). It applies to ALL frontend stacks, not just this one.

@@ -43,6 +43,8 @@ test_intentions:
         assertions: ["result.field == <expected>"]
 ```
 
+For frontend stories, the refinement agent also writes Trigger C intentions — one per rendered field — declaring the expected display string for null, formatted, and edge-case inputs. These are not formulas; they are display mapping oracles. The test engineer copies them into UI tests using the project's mocking and rendering tools (e.g., MSW + Testing Library for web, or the equivalent for your stack).
+
 The **developer** reads the `test_intentions` and copies the oracle values into the test. The developer doesn't compute -- they copy. This solves the "LLMs can't compute" problem: the refiner does the math once, the developer uses the pre-computed answer.
 
 The test then looks like:
@@ -152,7 +154,7 @@ Security audit --> Review --> Validated
 
 ## Adopting This in a New Project
 
-1. During `/refine`, the refinement agent creates story files with `test_intentions` for features with formulas
+1. During `/refine`, the refinement agent creates story files with `test_intentions` for features with formulas (Trigger A) and for frontend stories with rendered fields (Trigger C)
 2. During `/build`, the developer reads test_intentions and copies oracle values into tests
 3. During `/validate` and `/review`, enforcement scripts run automatically
 4. Configure enforcement via `test_enforcement.json` (copy from `scripts/test_enforcement.json.example`)

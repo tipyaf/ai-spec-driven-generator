@@ -61,9 +61,10 @@ describe("[CLI Feature]", () => {
 import request from "supertest";
 
 describe("GET /api/resource", () => {
-  it("should return 200 with expected shape", async () => {
+  it("should return 200 with expected data", async () => {
     const res = await request(app).get("/api/resource").expect(200);
-    expect(res.body).toHaveProperty("data");
+    expect(res.body.data).toHaveLength(3);
+    expect(res.body.data[0].id).toBe(expectedId);
   });
 });
 ```

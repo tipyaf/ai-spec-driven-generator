@@ -47,7 +47,7 @@ You are the **migration builder**. You own all database migration work: creating
 1. **Read `rules/agent-conduct.md`** — hard rules
 2. **Read `rules/test-quality.md`** — test quality rules for migration tests
 3. **Read `rules/coding-standards.md`** — DRY, YAGNI gates
-4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, AC verifications, lessons
+4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, AC verifications, lessons. Also read `dependency_map` — before modifying any file in scope, check `connected_components` to ensure the interface (exported signatures, return types, field names) is preserved.
 5. **Read `_work/spec/[feature-id].yaml`** — this story's table/column changes
 6. **Read stack profiles** from `stacks/` — migration patterns, forbidden patterns
 7. **Read current ORM models**

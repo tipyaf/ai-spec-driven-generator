@@ -29,8 +29,9 @@ You are the **TDD RED phase agent**. You write failing tests BEFORE the builder 
 - Plan document exists with test specifications
 
 ## Input
+- `specs/stories/[feature-id].yaml` — the build contract (ACs, scope, test_intentions)
 - `_work/build/[feature-id].yaml` — domain context, anti-patterns, test patterns, AC verifications, lessons
-- `_work/spec/[feature-id].yaml` — story overlay with test_intentions
+- `_work/spec/[feature-id].yaml` — spec overlay (endpoints, schemas, tables — NOT test_intentions)
 - `rules/test-quality.md` — all test rules (non-negotiable)
 - `rules/coding-standards.md` — SOLID, CQRS, DRY, YAGNI gates
 - `stacks/*.md` — stack-specific testing tools and patterns
@@ -46,15 +47,20 @@ You are the **TDD RED phase agent**. You write failing tests BEFORE the builder 
 1. **Read `rules/test-quality.md`** — all test rules. Non-negotiable.
 2. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI gates apply to test code too.
 3. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons
-4. **Read the plan** — if story links a plan, it IS the spec. Follow exactly.
-5. **Read production code** (read-only) — function signatures, response shapes, Pydantic models
-6. **Read backend routers FIRST for MSW mocks** — follow Rule 2 in test-quality.md. Never read frontend first.
-7. **Read conftest.py / MSW setup** — reuse fixtures, do not duplicate
-8. **Read test_intentions from `_work/spec/[feature-id].yaml`** — each intention MUST become a test (Rule 8)
-9. **Read `memory/LESSONS.md`** — check for lessons related to current task
-10. **Run API contract checker** (endpoint stories):
+4. **Read `dependency_map` from the build file** — pre-computed analysis of which existing code is touched by the story:
+   - `touched_functions`: existing symbols this story modifies or calls — verify these do not regress
+   - `existing_tests`: test files already covering those symbols — run them as a baseline (must stay GREEN after your RED commit)
+   - `connected_components`: production modules outside scope that import from scope files — regression risk surface
+   If `dependency_map` is empty or absent: perform the coverage audit with extra attention to call-site analysis.
+5. **Read the plan** — if story links a plan, it IS the spec. Follow exactly.
+6. **Read production code** (read-only) — function signatures, response shapes, Pydantic models
+7. **Read backend routers FIRST for MSW mocks** — follow Rule 2 in test-quality.md. Never read frontend first.
+8. **Read conftest.py / MSW setup** — reuse fixtures, do not duplicate
+9. **Read test_intentions from `specs/stories/[feature-id].yaml`** (the story file) — each intention MUST become a test (Rule 8)
+10. **Read `memory/LESSONS.md`** — check for lessons related to current task
+11. **Run API contract checker** (endpoint stories):
    ```bash
-   python scripts/check_api_contracts.py --report
+   python scripts/check_msw_contracts.py --story {story_id}
    ```
    Every MISMATCH for this story's endpoints becomes a failing test.
 
@@ -65,13 +71,15 @@ You are the **TDD RED phase agent**. You write failing tests BEFORE the builder 
 | 1 | Run coverage audit before writing any test |
 | 2 | Write failing tests that define correctness for each AC |
 | 3 | Write contract tests (response field names match schemas) |
-| 4 | Write test_intention tests with exact expected values |
+| 4 | Write test_intention tests with exact expected values: numeric oracle for formulas (Trigger A), display string oracle for UI rendering (Trigger C) |
 | 5 | Write coverage audit gap tests |
 | 6 | Verify all tests FAIL (RED phase) |
 
 ## Workflow (TDD RED phase)
 
 ### Step 1: Coverage Audit (MANDATORY — before writing any test)
+If the build file contains a populated `dependency_map`, use it as the starting point for your coverage matrix. The `existing_tests` list tells you which existing suites must continue passing. Add each `connected_component` to your coverage matrix as a potential regression surface.
+
 Perform the audit from `rules/test-quality.md` Rule 4:
 1. Enumerate all data stores the feature touches
 2. Enumerate all endpoints the feature exposes
@@ -100,6 +108,7 @@ Linters + tests after each batch.
 ### Step 7: Verify tests FAIL (RED)
 - All pass? STOP. Tests are asserting broken state as correct.
 - Auth tests (401) may pass — that is OK, pre-existing enforcement.
+- After verifying your new tests fail, also run each `run_command` from `dependency_map.existing_tests`. These pre-existing tests covering functions your story touches must NOT break due to your test additions.
 
 ### Step 8: Commit
 `git commit -m "test: RED — failing tests for [feature-id]"`
@@ -114,8 +123,13 @@ Linters + tests after each batch.
 - **NEVER** skip a test_intention from the spec
 - **NEVER** change expected values from test_intentions — different number = code bug, use xfail
 - **NEVER** assert computed values without exact expected results
+- **NEVER write bare existence assertions** (`is not None`, `toBeDefined()`) without following concrete value assertions -- see Rule 2b
+- **NEVER write bare type/length assertions** (`isinstance`, `len(x) > 0`, `toBeInstanceOf`) as the terminal assertion -- always assert concrete values
+- **NEVER assert only status_code == 200** in a feature test without also asserting the response body
 - **ALWAYS** run coverage audit BEFORE writing any tests
 - **ALWAYS** follow the linked plan exactly
+- **ALWAYS** verify existing_tests from dependency_map pass after your RED commit — regressions introduced by test scaffolding are a constraint violation
+- **ALWAYS** include connected_components from dependency_map in your coverage audit — they are regression surfaces even though they are outside the story's scope
 - **ALWAYS** read `rules/test-quality.md` before starting
 - **ALWAYS** run enforcement scripts before committing
 - If 100% of bug-catching tests pass: STOP — tests are wrong

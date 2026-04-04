@@ -97,3 +97,53 @@ For each user story, systematically check:
 - [ ] What happens with invalid/malformed input?
 - [ ] What happens at boundary values (0, max int, empty string)?
 - [ ] What happens if the user cancels mid-operation?
+
+## Test Intentions — UI Rendering (Trigger C)
+
+When a story renders fields in the UI, write `test_intentions` entries declaring the expected display string for each field. The oracle is a declared mapping, not arithmetic.
+
+> The assertions below use web Testing Library syntax as an example. Adapt to your stack's UI query API (Detox, Appium, Playwright, etc.).
+
+```yaml
+# Trigger C example — UI rendering / display correctness
+test_intentions:
+  - function: "formatCurrency"
+    description: "Portfolio total value renders as formatted currency string"
+    inputs:
+      total_value: 1234567.89
+      currency: "USD"
+    oracle:
+      final: "formatCurrency(1234567.89, 'USD') = '$1,234,567.89'"
+    assertions:
+      - "screen.getByText('$1,234,567.89') is in document"
+    edge_cases:
+      - description: "null total_value renders placeholder"
+        inputs: { total_value: null }
+        oracle: { final: "formatCurrency(null) = '—'" }
+        assertions: ["screen.getByText('—') is in document"]
+      - description: "negative value renders with minus sign"
+        inputs: { total_value: -500.00 }
+        oracle: { final: "formatCurrency(-500.00) = '-$500.00'" }
+        assertions: ["screen.getByText('-$500.00') is in document"]
+  - function: "formatDate"
+    description: "Created date renders in human-readable format"
+    inputs:
+      created_at: "2026-01-15T10:00:00Z"
+    oracle:
+      final: "formatDate('2026-01-15T10:00:00Z') = 'January 15, 2026'"
+    assertions:
+      - "screen.getByText('January 15, 2026') is in document"
+    edge_cases:
+      - description: "null date renders placeholder"
+        inputs: { created_at: null }
+        oracle: { final: "formatDate(null) = '—'" }
+        assertions: ["screen.getByText('—') is in document"]
+  - function: "UserNameDisplay"
+    description: "Unicode characters in user name render correctly"
+    inputs:
+      name: "Ëlena Ñoño"
+    oracle:
+      final: "name='Ëlena Ñoño' renders unmangled"
+    assertions:
+      - "screen.getByText('Ëlena Ñoño') is in document"
+```

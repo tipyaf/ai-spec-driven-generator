@@ -25,7 +25,6 @@ Exit code: 0 = tests correctly fail (RED phase valid), 1 = tests pass (RED phase
 from __future__ import annotations
 
 import argparse
-import json
 import re
 import subprocess
 import sys
@@ -47,14 +46,6 @@ def find_project_root() -> Path:
         if (parent / ".git").is_dir():
             return parent
     return Path.cwd()
-
-
-def load_config(project_root: Path) -> dict:
-    """Load test enforcement config."""
-    config_path = project_root / "test_enforcement.json"
-    if config_path.exists():
-        return json.loads(config_path.read_text())
-    return {}
 
 
 def get_story_test_files(story_id: str, project_root: Path) -> list[str]:

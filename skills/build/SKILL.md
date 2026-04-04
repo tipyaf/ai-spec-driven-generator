@@ -65,14 +65,33 @@ Based on story type or epic, dispatch to the appropriate builder agent:
 
 Read the story's `epic` or `type` field to determine which builder to dispatch. If uncertain, use the default developer agent.
 
+## Dependency map generation
+
+After creating the build file and BEFORE dispatching the test-engineer:
+
+1. Read the story's `scope.files_to_create` and `scope.files_to_modify` sections
+2. For each file in scope:
+   a. Search the existing codebase for imports of that file (use language-appropriate import detection from the active stack profile)
+   b. Grep for function/class names exported from that file that appear in other production files
+   c. Find test files that import or reference those same symbols
+3. Populate `dependency_map` in `_work/build/sc-[ID].yaml`:
+   - `touched_functions`: symbols in scope files that are called or modified by existing code
+   - `existing_tests`: test files that reference those symbols (with their run commands)
+   - `connected_components`: production files outside scope that import from scope files
+4. If no existing tests are found for a touched function, note it as a coverage gap — the test-engineer's coverage audit will catch it
+5. If the project is greenfield (no existing code to analyze), leave `dependency_map` arrays empty — the test-engineer falls back to its standard coverage audit
+
+This step is lightweight (grep-based) and runs in the orchestrator context — no agent dispatch needed.
+
 ## TDD pipeline — 6 enforcement gates
 
 All builds follow strict TDD. The pipeline has two phases with enforcement scripts:
 
 ### RED phase (Test Engineer writes tests first)
-1. Dispatch `agents/test-engineer.md` to write failing tests based on story ACs
+1. Dispatch `agents/test-engineer.md` to write failing tests based on story ACs (the test-engineer receives `dependency_map` via the build file)
 2. Run `scripts/check_red_phase.py` — confirms tests exist AND fail (red)
-3. Run `scripts/check_test_intentions.py` — confirms test intentions match AC verify commands
+3. Run `scripts/check_test_intentions.py --story [ID] --spec-path specs/stories/[feature-id].yaml` — confirms every spec test_intention has a corresponding test function in committed test files. Pass `--require-ui-intentions` for frontend stories with rendered fields (Trigger C) to fail when test_intentions is empty.
+4. Run `scripts/check_msw_contracts.py` — confirms API mock handlers use backend field names (endpoint stories only)
 
 ### GREEN phase (Builder makes tests pass)
 4. Dispatch the appropriate builder agent (see table above)

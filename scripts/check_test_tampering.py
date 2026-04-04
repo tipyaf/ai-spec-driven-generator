@@ -107,23 +107,6 @@ def get_file_at_commit(filepath: str, commit: str, cwd: Path) -> str | None:
         return None
 
 
-def get_test_files_in_commit(commit: str, cwd: Path) -> list[str]:
-    """Get list of test files that exist at a commit."""
-    log = git_cmd(["diff-tree", "--no-commit-id", "-r", "--name-only", commit], cwd)
-    test_files = []
-    for line in log.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-        if re.match(r".*test_.*\.py$", line) or re.match(r".*_test\.py$", line):
-            test_files.append(line)
-        if re.match(r".*\.test\.(ts|tsx|js|jsx)$", line) or re.match(
-            r".*\.spec\.(ts|tsx|js|jsx)$", line
-        ):
-            test_files.append(line)
-    return test_files
-
-
 def get_all_test_files_for_story(story_id: str, project_root: Path) -> list[str]:
     """Get all test files across all commits for this story."""
     log = git_cmd(
@@ -386,7 +369,7 @@ def main() -> int:
 
     # --- Step 2: Verify tests actually PASS (GREEN phase must make tests green) ---
     print("\nRe-running tests to verify GREEN phase...")
-    test_cmd = args.test_cmd if hasattr(args, "test_cmd") and args.test_cmd else None
+    test_cmd = args.test_cmd if args.test_cmd else None
     if not test_cmd:
         # Auto-detect: Python or TypeScript
         py_files = [tf for tf in test_files if tf.endswith(".py")]

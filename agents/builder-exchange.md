@@ -49,7 +49,7 @@ Exchange adapter module with:
 1. **Read `rules/agent-conduct.md`** — hard rules
 2. **Read `rules/coding-standards.md`** — SOLID, CQRS, DRY, YAGNI gates
 3. **Read `rules/test-quality.md`** — test quality rules
-4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons
+4. **Read `_work/build/[feature-id].yaml`** — domain context, anti-patterns, test patterns, AC verifications, lessons. Also read `dependency_map` — before modifying any file in scope, check `connected_components` to ensure the interface (exported signatures, return types, field names) is preserved.
 5. **Read `_work/spec/[feature-id].yaml`** — what this story adds or changes
 6. **Read stack profiles** from `stacks/` — AC-SEC-*, AC-BP-* items. Pay special attention to "API keys never in logs, never in error responses".
 7. **Read `memory/LESSONS.md`** — check for safety-related lessons
