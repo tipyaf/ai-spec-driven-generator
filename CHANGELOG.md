@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.5] - 2026-04-04
+
+- feat: make story-reviewer a mandatory blocking gate before validated
+
+
 ## [4.0.4] - 2026-04-04
 
 - fix: auto-detect base branch for SonarQube diff — support all branching models
