@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.4] - 2026-04-04
+
+- fix: auto-detect base branch for SonarQube diff — support all branching models
+
+
 ## [4.0.3] - 2026-04-04
 
 - fix: sonar_check.py ROOT resolution — use git toplevel instead of parent traversal
