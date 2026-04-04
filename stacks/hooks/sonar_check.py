@@ -84,10 +84,20 @@ def run(cmd: str, **kwargs) -> tuple[int, str]:
 
 
 def get_changed_files() -> str:
-    code, out = run("git diff origin/develop --name-only --diff-filter=ACMR")
+    base_branch = get_env("SONAR_BASE_BRANCH") or _detect_base_branch()
+    code, out = run(f"git diff {base_branch} --name-only --diff-filter=ACMR")
     if code != 0 or not out.strip():
         return ""
     return ",".join(out.strip().splitlines())
+
+
+def _detect_base_branch() -> str:
+    """Auto-detect integration branch: origin/develop if it exists, else origin/main."""
+    for branch in ("origin/develop", "origin/main", "origin/master"):
+        code, _ = run(f"git rev-parse --verify {branch}")
+        if code == 0:
+            return branch
+    return "origin/main"
 
 
 def run_scanner(token: str, host: str, project_key: str, inclusions: str) -> bool:
