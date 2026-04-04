@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.2] - 2026-04-04
+
+- fix: cross-platform SonarQube config — .env per project, Python 3.8+ compat
+
+
 ## [4.0.1] - 2026-04-04
 
 - feat: v4.0.0 — TDD enforcement pipeline, 8 new agents, 5 new skills, migration tooling
