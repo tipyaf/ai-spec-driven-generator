@@ -34,7 +34,7 @@ Only read `.ref.md` files if you need a specific template during implementation.
 6. Self-check against ALL acceptance criteria
 7. Update `specs/feature-tracker.yaml`: set feature status to `building`
 
-### Phase 3.5: Validate (5 sequential gates)
+### Phase 3.5: Validate (6 sequential gates)
 Run these quality gates in order. ALL must pass.
 
 **Gate 1 — Security**: check OWASP patterns, stack forbidden patterns, AC-SEC-* verify commands
@@ -42,10 +42,11 @@ Run these quality gates in order. ALL must pass.
 **Gate 3 — UI** (if UI project): WCAG check + wireframe conformity
 **Gate 4 — AC Validation**: execute EVERY `verify:` command from the story file
 **Gate 5 — Review**: code quality, scope conformity (only touched listed files?)
+**Gate 6 — Story Review**: dispatch `agents/story-reviewer.md` — verifies every AC against committed code with structured PASS/FAIL verdict. **This gate is mandatory.** The story CANNOT be marked `validated` without a PASS from the story reviewer.
 
 ### Verdict
-- **ALL PASS**: Update tracker status to `testing`, then `validated`. Report to user.
-- **ANY FAIL**: Increment `cycles` in tracker. Fix and re-validate.
+- **ALL 6 GATES PASS**: Update tracker status to `validated`. Report to user.
+- **ANY FAIL**: Increment `cycles` in tracker. Fix and re-validate (loop back to the failed gate).
 - **cycles >= 3**: ESCALATE to human. Do NOT attempt a 4th cycle. Update tracker notes with what failed and why.
 
 ## Specialized builder dispatch
@@ -79,7 +80,7 @@ All builds follow strict TDD. The pipeline has two phases with enforcement scrip
 
 ### Post-build
 - Run `scripts/check_coverage_audit.py` — confirms coverage meets threshold
-- Dispatch `agents/story-reviewer.md` for per-story AC verification
+- Story review is handled by Gate 6 in the validation phase (mandatory, blocking)
 
 ## Build file creation
 
