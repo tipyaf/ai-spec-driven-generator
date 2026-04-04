@@ -20,7 +20,29 @@ import time
 import urllib.request
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent.parent
+def _find_project_root() -> Path:
+    """Find the actual project root (not the framework submodule root).
+    Uses git to resolve the top-level directory, falls back to traversal."""
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--show-toplevel"],
+            capture_output=True, text=True, timeout=5,
+        )
+        if result.returncode == 0:
+            return Path(result.stdout.strip())
+    except Exception:
+        pass
+    # Fallback: walk up from this file until we find .git (not .git file — that's a submodule)
+    current = Path(__file__).resolve().parent
+    while current != current.parent:
+        git_path = current / ".git"
+        if git_path.is_dir():  # real .git dir = project root (not submodule .git file)
+            return current
+        current = current.parent
+    return Path(__file__).resolve().parent.parent.parent
+
+
+ROOT = _find_project_root()
 
 
 def load_dotenv(root: Path) -> dict[str, str]:
