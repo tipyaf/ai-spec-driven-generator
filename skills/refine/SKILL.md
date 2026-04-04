@@ -94,3 +94,9 @@ After writing the story file, create a spec overlay:
 - [ ] `specs/stories/[feature-id].yaml` — the build contract
 - [ ] `_work/spec/sc-[ID].yaml` — spec overlay (even if empty)
 - [ ] `specs/feature-tracker.yaml` — updated with status: refined
+
+## Next step — ALWAYS tell the user
+
+After `/refine` completes, ALWAYS end your response with:
+
+> **Next step:** Story refined and ready to build. Run `/build [feature-name]` to start the TDD pipeline (RED → GREEN → 7 quality gates). You can also `/refine [other-feature]` to refine another feature first.

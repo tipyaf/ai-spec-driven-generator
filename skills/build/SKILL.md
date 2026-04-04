@@ -110,3 +110,17 @@ Before building, check the story for dev comments (from Shortcut or tracker):
 - [ ] UX spec updated if new pages/flows introduced (wireframes, sitemap, design doc)
 - [ ] `specs/feature-tracker.yaml` — updated with status: validated (or escalated)
 - [ ] PR created and **URL shared with the user** — always output the PR URL in your response after `gh pr create`
+
+## Next step — tell the user ONLY when manual action is required
+
+Only display a "Next step" when the user needs to act. Do NOT display during automatic loops (fix → re-validate).
+
+**If ALL gates passed (validated):**
+> **Next step:** Feature `[name]` is validated (all 7 gates passed). You can:
+> - `/build [next-feature]` to build the next refined story
+> - `/refine [feature]` to refine another feature
+> - `/review` to run the final cross-feature review (requires ALL features validated)
+> Remaining: [list features with their status from tracker].
+
+**If ESCALATED (cycles >= 3):**
+> **Next step:** Escalated after 3 failed cycles. Failing gates: [list]. Please review the issues above and decide how to proceed.

@@ -53,3 +53,13 @@ This skill covers two distinct review types:
 9. **Verify ALL ACs across ALL stories**: re-run every `verify:` command from every story file
 10. Produce structured PASS/FAIL report
 11. If FAIL → return issues to developer with file:line references → suggest `/build` to fix
+
+## Next step — ALWAYS tell the user
+
+After `/review` completes, ALWAYS end your response with one of:
+
+**If PASS:**
+> **Next step:** All features passed review. The project is ready for deployment. Create a release PR when you're ready, or run `/scan-full` for a final SonarQube audit.
+
+**If FAIL:**
+> **Next step:** Review found [N] issues. Run `/build [feature]` to fix the flagged issues, then `/review` again.

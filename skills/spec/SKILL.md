@@ -87,3 +87,9 @@ The `/spec` command also supports regenerating markdown specs from YAML overlays
 - [ ] `specs/[project-name]-arch.md`
 - [ ] `specs/feature-tracker.yaml`
 - [ ] `_work/spec/` directory created (even if empty — ready for overlays)
+
+## Next step — ALWAYS tell the user
+
+After `/spec` completes, ALWAYS end your response with:
+
+> **Next step:** Your project is fully specified. Run `/refine [feature-name]` to break the first feature into implementable stories. Features available: [list features from tracker with status `pending`].

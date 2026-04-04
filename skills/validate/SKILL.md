@@ -71,3 +71,13 @@ After validation completes, update the build state file:
 - [ ] Validation report (structured PASS/FAIL/NOT_VERIFIABLE with evidence)
 - [ ] `_work/build/sc-[ID].yaml` — gate statuses updated
 - [ ] `specs/feature-tracker.yaml` — updated
+
+## Next step — tell the user ONLY when manual action is required
+
+Only display a "Next step" when the user needs to act. Do NOT display during automatic loops.
+
+**If ALL PASS:**
+> **Next step:** Feature `[name]` validated. Run `/build [next-feature]` to continue, or `/review` if all features are validated. Remaining: [list features with status].
+
+**If ESCALATED:**
+> **Next step:** Escalated after 3 failed cycles. Failing ACs: [list]. Please review and decide how to proceed.
