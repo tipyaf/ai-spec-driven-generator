@@ -66,7 +66,8 @@ The framework **guides and challenges** the user to build the best possible prod
 - **Unified AC format**: `AC-[TYPE]-[FEATURE]-[NUMBER]` with `verify:` command and testability tier
 - **Stack profiles**: coding and security contracts per tech stack — auto-generate AC-SEC and AC-BP
 - **Implementation scope control**: developers can only touch files listed in the story's scope section
-- **5 sequential quality gates**: Security → Tests → UI → AC Validation → Review
+- **6 sequential quality gates**: Security → Tests → UI → AC Validation → Review → Story Review (mandatory before `validated`)
+- **SonarQube continuous quality**: hook blocks on new violations after each session + on-demand `/scan`, `/scan-full`, `/sonar` skills
 
 ### Quality
 - **3-pass code review**: KISS & readability → static analysis (automated hook) → safety & correctness
@@ -124,10 +125,13 @@ PHASE 2 — CONSTRUCTION (per feature loop)
   For each feature [pending → refined → building → testing → validated]:
 
   /refine   → spec overlay + story file (_work/spec/sc-[ID].yaml)
-  /build    → TDD: RED (test-engineer) → GREEN (builder) → review → security
-  /validate → 5 gates: Security → Tests → UI → ACs → Review
-  → PASS: feature validated
-  → FAIL: fix + re-validate (max 3 cycles, then escalate)
+  /build    → TDD: RED (test-engineer) → GREEN (builder) → 6 quality gates
+  /validate → Gate 1: Security → Gate 2: Tests → Gate 3: UI
+              Gate 4: AC Validation → Gate 5: Review → Gate 6: Story Review
+  → ALL 6 PASS: feature validated
+  → ANY FAIL: fix + re-validate (max 3 cycles, then escalate)
+
+  SonarQube runs continuously (hook after each session + on-demand /scan)
 
 ═══════════════════════════════════════════════════════════
 PHASE 3 — REVIEW (/review) — All features must be validated
