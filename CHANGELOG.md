@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.11] - 2026-04-04
+
+- feat: 4 evolutions (TDAD, Trigger C, Rule 2b, token costs) + 151 framework self-tests
+
+
 ## [4.0.10] - 2026-04-04
 
 - feat: enforce agent model dispatch from frontmatter
