@@ -93,8 +93,9 @@ PHASE 2 — CONSTRUCTION (per feature loop)
     Gate 3: UI (WCAG + wireframe conformity) — if UI project
     Gate 4: AC Validation (every verify: command)
     Gate 5: Review (code quality + scope check)
-    Gate 6: Story Review (story-reviewer verifies every AC — mandatory)
-  → ALL 6 PASS: status → validated
+    Gate 6: SonarQube (scan story files + coverage — skipped if not configured)
+    Gate 7: Story Review (story-reviewer verifies every AC — mandatory)
+  → ALL GATES PASS: status → validated
   → ANY FAIL: cycles++ → fix → re-validate (max 3, then escalate)
 
 ═══════════════════════════════════════════════════════════
@@ -126,7 +127,8 @@ PHASE 5 — RELEASE — ✅ Human
 | 2.5: Refine | /refine | Refinement | Human | `specs/stories/[feature].yaml` |
 | 3: Implement | /build | Developer | Auto | Code + tests written |
 | 3.5: Validate | /validate | Validator | Auto | ALL `verify:` commands PASS |
-| 3.6: Story Review | /build | Story Reviewer | Auto | Every AC verified PASS — **blocks `validated`** |
+| 3.6: SonarQube | /build | (script) | Auto | No new BLOCKER/CRITICAL — **skipped if not configured** |
+| 3.7: Story Review | /build | Story Reviewer | Auto | Every AC verified PASS — **blocks `validated`** |
 | 4: Review | /review | Reviewer+Security+Tester | Auto | Quality + security PASS |
 | 5: Deploy | — | DevOps | Human | Infrastructure decision |
 | 6: Release | — | — | Human | Go/no-go decision |

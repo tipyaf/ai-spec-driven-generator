@@ -42,6 +42,12 @@ gates:
     high: 0
     medium: 0
     low: 0
+  sonarqube:
+    status: pending     # pending | pass | fail | skipped
+    blocker: 0
+    critical: 0
+    major: 0
+    coverage_pct: null
   story_review:
     status: pending     # pending | pass | fail
     findings: []
