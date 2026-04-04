@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.10] - 2026-04-04
+
+- feat: enforce agent model dispatch from frontmatter
+
+
 ## [4.0.9] - 2026-04-04
 
 - docs: rewrite README — clearer structure, half the size
