@@ -40,6 +40,15 @@ When you need an agent, read ONLY its core file:
 
 **NEVER read all agent files at once.** Load the minimum needed for the current task.
 
+### Model dispatch rule (mandatory)
+
+When dispatching an agent, read the `model:` field from its YAML frontmatter and **pass it as the `model` parameter** when using the Agent tool to spawn the subagent. This ensures each agent runs on the appropriate model tier (Opus for reasoning-heavy tasks, Sonnet for systematic tasks).
+
+- If the agent frontmatter says `model: opus` → spawn with `model: "opus"`
+- If the agent frontmatter says `model: sonnet` → spawn with `model: "sonnet"`
+- If no `model:` field → use the current session model (no override)
+- Projects MAY override agent models in their project `CLAUDE.md` under `§Agent Model Overrides`
+
 ## On session start
 
 ### New project (no memory file exists)
