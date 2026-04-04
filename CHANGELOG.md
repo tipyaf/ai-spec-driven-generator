@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.9] - 2026-04-04
+
+- docs: rewrite README — clearer structure, half the size
+
+
 ## [4.0.8] - 2026-04-04
 
 - feat: add next-step guidance to all skills — only on manual action required
