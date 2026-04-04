@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.0.7] - 2026-04-04
+
+- feat: add SonarQube as Gate 6 in validation pipeline
+
+
 ## [4.0.6] - 2026-04-04
 
 - docs: update README — 6 quality gates, SonarQube positioning
