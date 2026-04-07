@@ -1,5 +1,10 @@
 # Changelog
 
+## [4.1.1] - 2026-04-07
+
+- feat: add Git Flow enforcement hooks — block PRs targeting main, direct pushes, and branching from main
+
+
 ## [4.1.0] - 2026-04-07
 
 ### Refine phase evolution
