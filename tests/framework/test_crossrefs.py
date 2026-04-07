@@ -228,6 +228,7 @@ class TestEnforcementScriptRefs:
         "scripts/check_test_quality.py",
         "scripts/check_write_coverage.py",
         "scripts/check_oracle_assertions.py",
+        "scripts/check_story_commits.py",
     ]
 
     def test_all_enforcement_scripts_exist(self):

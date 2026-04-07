@@ -37,37 +37,87 @@ dependency_map:
     #   depends_on: ""        # Scope file it imports from
     #   reason: ""            # What it uses (import, interface dependency)
 
-gates:
+# ─── RED phase (TDD — test-engineer writes failing tests) ─────────────────────
+red_phase:
+  status: pending       # pending | in_progress | validated
   tdd_red:
     status: pending     # pending | done | fail
     commit: null
     test_count: 0
     failing: 0
+  quality_scan:
+    status: pending     # pending | pass | fail | skipped (skipped if no quality tool configured)
+    tool: null          # sonarqube | other | null
+    findings: []
+  review:
+    status: pending     # pending | pass | fail
+    findings: []
+
+# ─── GREEN phase (builder makes tests pass) ──────────────────────────────────
+green_phase:
+  status: pending       # pending | in_progress | done
   tdd_green:
     status: pending     # pending | pass | fail
     commit: null
     tampering: []
-  code_review:
+  compilation:
     status: pending     # pending | pass | fail
-    pass_1: null        # KISS & readability
-    pass_2: null        # Static analysis (automated)
-    pass_3: null        # Safety & correctness
-    findings: []
-  security_audit:
+    command: null       # compilation command from stack profile
+
+# ─── Validation gates (11 sequential — ALL must pass) ────────────────────────
+# Gates 4-7 are skipped for non-UI projects.
+# Gate 3 (code_quality) is NEVER skipped — if no tool is configured, the reviewer
+# agent takes over with its 3-pass quality review (KISS, static, safety).
+gates:
+  security:
     status: pending     # pending | pass | fail
     critical: 0
     high: 0
     medium: 0
     low: 0
-  sonarqube:
-    status: pending     # pending | pass | fail | skipped
+  unit_tests:
+    status: pending     # pending | pass | fail
+    pass_count: 0
+    fail_count: 0
+  code_quality:
+    status: pending     # pending | pass | fail (NEVER skipped)
+    method: null        # tool (sonarqube/other) | reviewer (fallback)
     blocker: 0
     critical: 0
     major: 0
     coverage_pct: null
+    code_review_pass_1: null   # KISS & readability (when method=reviewer)
+    code_review_pass_2: null   # Static analysis (when method=reviewer)
+    code_review_pass_3: null   # Safety & correctness (when method=reviewer)
+    findings: []
+  e2e_code:
+    status: pending     # pending | pass | fail | skipped (non-UI projects)
+  wcag_wireframes:
+    status: pending     # pending | pass | fail | skipped (non-UI projects)
+    wcag_violations: 0
+    wireframe_conformity: null  # pass | fail | null
+  e2e_execution:
+    status: pending     # pending | pass | fail | skipped (non-UI projects)
+    pass_count: 0
+    fail_count: 0
+  e2e_wireframe_validation:
+    status: pending     # pending | pass | fail | skipped (non-UI projects)
+  ac_validation:
+    status: pending     # pending | pass | fail
+    cycle: 0
+    passed: []
+    failed: []
+    not_verifiable: []
   story_review:
     status: pending     # pending | pass | fail
     findings: []
-  validation:
+  code_review:
     status: pending     # pending | pass | fail
-    cycle: 0
+    console_errors: 0   # must be 0 to pass
+    pass_1: null        # KISS & readability
+    pass_2: null        # Static analysis (automated)
+    pass_3: null        # Safety & correctness
+    findings: []
+  final_compilation:
+    status: pending     # pending | pass | fail
+    command: null       # same as green_phase.compilation.command

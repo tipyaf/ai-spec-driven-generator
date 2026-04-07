@@ -148,3 +148,58 @@ class TestAgnosticStackProfileTemplate:
             f"Stack template should define forbidden patterns and test conventions. "
             f"Found: {found}"
         )
+
+
+class TestAgnosticToolOptional:
+    """Framework must never require specific external tools."""
+
+    def test_sonarqube_never_required(self):
+        """SonarQube must never be REQUIRED in core framework files."""
+        agnostic_files = [
+            "skills/build/SKILL.md",
+            "skills/refine/SKILL.md",
+            "rules/agent-conduct.md",
+        ]
+        for f in agnostic_files:
+            content = read_text(FRAMEWORK_ROOT / f).lower()
+            # Should not say "must use sonarqube" or "requires sonarqube"
+            assert "must use sonarqube" not in content, (
+                f"{f} must not require SonarQube"
+            )
+            assert "requires sonarqube" not in content, (
+                f"{f} must not require SonarQube"
+            )
+
+    def test_code_quality_gate_has_fallback(self):
+        """Gate 3 (Code Quality) must have a fallback when no tool is configured."""
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
+        # Must mention reviewer as fallback
+        assert "reviewer" in skill.lower(), (
+            "Code quality gate must have reviewer fallback"
+        )
+        assert "never skip" in skill.lower() or "never skipped" in skill.lower(), (
+            "Code quality gate must be documented as NEVER skipped"
+        )
+
+    def test_pm_tool_not_hardcoded(self):
+        """PM tool must not be hardcoded to a single provider."""
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "refine" / "SKILL.md")
+        # Must mention multiple PM tools or say "if configured"
+        assert "if configured" in skill.lower() or "if pm tool configured" in skill.lower(), (
+            "refine/SKILL.md must treat PM tool as optional"
+        )
+
+    def test_wcag_tool_not_hardcoded(self):
+        """WCAG audit tool must not be hardcoded."""
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "refine" / "SKILL.md")
+        # Must say "if configured" or "if tool configured"
+        assert "if" in skill.lower() and "configured" in skill.lower(), (
+            "WCAG audit tool must be treated as optional in refine/SKILL.md"
+        )
+
+    def test_agent_conduct_documents_tool_optionality(self):
+        """agent-conduct.md must document that tools are optional."""
+        content = read_text(FRAMEWORK_ROOT / "rules" / "agent-conduct.md")
+        assert "optional" in content.lower(), (
+            "agent-conduct.md must document that tools are optional"
+        )

@@ -31,12 +31,15 @@ Activated by `/refine` skill when a feature has status `pending` in `specs/featu
 - `specs/feature-tracker.yaml` — feature statuses and dependencies
 - `stacks/*.md` — stack profiles for auto-generating AC-SEC and AC-BP
 - `memory/LESSONS.md` — past failures to inform edge case identification
+- `specs/[project]-ux.md` — existing UX spec with wireframes (if UI project)
 
 ## Output
 - `specs/stories/[feature-id].yaml` — the build contract (story file)
 - Updated `specs/feature-tracker.yaml` — status set to `refined`
+- `_work/ux/wireframes/[story-id]/` — HTML wireframe files (if UI project with new UI elements)
+- Updated `specs/[project]-ux.md` — new/modified wireframe sections (if UI project)
 - Tickets in project management tool (if configured)
-- **NEVER** writes code, modifies architecture, or creates files outside `specs/`
+- **NEVER** writes code, modifies architecture, or creates files outside `specs/` and `_work/`
 
 ## Read Before Write (mandatory)
 1. Read the feature description and ACs from `specs/[project].yaml`
@@ -54,7 +57,7 @@ Activated by `/refine` skill when a feature has status `pending` in `specs/featu
 | Clarify | Resolve ambiguities with the PO |
 | Estimate | Assess technical complexity with the architect |
 | Break down | Split large features into deliverable increments |
-| Synchronize | Keep project management tool (Shortcut, etc.) updated |
+| Synchronize | Keep project management tool updated (if configured) |
 
 ## Workflow
 
@@ -163,12 +166,51 @@ Use the same YAML format as Trigger A. The `inputs` values match the backend API
 
 If the story is backend-only (no UI rendering), skip this step. For stories with BOTH computed values AND rendered fields, write both Trigger A and Trigger C intentions in the same `test_intentions` block.
 
-### Step 1c-bis: UX Gate (UI projects only)
-**MANDATORY for web, mobile, or desktop projects with UI changes:**
-1. If feature touches UI: verify UX spec exists (wireframes, component spec, or prototype in the design doc)
-2. If no UX spec found: warn user — "Feature X has UI changes but no UX spec. Options: (a) run `/spec` UX phase first, (b) proceed without UX spec (accept UI improvisation risk). What should I do?"
-3. **WAIT for user input.** Do not auto-proceed.
-4. If UX spec exists: reference it in the story file `ux_ref:` field
+### Step 1c-bis: Wireframe gate (UI projects only)
+**MANDATORY for web, mobile, or desktop projects when the story introduces new UI elements** (new pages, new components, modified layouts).
+
+**When to trigger:**
+- Story introduces a **new page or screen**
+- Story adds **new UI components** not covered by existing wireframes
+- Story **modifies layout or navigation** of existing pages
+- Story changes **design system tokens** (colors, typography, spacing)
+
+If the story is backend-only or modifies existing UI without layout changes, skip this gate.
+
+**Workflow:**
+
+**Step 1c-bis-1: Detect new UI elements**
+- Compare story scope against existing wireframes in `specs/[project]-ux.md`
+- If all UI elements are already covered by existing wireframes → skip to step 1c-bis-6 (just set `ux_ref:`)
+
+**Step 1c-bis-2: Dispatch UX/UI agent**
+- Dispatch `agents/ux-ui.md` to create or update wireframes for new/modified pages and components
+- Wireframes MUST follow the project's design system (`specs/[project]-ux.md` → Design System section)
+- Wireframes are produced as **self-contained HTML files** (inline CSS with DS tokens as CSS variables)
+- Include all states: empty, loading, error, success
+- Include responsive breakpoints (320px, 768px, 1024px, 1440px)
+- Include component specs with accessibility requirements
+- **Every interactive element and significant content zone MUST have a `data-testid` attribute** (e.g., `data-testid="login-form-email"`, `data-testid="dashboard-total-value"`)
+- These `data-testid` values are the **contract between wireframes and production code** — the builder reuses them exactly, E2E tests target them
+
+**Step 1c-bis-3: WCAG validation on wireframes**
+- If WCAG audit tool is configured in the stack profile (Pa11y CLI, axe-core, or other) → use it on the wireframe HTML
+- If no tool configured → UX agent performs manual WCAG checklist (contrast ratios, keyboard nav, ARIA, touch targets)
+- **If WCAG fails** → return to step 1c-bis-2, fix wireframes, re-validate. **Loop until PASS.**
+
+**Step 1c-bis-4: Present wireframes to user**
+- Show all wireframes (HTML files) for each new/modified page
+- Show component specs with states and accessibility
+- Show responsive adaptations
+- **WAIT for user approval.** Do NOT proceed without explicit validation.
+- **If user rejects** → return to step 1c-bis-2 with user feedback, iterate.
+
+**Step 1c-bis-5: Persist wireframes**
+- Write validated wireframes to `_work/ux/wireframes/[story-id]/[page-name].html`
+- Update `specs/[project]-ux.md` with new/modified wireframe sections
+
+**Step 1c-bis-6: Reference in story file**
+- Set `ux_ref:` field in the story file pointing to the wireframe section in `specs/[project]-ux.md`
 
 ### Step 1d: Propose breakdown options
 For large features (> 1 sprint or L/XL), propose alternatives before proceeding:
@@ -203,15 +245,52 @@ Then:
 | L | Complex, multi-component | Scraping pipeline |
 | XL | Must be broken down | Too large |
 
+### Step 3b: Auto-generate validation ACs (MANDATORY for every story)
+After estimating and before writing the story file, add these validation ACs to every story:
+
+- **AC-BP-[FEATURE]-COMPILE**: Project compiles without errors (compilation command from stack profile)
+- **AC-BP-[FEATURE]-TU**: All unit tests pass (test command from stack profile)
+- **AC-BP-[FEATURE]-CONSOLE**: Zero console errors/stacktraces (frontend browser console + backend server logs)
+
+For UI projects (when `ux_ref` is not null), also add:
+- **AC-BP-[FEATURE]-WCAG**: WCAG 2.1 AA — 0 violations (WCAG audit command if configured, else runtime-only)
+- **AC-BP-[FEATURE]-WIREFRAME**: UI matches wireframe layout, design system, and `data-testid` attributes
+
+These ACs use the `validation_acs` section of the story template. Fill `verify:` commands using the actual commands from the stack profile.
+
 ### Step 4: Write story file (MANDATORY)
 Write the refined story to `specs/stories/[feature-id].yaml` using the template at `specs/templates/story-template.yaml`.
 This file is the **build contract** — the developer implements exactly this, the validator checks exactly this.
-The story file MUST include: user story, scope (files), ALL ACs with `verify:` commands, edge cases, dependencies.
+The story file MUST include: user story, scope (files), ALL ACs with `verify:` commands, edge cases, dependencies, validation ACs, and test intentions.
 
 ⚠️ **Auto-generated files rule**: Before listing any file in `scope.files_to_modify`, check if it bears a "DO NOT EDIT" or "auto-generated" header. If yes, do NOT include it in the scope — include the generator input instead (migration, schema source, etc.) and add a note explaining the output file will be regenerated automatically.
 
-### Step 5: Create tickets (if configured)
-Create tickets in project management tool with: parent feature, size, priority, user story format, ACs, edge cases, dependencies, technical notes. See reference for template.
+### Step 5: Create tickets (if PM tool configured)
+If a PM tool is configured (Shortcut, Jira, GitLab, or via MCP):
+
+1. Create **Epic** per feature (if not already created)
+   - Jira: Epic, GitLab: Milestone, Shortcut: Epic
+2. Create **Story** per user story with: parent feature, size, priority, user story format, ACs, edge cases, dependencies, technical notes
+3. **Attach wireframe HTML files** to the ticket (via PM tool API or MCP)
+   - Also attach a screenshot image (via E2E tool if configured) for quick preview
+4. **Add validation checklist** to the ticket:
+   - [ ] Unit tests created, reviewed, and validated (RED phase)
+   - [ ] Unit tests pass after implementation
+   - [ ] Compilation OK (0 errors)
+   - [ ] E2E written from wireframes (if UI)
+   - [ ] E2E pass without errors (if UI)
+   - [ ] Wireframes conformity OK (if UI)
+   - [ ] WCAG OK (if UI)
+   - [ ] Code quality OK (tool or reviewer)
+   - [ ] 0 console errors (front + back)
+   - [ ] Security OK
+   - [ ] Code review OK
+   - [ ] All ACs pass
+   - [ ] Story review OK
+   - [ ] Final compilation OK
+5. Initial status: `Backlog` → `Refined` after user validation
+
+With or without a PM tool, the specs (`specs/stories/`, `specs/[project].yaml`) are the **absolute source of truth**. The PM tool is a mirror/facilitator, never a replacement. The product can be rebuilt entirely from specs alone.
 
 ### Step 6: Update tracker
 Update `specs/feature-tracker.yaml`: set feature status to `refined`, set `story_file` path, set `started_at`.
@@ -235,7 +314,7 @@ Present breakdown and request validation before moving to dev.
 - XL = must break down — no XL stories
 - Each story must be independently implementable
 - ACs must be automatically testable
-- Always synchronize project management tool — every status change reflected
+- Always synchronize project management tool (if configured) — every status change reflected
 - Ask PO questions BEFORE assuming
 - Document decisions in memory
 
@@ -249,17 +328,31 @@ Present breakdown and request validation before moving to dev.
 | Missing UX spec (UI story) | — | Warn user, wait for decision |
 | Circular dependency | — | Escalate to architect |
 
-## Shortcut Integration
-Refinement is the **primary owner** of Shortcut. Create Epic per feature, Story per user story. Initial status: `Backlog`, move to `Refined` after user validation. See reference for full workflow, status table, and commands.
+## Project Management Integration
+
+Refinement is the **primary owner** of PM tool tickets. The tool is detected from project configuration (`pm_tool` field in `CLAUDE.md` or `memory/[project].md`).
+
+| Tool | Epic | Story | Attachments | Status sync |
+|------|------|-------|-------------|-------------|
+| Shortcut | Epic | Story | API upload | API |
+| Jira | Epic | Story | REST API | REST API |
+| GitLab | Milestone | Issue | Issue attachment | API |
+| MCP | Via MCP server | Via MCP server | Via MCP server | Via MCP server |
+| None | — | — | — | Specs = source of truth |
+
+If not configured, skip ticket creation (log warning, specs remain authoritative).
 
 ## Status Output (mandatory)
 ```
 Phase 2.5 — Refinement | Feature: [feature-id]
 Status: REFINED / BLOCKED
 Stories: N created | ACs: N total (N func + N sec + N bp)
+Validation ACs: N auto-generated (COMPILE, TU, CONSOLE [, WCAG, WIREFRAME])
 Test intentions: N computed | Edge cases: N identified
 Testability: N Tier-1, N Tier-2, N Tier-3
+Wireframes: N created / N/A (non-UI) | WCAG: PASS / N/A
+PM tickets: N created / N/A (no PM tool)
 Next: Ready for /build / Waiting for user validation / Blocked by [reason]
 ```
 
-> **Reference**: See `agents/refinement.ref.md` for ticket templates and Shortcut integration details.
+> **Reference**: See `agents/refinement.ref.md` for ticket templates and PM integration details.

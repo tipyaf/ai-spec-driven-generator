@@ -1,6 +1,6 @@
 """
 Pipeline tests — validates the COMPLETE /build pipeline from prerequisites
-through RED phase, GREEN phase, 7 quality gates, and verdict logic.
+through RED phase (4 steps), GREEN phase (2 steps), 11 quality gates, and verdict logic.
 
 This is the most critical test file: it ensures the build orchestration
 described in skills/build/SKILL.md is internally consistent and that all
@@ -137,14 +137,21 @@ class TestDependencyMapGeneration:
             "Dependency map generation should be grep-based (lightweight)"
         )
 
-    def test_skill_runs_before_test_engineer(self, skill_content: str):
-        """Dependency map must be generated BEFORE dispatching test-engineer."""
-        dep_map_pos = skill_content.lower().find("dependency map generation")
-        red_phase_pos = skill_content.lower().find("red phase")
-        if dep_map_pos >= 0 and red_phase_pos >= 0:
-            assert dep_map_pos < red_phase_pos, (
-                "Dependency map generation must come BEFORE RED phase in SKILL.md"
-            )
+    def test_skill_documents_dep_map_before_test_engineer(self, skill_content: str):
+        """Dependency map must be documented as running BEFORE dispatching test-engineer."""
+        # The dependency map section documents it should run before RED phase
+        dep_map_section = ""
+        in_section = False
+        for line in skill_content.splitlines():
+            if "dependency map generation" in line.lower():
+                in_section = True
+            if in_section:
+                dep_map_section += line + "\n"
+            if in_section and line.startswith("## ") and "dependency" not in line.lower():
+                break
+        assert "before" in dep_map_section.lower(), (
+            "Dependency map section must document it runs BEFORE dispatching test-engineer"
+        )
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -295,24 +302,28 @@ class TestPostBuild:
 
 
 # ══════════════════════════════════════════════════════════════════════════
-# 7 Quality Gates (Phase 3.5: Validate)
+# 11 Quality Gates (Phase 5: Validate)
 # ══════════════════════════════════════════════════════════════════════════
 
 
 class TestQualityGates:
-    """SKILL.md must document 7 sequential validation gates correctly."""
+    """SKILL.md must document 11 sequential validation gates correctly."""
 
     GATE_DESCRIPTIONS = {
         1: "Security",
-        2: "Tests",
-        3: "UI",
-        4: "AC Validation",
-        5: "Review",
-        6: "SonarQube",
-        7: "Story Review",
+        2: "Unit Tests",
+        3: "Code Quality",
+        4: "E2E Code",
+        5: "WCAG + Wireframes",
+        6: "E2E Execution",
+        7: "E2E vs Wireframes",
+        8: "AC Validation",
+        9: "Story Review",
+        10: "Code Review",
+        11: "Final Compilation",
     }
 
-    def test_seven_gates_documented(self, skill_content: str):
+    def test_eleven_gates_documented(self, skill_content: str):
         for gate_num, gate_name in self.GATE_DESCRIPTIONS.items():
             pattern = rf"\*\*Gate\s+{gate_num}\b"
             assert re.search(pattern, skill_content), (
@@ -323,36 +334,93 @@ class TestQualityGates:
         m = re.search(r"\*\*Gate 1\b.*", skill_content)
         assert m and "security" in m.group(0).lower()
 
-    def test_gate_2_is_tests(self, skill_content: str):
+    def test_gate_2_is_unit_tests(self, skill_content: str):
         m = re.search(r"\*\*Gate 2\b.*", skill_content)
         assert m and "test" in m.group(0).lower()
 
-    def test_gate_4_is_ac_validation(self, skill_content: str):
-        m = re.search(r"\*\*Gate 4\b.*", skill_content)
+    def test_gate_3_is_code_quality(self, skill_content: str):
+        m = re.search(r"\*\*Gate 3\b.*", skill_content)
+        assert m and "quality" in m.group(0).lower()
+
+    def test_gate_3_never_skipped(self, skill_content: str):
+        """Gate 3 (Code Quality) must be documented as NEVER skipped."""
+        # Find the Gate 3 section and check for "NEVER skipped" language
+        gate3_match = re.search(r"\*\*Gate 3\b.*?(?=\*\*Gate 4\b)", skill_content, re.DOTALL)
+        assert gate3_match, "Gate 3 section not found"
+        gate3_text = gate3_match.group(0).lower()
+        assert "never skip" in gate3_text or "never skipped" in gate3_text, (
+            "Gate 3 (Code Quality) must document that it is NEVER skipped"
+        )
+
+    def test_gate_3_has_reviewer_fallback(self, skill_content: str):
+        """Gate 3 must document reviewer fallback when no quality tool is configured."""
+        gate3_match = re.search(r"\*\*Gate 3\b.*?(?=\*\*Gate 4\b)", skill_content, re.DOTALL)
+        assert gate3_match, "Gate 3 section not found"
+        gate3_text = gate3_match.group(0).lower()
+        assert "reviewer" in gate3_text, (
+            "Gate 3 must document reviewer as fallback when no quality tool configured"
+        )
+
+    def test_gate_8_is_ac_validation(self, skill_content: str):
+        m = re.search(r"\*\*Gate 8\b.*", skill_content)
         assert m and ("ac" in m.group(0).lower() or "validation" in m.group(0).lower())
 
-    def test_gate_6_is_sonarqube_optional(self, skill_content: str):
-        m = re.search(r"\*\*Gate 6\b.*", skill_content)
-        assert m and "sonar" in m.group(0).lower()
-
-    def test_gate_7_is_story_review_mandatory(self, skill_content: str):
-        m = re.search(r"\*\*Gate 7\b.*", skill_content)
+    def test_gate_9_is_story_review_mandatory(self, skill_content: str):
+        m = re.search(r"\*\*Gate 9\b.*", skill_content)
         assert m and "story" in m.group(0).lower()
 
-    def test_gate_7_references_story_reviewer(self, skill_content: str):
+    def test_gate_9_references_story_reviewer(self, skill_content: str):
         assert "story-reviewer" in skill_content
 
     def test_story_reviewer_agent_exists(self):
         assert (FRAMEWORK_ROOT / "agents" / "story-reviewer.md").exists()
 
+    def test_gate_10_is_code_review(self, skill_content: str):
+        m = re.search(r"\*\*Gate 10\b.*", skill_content)
+        assert m and "code review" in m.group(0).lower()
+
+    def test_gate_10_checks_console_errors(self, skill_content: str):
+        """Gate 10 must verify 0 console errors/stacktraces."""
+        gate10_match = re.search(r"\*\*Gate 10\b.*?(?=\*\*Gate 11\b)", skill_content, re.DOTALL)
+        assert gate10_match, "Gate 10 section not found"
+        gate10_text = gate10_match.group(0).lower()
+        assert "console" in gate10_text, (
+            "Gate 10 (Code Review) must check for console errors"
+        )
+
+    def test_gate_11_is_final_compilation(self, skill_content: str):
+        m = re.search(r"\*\*Gate 11\b.*", skill_content)
+        assert m and "compilation" in m.group(0).lower()
+
+    def test_compilation_appears_twice(self, skill_content: str):
+        """Compilation must exist in both Step 4.2 (GREEN) and Gate 11."""
+        compilation_refs = re.findall(r"compilation", skill_content.lower())
+        assert len(compilation_refs) >= 2, (
+            "Compilation must appear in both GREEN phase (Step 4.2) and Gate 11"
+        )
+
     def test_gates_are_sequential(self, skill_content: str):
-        """Gates must appear in order 1-7 in SKILL.md."""
+        """Gates must appear in order 1-11 in SKILL.md."""
         positions = []
-        for i in range(1, 8):
+        for i in range(1, 12):
             m = re.search(rf"\*\*Gate\s+{i}\b", skill_content)
             assert m, f"Gate {i} not found"
             positions.append(m.start())
-        assert positions == sorted(positions), "Gates must appear in sequential order 1-7"
+        assert positions == sorted(positions), "Gates must appear in sequential order 1-11"
+
+    def test_ui_gates_are_skippable(self, skill_content: str):
+        """Gates 4-7 must be documented as skippable for non-UI projects."""
+        for gate_num in [4, 5, 6, 7]:
+            gate_match = re.search(
+                rf"\*\*Gate {gate_num}\b.*?(?=\*\*Gate {gate_num + 1}\b)",
+                skill_content,
+                re.DOTALL,
+            )
+            assert gate_match, f"Gate {gate_num} section not found"
+            gate_text = gate_match.group(0).lower()
+            assert "skip" in gate_text or "ui" in gate_text, (
+                f"Gate {gate_num} must be documented as UI-only (skippable for non-UI)"
+            )
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -430,12 +498,13 @@ class TestPipelineOrdering:
     """The overall pipeline phases must appear in the correct order in SKILL.md."""
 
     def test_main_phase_order(self, skill_content: str):
-        """Core workflow phases must appear in order: Prerequisites → Setup → Implement → Validate → Verdict"""
+        """Core workflow phases must appear in order: Prerequisites → Setup → RED → GREEN → Validate → Verdict"""
         markers = [
             ("prerequisites", skill_content.lower().find("prerequisit")),
             ("setup", skill_content.lower().find("setup")),
-            ("implement", skill_content.lower().find("phase 3: implement")),
-            ("validate", skill_content.lower().find("phase 3.5: validate")),
+            ("red", skill_content.lower().find("phase 3: red")),
+            ("green", skill_content.lower().find("phase 4: green")),
+            ("validate", skill_content.lower().find("phase 5: validate")),
             ("verdict", skill_content.lower().find("verdict")),
         ]
         found = [(name, pos) for name, pos in markers if pos >= 0]
@@ -444,22 +513,12 @@ class TestPipelineOrdering:
             f"Pipeline phases out of order. Found: {[n for n, _ in found]}"
         )
 
-    def test_red_before_green_in_tdd_section(self, skill_content: str):
-        """In the TDD pipeline section, RED must come before GREEN."""
-        tdd_section = ""
-        in_tdd = False
-        for line in skill_content.splitlines():
-            if "tdd pipeline" in line.lower():
-                in_tdd = True
-            if in_tdd:
-                tdd_section += line + "\n"
-            if in_tdd and line.startswith("## ") and "tdd" not in line.lower():
-                break
-
-        red_pos = tdd_section.lower().find("red phase")
-        green_pos = tdd_section.lower().find("green phase")
-        assert red_pos >= 0 and green_pos >= 0, "TDD section must have RED and GREEN phases"
-        assert red_pos < green_pos, "RED phase must come before GREEN phase in TDD section"
+    def test_red_before_green_in_workflow(self, skill_content: str):
+        """In the workflow section, RED (Phase 3) must come before GREEN (Phase 4)."""
+        red_pos = skill_content.lower().find("phase 3: red")
+        green_pos = skill_content.lower().find("phase 4: green")
+        assert red_pos >= 0 and green_pos >= 0, "Workflow must have RED (Phase 3) and GREEN (Phase 4) phases"
+        assert red_pos < green_pos, "RED phase must come before GREEN phase in workflow"
 
 
 # ══════════════════════════════════════════════════════════════════════════
@@ -474,11 +533,11 @@ class TestClaudeMdSkillMdConsistency:
     def claude_md(self) -> str:
         return read_text(FRAMEWORK_ROOT / "rules" / "CLAUDE.md")
 
-    def test_both_mention_seven_gates(self, skill_content: str, claude_md: str):
+    def test_both_mention_eleven_gates(self, skill_content: str, claude_md: str):
         skill_gates = len(re.findall(r"\*\*Gate\s+\d+", skill_content))
         claude_gates = claude_md.lower().count("gate")
-        assert skill_gates >= 7, f"SKILL.md should have 7+ gate references, found {skill_gates}"
-        assert claude_gates >= 7, f"CLAUDE.md should mention gates multiple times"
+        assert skill_gates >= 11, f"SKILL.md should have 11+ gate references, found {skill_gates}"
+        assert claude_gates >= 11, f"CLAUDE.md should mention gates multiple times, found {claude_gates}"
 
     def test_both_mention_escalation(self, skill_content: str, claude_md: str):
         assert "escalat" in skill_content.lower()

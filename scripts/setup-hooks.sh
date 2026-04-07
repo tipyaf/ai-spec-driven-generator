@@ -15,7 +15,22 @@ cat > "$HOOKS_DIR/pre-commit" << 'HOOK'
 # Installed by: scripts/setup-hooks.sh
 # Blocks the commit if any test fails.
 
-# Only run if framework files are being committed
+# --- Check 1: Story commit atomicity (when specs/ files are staged) ---
+SPEC_FILES=$(git diff --cached --name-only -- specs/)
+if [ -n "$SPEC_FILES" ]; then
+    echo "Running story commit check..."
+    python3 "$(dirname "$0")/check_story_commits.py" 2>&1
+
+    if [ $? -ne 0 ]; then
+        echo ""
+        echo "Story commit check FAILED — commit blocked."
+        echo "Fix the issues above, then commit again."
+        echo "To bypass (emergency only): git commit --no-verify"
+        exit 1
+    fi
+fi
+
+# --- Check 2: Framework self-tests (when framework files are staged) ---
 FRAMEWORK_FILES=$(git diff --cached --name-only -- agents/ skills/ rules/ scripts/ specs/templates/ stacks/ tests/framework/)
 
 if [ -z "$FRAMEWORK_FILES" ]; then
@@ -39,7 +54,8 @@ HOOK
 chmod +x "$HOOKS_DIR/pre-commit"
 
 echo "Hooks installed:"
-echo "  pre-commit -> framework self-tests (151 tests)"
+echo "  pre-commit -> story commit check + framework self-tests"
 echo ""
 echo "The hook runs automatically before every commit."
-echo "It only triggers when framework files are staged (agents/, skills/, rules/, scripts/, specs/templates/)."
+echo "  - Story commit check: triggers when specs/ files are staged"
+echo "  - Framework self-tests: triggers when framework files are staged (agents/, skills/, rules/, scripts/, specs/templates/)"

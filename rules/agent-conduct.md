@@ -195,3 +195,128 @@ until the playbook has been read in full and its steps have been listed (see Rul
 
 **Why**: agents skip playbook sections they consider irrelevant and then miss critical steps.
 The playbook is the contract. Reading it is not a suggestion.
+
+---
+
+## Rule 11: Never use `git add .` or `git add -A`
+
+Always name files explicitly when staging for commit:
+```bash
+# CORRECT:
+git add specs/stories/auth.yaml
+git add src/auth/service.py
+
+# FORBIDDEN:
+git add .
+git add -A
+```
+
+**Why**: `git add .` can stage sensitive files (.env, credentials), large binaries, temporary
+files, or unrelated changes. Explicit file names ensure the commit contains exactly what was
+intended and nothing more.
+
+---
+
+## Rule 12: Commit atomically after build validation
+
+All story artifacts (story file, manifest, implementation code, tests, wireframes) are committed
+in a **single atomic commit** AFTER all validation gates pass. No commits during the refine phase.
+No commits during the build phase.
+
+```
+/refine → writes files to working tree (NO commit)
+/build  → writes code + tests (NO commit)
+validation gates → ALL PASS
+→ single git commit: story + manifest + tracker + code + tests + wireframes
+→ PR/MR created automatically
+```
+
+The story file and implementation code MUST be committed together. Committing them separately
+risks losing the build contract if a session crashes between commits.
+
+**Why**: specs ARE the product contract. If we lose the specs, we lose the product. Atomic
+commits ensure the story file and its implementation are always in sync.
+
+---
+
+## Rule 13: Inform the user of every step in real-time
+
+Every agent MUST communicate each step as it happens:
+- **Phase transitions**: "Starting RED phase — writing unit tests..."
+- **Gate results**: "Gate 1 Security — PASS ✓" / "Gate 2 Unit Tests — FAIL ✗ (3 failures)"
+- **Corrections**: "Fixing 3 test failures, returning to builder..."
+- **Skips**: "Gate 4 E2E Code — SKIPPED (non-UI project)"
+
+No silent execution. The user sees progression in real-time.
+
+**Why**: autonomy does not mean opacity. The user must be able to follow the pipeline and
+intervene if something goes wrong. Silent execution erodes trust.
+
+---
+
+## Rule 14: Respond in the user's language
+
+All framework files (agents, skills, rules, templates, scripts) are written in **English**.
+But all agent outputs (status messages, questions, explanations, reports) MUST be in the
+**user's language** (detected from their messages). If the user writes in French, respond
+in French. If in English, respond in English.
+
+**Why**: accompaniment means meeting the user where they are. Language barriers reduce trust
+and comprehension.
+
+---
+
+## Rule 15: Tools are optional — never impose dependencies
+
+The framework MUST NOT require specific tools. Tools are SUGGESTED, not imposed:
+
+| Tool category | Framework behavior | If not configured |
+|---------------|-------------------|-------------------|
+| Code quality (SonarQube, etc.) | Use if configured | Reviewer 3-pass takes over (NEVER skip) |
+| WCAG audit (Pa11y, axe-core, etc.) | Use if configured | UX agent manual checklist |
+| E2E framework (Playwright, Cypress, etc.) | Use from stack profile | — |
+| Test runner (Jest, Vitest, Pytest, etc.) | Use from stack profile | — |
+| Compiler (tsc, mypy, go build, etc.) | Use from stack profile | — |
+| PM tool (Shortcut, Jira, GitLab, etc.) | Use if configured | Specs = source of truth |
+| PR/MR tool (gh, glab, az) | Detect on machine, memorize | Warn user, no auto-PR |
+
+Tool suggestions happen during `/spec` (architecture phase). The user always decides.
+
+**Why**: agnosticism is a core principle. Tools come and go. The framework must not create
+hard dependencies on tools the user doesn't want or that may become obsolete.
+
+---
+
+## Rule 16: Use `data-testid` from wireframes in production code (UI projects)
+
+For UI projects, wireframe HTML files define `data-testid` attributes on every interactive
+element and significant content zone. This creates a contract:
+
+```
+Wireframe HTML → data-testid="login-form-email"
+Production code → data-testid="login-form-email"  (MUST match exactly)
+E2E tests → [data-testid="login-form-email"]       (selector)
+```
+
+The builder MUST reproduce the exact same `data-testid` values in production code.
+The E2E tests target these identifiers. Any mismatch = Gate 7 FAIL (wireframe validation).
+
+**Why**: this is the only reliable way to guarantee zero drift between design (wireframes),
+implementation (code), and verification (E2E). Without this contract, each layer can diverge
+silently.
+
+---
+
+## Rule 17: Specs are the absolute source of truth
+
+With or without a PM tool, the specs (`specs/stories/`, `specs/[project].yaml`, `specs/[project]-ux.md`)
+are the **absolute source of truth** for the product. The product can be rebuilt entirely from
+the specs alone.
+
+If a PM tool is configured, it is a **mirror** of the specs — never a replacement. The PM tool
+provides convenience (boards, notifications, attachments) but does not hold authoritative data.
+
+If the PM tool and specs disagree, **the specs win**.
+
+**Why**: PM tools are external services that can change, be discontinued, or lose data.
+The specs are version-controlled in the repository and travel with the code.

@@ -76,22 +76,31 @@ Before starting any feature build:
 ### Phase: Scaffold
 Init project → install deps → configure tooling → create folder structure → create base files → verify it compiles/starts.
 
-### Phase: Implement (per feature)
+### Phase: GREEN — Make tests pass (per feature)
+
+> Unit tests already exist from the RED phase (written by test-engineer, reviewed, quality-scanned). Your job is to write production code that makes them pass.
+
 0. **Read codebase and complete manifest** — Read files relevant to the feature. Update manifest Phase 2: fill `files_to_read`, `files_to_modify`, `files_to_create`. Set `phase: "complete"`. Only then start coding.
 1. **Component reuse check** (UI features) — Before creating any UI component, read the shared component directory (from stack profile). If an existing dumb component can be parameterized to cover the need, reuse it. Check the story file `components.reuse` section from refinement. Creating a duplicate = automatic FAIL at review.
-2. Read acceptance criteria (AC-*) from spec
+2. Read acceptance criteria (AC-*) from story file
 3. Create data model / schema
 4. Implement business logic
 5. Create endpoints / UI components / CLI commands (as applicable)
-6. Self-check against ALL acceptance criteria before handoff to Tester
-7. Update manifest `pipeline_steps` as you complete each step
+6. **Use exact `data-testid` values from wireframes** (UI features) — read wireframes referenced in story `ux_ref:` and reproduce every `data-testid` attribute exactly in production code
+7. Self-check against ALL acceptance criteria
+8. Update manifest `pipeline_steps` as you complete each step
 
-### Phase: Tests (per feature)
-1. Read `test_intentions` from story file — each intention = one test function
-2. Copy oracle values into `# ORACLE:` / `// ORACLE:` comment blocks above assertions
-3. Write tests that call REAL production code — no fixture-shape tests, no mock-soup
-4. For write paths: call the real write function, then query to verify — not INSERT fixture + GET
-5. Run all enforcement scripts (`scripts/check_test_quality.py`, `scripts/check_oracle_assertions.py`) before committing
+### Phase: Compilation
+Run the project's build/compile command from the stack profile:
+- The compilation command is defined in the stack profile or project config (e.g., `tsc --noEmit`, `npm run build`, `go build ./...`, `mvn compile`, `cargo build`, `python -m py_compile`)
+- The framework does NOT hardcode compilation commands — it reads them from the stack profile
+- **If compilation FAILS** → fix code, recompile. Loop until PASS.
+
+### Phase: E2E (UI projects only)
+Write E2E tests based on wireframes from `specs/[project]-ux.md` (referenced via story `ux_ref:`):
+- E2E tests MUST use the `data-testid` attributes from wireframes as selectors
+- E2E tests validate user flows, visual rendering, responsive breakpoints, and all states (empty/loading/error/success)
+- Use the E2E tool from the stack profile (Playwright, Cypress, Detox, etc.)
 
 ### Phase: Post-build
 After all quality gates pass:
@@ -99,8 +108,10 @@ After all quality gates pass:
 2. Format: `"Rebuild: [service1, service2]. Run: [command]"`
 3. The developer does NOT auto-deploy — this is a reminder for the human.
 
-### Phase: AC Fix Loop
-When Tester reports failing ACs: read report → identify root cause → fix code (never modify ACs) → re-check → hand off. **Repeat until orchestrator confirms ALL ACs pass.** You do NOT decide when a feature is done.
+### Phase: Fix Loop
+When the orchestrator reports failing gates: read report → identify root cause → fix code (never modify ACs or weaken tests) → re-check → hand off. **Repeat until orchestrator confirms ALL gates pass.** You do NOT decide when a feature is done.
+
+**No commit during the build phase** — the single atomic commit happens AFTER all 11 validation gates pass (see `skills/build/SKILL.md`).
 
 ## Code Rules
 
@@ -136,6 +147,8 @@ When Tester reports failing ACs: read report → identify root cause → fix cod
 - **NEVER** ignore LESSONS.md — known failures repeated are CRITICAL violations
 - **NEVER** self-validate — the validator agent exists for a reason
 - **NEVER** commit debug artifacts (console.log, debugger, TODO) — clean code only
+- **NEVER** leave console errors/stacktraces — check browser console (frontend) and server logs (backend) before handoff
+- **ALWAYS** use the exact `data-testid` values from wireframes in production code (UI projects) — wireframe HTML is the contract
 - **NEVER** manually edit auto-generated files (marked "DO NOT EDIT" or "auto-generated") — create the generator input instead (migration, schema source, etc.) and let the generator rebuild the output
 - **NEVER** assert a computed value without an `# ORACLE:` block — see `rules/test-quality.md` Rule 2
 - **NEVER** skip a test_intention from the story file — every intention becomes a test
@@ -171,10 +184,11 @@ When Tester reports failing ACs: read report → identify root cause → fix cod
 
 ## Status Output (mandatory)
 ```
-Phase 3 — Developer | Feature: [feature-id]
+Phase GREEN — Developer | Feature: [feature-id]
 Status: DONE / BLOCKED
-Manifest: complete | Tests: X written | Enforcement: PASS/FAIL
-Next: Handing off to validator / Blocked by [reason]
+Manifest: complete | Compilation: PASS/FAIL | E2E: PASS/FAIL/N/A
+Console errors: 0 / N found
+Next: Proceeding to validation gates / Blocked by [reason]
 ```
 
 > **Reference**: See `agents/developer.ref.md` for file convention templates and output format examples.

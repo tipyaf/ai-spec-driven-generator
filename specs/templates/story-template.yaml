@@ -92,31 +92,76 @@ test_intentions:
   #       oracle: {}
   #       assertions: []
 
+# UX reference — wireframe contract for UI projects
+# Set by refinement agent when story has UI changes (Step 1c-bis).
+# The builder MUST reproduce all data-testid attributes from wireframes in production code.
+# The E2E tests target these data-testid as selectors.
+ux_ref: null                              # Path to wireframe section in specs/[project]-ux.md, or null
+
+# Component reuse audit (UI projects only, filled by refinement agent)
+components:
+  reuse: []                               # Existing components to reuse (name, path, note)
+  create: []                              # New components needed (name, type: dumb|smart, reason)
+
 # Dependencies on other features
 depends_on: []                            # Feature IDs that must be "validated" first
 
 # Technical notes for the developer
 notes: ""
 
+# ─── Auto-generated validation ACs ────────────────────────────────────────
+# These ACs are ALWAYS added by the refinement agent to every story.
+# They enforce compilation, unit tests, and console errors as verifiable gates.
+# The verify: commands use the project's stack profile commands.
+#
+# For UI projects, additional ACs for WCAG and wireframe conformity are added.
+validation_acs:
+  - id: "AC-BP-[FEATURE]-COMPILE"
+    type: "BP"
+    description: "Project compiles without errors (compilation command from stack profile)"
+    verify: ""                            # Filled by refinement from stack profile build command
+    tier: 1
+  - id: "AC-BP-[FEATURE]-TU"
+    type: "BP"
+    description: "All unit tests pass"
+    verify: ""                            # Filled by refinement from stack profile test command
+    tier: 1
+  - id: "AC-BP-[FEATURE]-CONSOLE"
+    type: "BP"
+    description: "Zero console errors/stacktraces (frontend browser console + backend server logs)"
+    verify: ""                            # Runtime check — tier 2
+    tier: 2
+  # UI projects only — added by refinement when ux_ref is not null:
+  # - id: "AC-BP-[FEATURE]-WCAG"
+  #   type: "BP"
+  #   description: "WCAG 2.1 AA — 0 violations"
+  #   verify: ""                          # WCAG audit command if configured, else runtime-only
+  #   tier: 1 or 2
+  # - id: "AC-BP-[FEATURE]-WIREFRAME"
+  #   type: "BP"
+  #   description: "UI matches wireframe layout, design system, and data-testid attributes"
+  #   verify: "runtime-only"
+  #   tier: 3
+
 # ─── Definition of Done ────────────────────────────────────────────────────
 # Standard closing gate — always included, verified by the validator.
-# Replace [PR_NUMBER] with the actual PR number when writing the story file.
 definition_of_done:
   - "All AC verify: commands pass"
-  - "No compilation/build errors (language-specific build command)"
+  - "No compilation/build errors (compilation command from stack profile)"
   - "All unit tests pass"
   - "Zero console errors/stacktraces (front: browser console, back: server logs)"
-  - "PR merged into develop"
-  - "Shortcut story moved to Done"
+  - "All 11 validation gates pass"
+  - "PR/MR merged into integration branch"
+  - "PM tool ticket moved to Done (if configured)"
 
 # AC-BP-DONE — Mandatory closing AC (Tier 1, always last)
-# Verifies the PR was merged — signals to the validator that Shortcut can be closed.
-# The validator MUST update Shortcut to Done after this AC passes.
+# Verifies the PR/MR was merged — signals to the validator that the PM ticket can be closed.
+# Uses the PR/MR tool detected and memorized in memory/[project].md → pr_tool.
 closing_ac:
   - id: "AC-BP-[FEATURE]-DONE"
     type: "BP"
     description: |
-      PR is merged into develop — story closure gate.
-      After this passes, the validator MUST move the Shortcut story to Done (state 500000010).
-    verify: "gh pr list --state merged --base develop --json title | grep -q '[feature-id]'"
+      PR/MR is merged into the integration branch — story closure gate.
+      After this passes, the validator MUST update the PM tool ticket to Done (if configured).
+    verify: ""                            # Filled by refinement using detected pr_tool (gh/glab/az)
     tier: 1

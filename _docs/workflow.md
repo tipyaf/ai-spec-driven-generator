@@ -156,6 +156,9 @@ project-root/
 | stacks/ | Stack profiles and quality hooks | Yes |
 | stacks/hooks/ | code_review.py, hook-config.json, sonar_check.py | Yes |
 | apps/ | Application source code | Yes |
+| _work/build/ | Build pipeline state per story (11 gates) | Yes |
+| _work/spec/ | Per-story spec overlays | Yes |
+| _work/ux/wireframes/ | HTML wireframes with data-testid (UI projects) | Yes |
 | _cache/ | Tool caches (pytest, ruff, mypy) | No (.gitignore) |
 
 ---
@@ -200,6 +203,6 @@ This creates:
 
 - All 19 agent playbooks in `framework/agents/`
 - All 10 skills in `framework/skills/`
-- All 9 enforcement scripts in `framework/scripts/`
+- All 10 enforcement scripts in `framework/scripts/`
 - Templates in `framework/specs/templates/`
 - Memory templates in `framework/memory/`

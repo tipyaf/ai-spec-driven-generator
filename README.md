@@ -1,6 +1,6 @@
 # ai-spec-driven-generator
 
-An AI framework that generates production-ready code from structured YAML specs. 19 specialized agents, 10 skills, 9 enforcement scripts, 7 quality gates. Works with **Claude Code** and **Cursor**.
+An AI framework that generates production-ready code from structured YAML specs. 19 specialized agents, 10 skills, 10 enforcement scripts, 11 quality gates. Works with **Claude Code** and **Cursor**.
 
 ## How it works
 
@@ -9,25 +9,29 @@ An AI framework that generates production-ready code from structured YAML specs.
      ↓
 /refine     Break each feature into stories with verify: commands + test_intentions
             (Trigger A: formulas with oracle math, Trigger C: UI rendering assertions)
+            + wireframe gate (UI projects): HTML wireframes with data-testid → WCAG validation
      ↓
 /build      TDD pipeline per story:
-            RED (test-engineer writes failing tests)
-          → GREEN (builder makes them pass)
-          → 7 quality gates (all must pass to reach "validated"):
-              Gate 1: Security     — OWASP + stack forbidden patterns
-              Gate 2: Tests        — unit + e2e
-              Gate 3: UI           — WCAG + wireframes (if UI project)
-              Gate 4: AC Validation — execute every verify: command
-              Gate 5: Code Review  — quality + scope conformity
-              Gate 6: SonarQube    — scan + coverage (skipped if not configured)
-              Gate 7: Story Review — story-reviewer verifies every AC
+            RED (test-engineer writes failing tests → quality scan → review)
+          → GREEN (builder makes them pass → compilation)
+          → 11 quality gates (all must pass to reach "validated"):
+              Gate  1: Security          — OWASP + stack forbidden patterns
+              Gate  2: Unit Tests        — execute unit tests
+              Gate  3: Code Quality      — tool or reviewer fallback (NEVER skipped)
+              Gate  4: E2E Code          — E2E from wireframes with data-testid (UI only)
+              Gate  5: WCAG + Wireframes — accessibility + wireframe conformity (UI only)
+              Gate  6: E2E Execution     — run E2E suite (UI only)
+              Gate  7: E2E vs Wireframes — validate E2E results vs wireframes (UI only)
+              Gate  8: AC Validation     — execute every verify: command
+              Gate  9: Story Review      — story-reviewer verifies every AC
+              Gate 10: Code Review       — quality + scope + 0 console errors
+              Gate 11: Final Compilation — re-compile to confirm fixes
+          → ALL PASS? atomic commit + auto PR/MR
           → FAIL? fix + re-validate (max 3 cycles, then escalate to human)
      ↓
 /review     Final cross-feature review (all features must be validated)
      ↓
 Deploy + Release (human decision)
-
-SonarQube also runs continuously via hook after each session.
 ```
 
 ## Principles
@@ -36,7 +40,7 @@ SonarQube also runs continuously via hook after each session.
 |-----------|------|
 | **Agnostic** | Works with any language, any project type. Web, API, CLI, mobile, data pipeline, ML, embedded. Agents adapt based on `spec.type`. |
 | **Autonomous** | Humans decide (product, UX, architecture, deploy). Machines verify (tests, review, security). Auto-proceed when gates pass, escalate after 3 failures. |
-| **Accompaniment** | Guides the user at every step. Each phase ends with a clear "Next step" when manual action is required. Never leaves the user without guidance. |
+| **Accompaniment** | Guides the user at every step. Informs of each gate result in real-time. Each phase ends with a clear "Next step" when manual action is required. Never leaves the user without guidance. Responds in the user's language. |
 
 ## Quick start
 
@@ -59,7 +63,7 @@ The AI reads `CLAUDE.md` and follows the framework workflow automatically.
 ```
 /spec                        # Define your project
 /refine candidate-profile    # Break a feature into stories
-/build candidate-profile     # TDD pipeline + 7 quality gates
+/build candidate-profile     # TDD pipeline + 11 quality gates
 /validate candidate-profile  # Re-run verify: commands independently
 /review                      # Final review before PR
 ```
@@ -99,17 +103,21 @@ git submodule update --remote framework
 
 ## What's enforced
 
-### Quality gates (per story, sequential)
+### Quality gates (per story, sequential — all 11 must pass)
 
 | Gate | What it checks | Blocks on |
 |------|---------------|-----------|
 | 1. Security | OWASP patterns, AC-SEC-* verify commands | Any violation |
-| 2. Tests | Unit + e2e execution | Any failure |
-| 3. UI | WCAG 2.1 AA, wireframe conformity | Non-conformance (UI projects only) |
-| 4. AC Validation | Every `verify:` command from story file | Any command fails |
-| 5. Code Review | Quality, scope (only files in story scope touched) | Issues found |
-| 6. SonarQube | Scan + coverage report | New BLOCKER/CRITICAL (skipped if not configured) |
-| 7. Story Review | Story-reviewer verifies every AC against code | Any AC fails |
+| 2. Unit Tests | Execute unit tests (test command from stack profile) | Any failure |
+| 3. Code Quality | Tool (SonarQube/other) or reviewer 3-pass fallback — **NEVER skipped** | Issues found |
+| 4. E2E Code | Write E2E tests from wireframes with `data-testid` selectors | UI only |
+| 5. WCAG + Wireframes | WCAG 2.1 AA audit + wireframe conformity | UI only |
+| 6. E2E Execution | Run E2E test suite | UI only |
+| 7. E2E vs Wireframes | Validate E2E results match wireframe expectations | UI only |
+| 8. AC Validation | Every `verify:` command from story file | Any command fails |
+| 9. Story Review | Story-reviewer verifies every AC against code | Any AC fails |
+| 10. Code Review | Quality, scope, 0 console errors/stacktraces | Issues found |
+| 11. Final Compilation | Re-compile to confirm fixes haven't broken the build | Compilation error |
 
 ### TDD enforcement (machine, not honor)
 
@@ -129,6 +137,7 @@ git submodule update --remote framework
 | `check_test_quality.py` | `.skip()`, mock-soup, fixture-only tests, weak assertions (Rule 2b banlist) |
 | `check_oracle_assertions.py` | Numeric assertions without ORACLE math proof |
 | `check_write_coverage.py` | Tables with readers but no tested writers |
+| `check_story_commits.py` | Production code staged without story file/manifest/tracker |
 
 ### Additional enforcement
 

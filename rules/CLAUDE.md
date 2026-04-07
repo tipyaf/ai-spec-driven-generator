@@ -94,17 +94,21 @@ PHASE 2 — CONSTRUCTION (per feature loop)
 
   For each feature [pending → refined → building → testing → validated]:
 
-  /refine  → Refinement  → ✅ Human   → story file written
-  /build   → Developer   → 🤖 Auto    → code + tests
-  /validate → Validator   → 🤖 Auto    → verify: commands executed
-    Gate 1: Security (OWASP + stack forbidden patterns)
-    Gate 2: Tests (TU + e2e)
-    Gate 3: UI (WCAG + wireframe conformity) — if UI project
-    Gate 4: AC Validation (every verify: command)
-    Gate 5: Review (code quality + scope check)
-    Gate 6: SonarQube (scan story files + coverage — skipped if not configured)
-    Gate 7: Story Review (story-reviewer verifies every AC — mandatory)
-  → ALL GATES PASS: status → validated
+  /refine  → Refinement  → ✅ Human   → story file written + wireframes (UI)
+  /build   → RED (test-engineer) → GREEN (developer) → 🤖 Auto
+  /validate → Validator   → 🤖 Auto    → 11 quality gates
+    Gate  1: Security (OWASP + stack forbidden patterns + AC-SEC-*)
+    Gate  2: Unit Tests (execute TU from stack profile)
+    Gate  3: Code Quality (tool if configured, reviewer fallback — NEVER skipped)
+    Gate  4: E2E Code from wireframes (UI only — uses data-testid)
+    Gate  5: WCAG + Wireframe conformity (UI only)
+    Gate  6: E2E Execution (UI only)
+    Gate  7: E2E vs Wireframes validation (UI only)
+    Gate  8: AC Validation (every verify: command)
+    Gate  9: Story Review (story-reviewer verifies every AC — mandatory)
+    Gate 10: Code Review (SOLID/KISS + scope + 0 console errors)
+    Gate 11: Final Compilation (re-compile to confirm fixes)
+  → ALL GATES PASS: atomic commit + PR/MR → status → validated
   → ANY FAIL: cycles++ → fix → re-validate (max 3, then escalate)
 
 ═══════════════════════════════════════════════════════════
@@ -134,10 +138,9 @@ PHASE 5 — RELEASE — ✅ Human
 | 1: Plan | /spec | Architect | Human | `specs/[project]-arch.md` |
 | 2: Scaffold | /build | Developer | Auto | Project compiles/starts |
 | 2.5: Refine | /refine | Refinement | Human | `specs/stories/[feature].yaml` |
-| 3: Implement | /build | Developer | Auto | Code + tests written |
-| 3.5: Validate | /validate | Validator | Auto | ALL `verify:` commands PASS |
-| 3.6: SonarQube | /build | (script) | Auto | No new BLOCKER/CRITICAL — **skipped if not configured** |
-| 3.7: Story Review | /build | Story Reviewer | Auto | Every AC verified PASS — **blocks `validated`** |
+| 3: RED | /build | Test Engineer | Auto | Failing tests written + reviewed |
+| 3.1: GREEN | /build | Developer | Auto | Production code makes tests pass + compilation |
+| 3.5: Validate | /validate | Validator | Auto | ALL 11 quality gates PASS |
 | 4: Review | /review | Reviewer+Security+Tester | Auto | Quality + security PASS |
 | 5: Deploy | — | DevOps | Human | Infrastructure decision |
 | 6: Release | — | — | Human | Go/no-go decision |

@@ -28,15 +28,18 @@ Activated by `/validate` skill when a feature has status `building` or `testing`
 ## Input
 - `specs/stories/[feature-id].yaml` — the build contract with ALL ACs and `verify:` commands
 - `specs/stories/[feature-id]-manifest.yaml` — declared artifacts and file scope
+- `_work/build/sc-[ID].yaml` — build state file with gate statuses (for resuming)
+- `_work/ux/wireframes/[story-id]/` — HTML wireframes (UI projects)
 - `stacks/*.md` — stack profiles with forbidden patterns
 - `specs/feature-tracker.yaml` — current feature state and cycle count
 - `memory/LESSONS.md` — known failure patterns
 - Git diff for this feature
 
 ## Output
-- Structured PASS/FAIL report with evidence for every AC
+- Structured PASS/FAIL report with evidence for every gate (11 gates)
+- Updated `_work/build/sc-[ID].yaml` — gate statuses updated as each gate completes
 - Updated `specs/feature-tracker.yaml` (status, cycles, validated_at)
-- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results to `gates.validation` and `gates.scope_check`
+- Updated `specs/stories/[feature-id]-manifest.yaml` — write gate results
 - NOT_VERIFIABLE verdict for runtime-only ACs (distinct from PASS and FAIL)
 - **NEVER** modifies source code, test files, or story files
 
@@ -64,54 +67,106 @@ Activated by `/validate` skill when a feature has status `building` or `testing`
 
 ## Workflow
 
-### Step 1: Gather context
-1. Read `specs/stories/[feature-id].yaml` — this is the **build contract** with ALL ACs and `verify:` commands
-2. Read git diff to identify what changed
-3. Read stack profiles from `stacks/` for forbidden patterns
-4. Read `specs/feature-tracker.yaml` for current state
+The validator executes the 11 validation gates defined in `skills/build/SKILL.md` Phase 5. Each gate updates `_work/build/sc-[ID].yaml` with its result.
 
-### Step 1.5: Verify implementation manifest
-1. Read `specs/stories/[feature-id]-manifest.yaml`
-2. Verify manifest `phase` is `"complete"` (not `"skeleton"`)
-3. For each declared artifact:
+### Step 0: Gather context
+1. Read `specs/stories/[feature-id].yaml` — this is the **build contract** with ALL ACs and `verify:` commands
+2. Read `specs/stories/[feature-id]-manifest.yaml` — declared artifacts and scope
+3. Read `_work/build/sc-[ID].yaml` — current build state (resume from last gate if interrupted)
+4. Read git diff to identify what changed
+5. Read stack profiles from `stacks/` for forbidden patterns
+6. Read `specs/feature-tracker.yaml` for current state and cycle count
+
+### Step 0.5: Verify implementation manifest
+1. Verify manifest `phase` is `"complete"` (not `"skeleton"`)
+2. For each declared artifact:
    - **Endpoints**: verify route exists in router/controller files
    - **Migrations/tables**: verify in migration files or ORM models
    - **Components**: verify file exists at declared path
    - **Services**: verify file exists at declared path
-4. Any declared artifact not found in code = **FAIL** (spec contract violation)
-5. If no manifest exists: **WARNING** (process violation — builder skipped manifest phase, do not auto-FAIL but flag)
+3. Any declared artifact not found in code = **FAIL** (spec contract violation)
+4. If no manifest exists: **WARNING** (process violation — builder skipped manifest phase, do not auto-FAIL but flag)
 
-### Step 2: Execute ALL `verify:` commands from the story file
-This is the PRIMARY validation. For each AC in the story file:
+### Gate 1 — Security
+Check OWASP patterns, stack forbidden patterns, AC-SEC-* verify commands.
+- Grep for OWASP top-10 patterns in modified files
+- Execute all `verify:` commands for AC-SEC-* criteria
+- Check forbidden patterns from stack profiles
+→ *On FAIL*: fix security issues, re-run Gate 1. Loop until PASS.
+→ Update `_work/build/sc-[ID].yaml` → `gates.security.status`
+
+### Gate 2 — Execute unit tests
+Run unit tests only (test command from stack profile). All must pass.
+→ *On FAIL*: return to builder, fix code to satisfy TDD. Re-run from Gate 2.
+→ Update `_work/build/sc-[ID].yaml` → `gates.unit_tests.status`
+
+### Gate 3 — Code quality
+This gate is **NEVER skipped**.
+- If code quality tool configured (SonarQube or other) → run full scan + coverage report
+- If no tool configured → dispatch `agents/reviewer.md` with extended scope: code quality, maintainability, readability, patterns, security. The reviewer's 3 passes (KISS/readability, static analysis, safety/correctness) serve as the quality gate.
+→ *On FAIL*: fix code quality issues, re-run unit tests (Gate 2), then re-run Gate 3.
+→ Update `_work/build/sc-[ID].yaml` → `gates.code_quality.status`
+
+### Gate 4 — E2E code from wireframes (UI projects only)
+Write E2E tests based on wireframes from `specs/[project]-ux.md` (referenced via story `ux_ref:`).
+- E2E tests MUST use the `data-testid` attributes from wireframes as selectors
+- E2E tests validate user flows, visual rendering, responsive breakpoints, and all states (empty/loading/error/success)
+→ Skip for non-UI projects.
+→ Update `_work/build/sc-[ID].yaml` → `gates.e2e_code.status`
+
+### Gate 5 — WCAG + wireframe conformity (UI projects only)
+Run WCAG 2.1 AA audit (using configured accessibility tool, or manual checklist).
+- Screenshot pages and compare against wireframes
+- Verify design system colors, layout, component placement
+- Verify all `data-testid` from wireframes are present in production code
+- Verify responsive breakpoints match wireframe specifications
+→ *On FAIL*: return to builder, fix UI code, re-run from Gate 4.
+→ Skip for non-UI projects.
+→ Update `_work/build/sc-[ID].yaml` → `gates.wcag_wireframes.status`
+
+### Gate 6 — Execute E2E tests (UI projects only)
+Run E2E test suite (E2E tool from stack profile).
+→ *On FAIL*: fix code, re-run E2E.
+→ Skip for non-UI projects.
+→ Update `_work/build/sc-[ID].yaml` → `gates.e2e_execution.status`
+
+### Gate 7 — Validate E2E against wireframes (UI projects only)
+Verify E2E test results match wireframe expectations.
+- Screenshots from E2E must match wireframe layouts
+- All user flows from wireframes must be covered
+- All `data-testid` from wireframes must be present in production code
+→ *On FAIL*: return to builder, fix implementation to match wireframes. Re-run from Gate 4.
+→ Skip for non-UI projects.
+→ Update `_work/build/sc-[ID].yaml` → `gates.e2e_wireframe_validation.status`
+
+### Gate 8 — AC Validation
+Execute EVERY `verify:` command from the story file.
 - **Tier 1** (`grep`/`bash`): Run the command directly. PASS = exit 0 or pattern found. FAIL = exit non-zero or pattern missing.
 - **Tier 2** (`curl`/`playwright`): Start dev server if needed. Run the command. Check response/assertion.
 - **Tier 3** (`runtime-only`): Document what was checked and how. Mark as **NOT_VERIFIABLE** (distinct from PASS/FAIL).
-
 **Evidence required**: Every PASS/FAIL MUST include the command output as proof.
+→ *On FAIL*: return to builder, fix code, re-run from Gate 8.
+→ Update `_work/build/sc-[ID].yaml` → `gates.ac_validation.status`
 
-### Step 3: Scope check
+### Gate 9 — Story Review
+Dispatch `agents/story-reviewer.md` — verifies every AC against committed code with structured PASS/FAIL verdict. **Mandatory.** Story CANNOT be marked `validated` without PASS.
+→ *On FAIL*: return to builder, fix based on review feedback. Re-run from Gate 8.
+→ Update `_work/build/sc-[ID].yaml` → `gates.story_review.status`
+
+### Gate 10 — Code Review
+Dispatch `agents/reviewer.md` — code quality (SOLID/KISS/DRY/YAGNI), scope conformity (only touched listed files?), static analysis, readability.
+
+**Also verifies 0 console errors/stacktraces:**
+- **Frontend (web/mobile UI)**: Check browser console output. Filter for `error`, `Error`, `stacktrace`, `Uncaught`, `MISSING_MESSAGE`. Warnings are noted but do not block.
+- **Backend (API)**: Check server output for stacktraces, unhandled exceptions, or error-level log entries triggered by the modified feature.
+- A page that renders with a console error is NOT validated — even if all other ACs pass.
+
+**Scope check:**
 1. Verify git diff only touches files listed in the story's `scope` section
 2. Verify git diff files match manifest's `files_to_modify` + `files_to_create`
 3. Files outside scope = scope violation = **FAIL**
-4. Undeclared file in diff = manifest scope violation = **FAIL**
 
-### Step 4: Visual checks (UI projects only)
-> Skip for API, CLI, library, embedded, data pipeline projects.
-
-For each page/screen modified by dev: start dev server, screenshot with Playwright/Claude Preview, verify against wireframes (design system colors, layout, all states, contrast, responsiveness).
-
-### Step 4b: Console errors / stacktraces (BLOCKING)
-Check for runtime errors in both frontend and backend. **Any error or stacktrace = FAIL.**
-
-- **Frontend (web/mobile UI)**: Use `preview_console_logs` (Claude Preview MCP) to capture browser console output. Filter for `error`, `Error`, `stacktrace`, `Uncaught`, `MISSING_MESSAGE`. Warnings are noted but do not block.
-- **Backend (API)**: Use `preview_logs` or check server output for stacktraces, unhandled exceptions, or error-level log entries triggered by the modified feature.
-
-**Rules**:
-- A page that renders with a console error is NOT validated — even if all other ACs pass.
-- Pre-existing console errors unrelated to the current story MUST be fixed (< 30 min) or tracked in a new story. There is no "acceptable background noise" exemption.
-- Console warnings are reported but do not block validation.
-
-### Step 5: Code checks (anti-patterns + test quality)
+**Anti-pattern scan:**
 For each modified file, grep for anti-patterns:
 - **All types**: `console.log/debug`, `debugger`, `TODO/FIXME/HACK/XXX`, unused imports, empty catch blocks
 - **Web only**: hardcoded Tailwind colors, hardcoded CSS values
@@ -119,25 +174,21 @@ For each modified file, grep for anti-patterns:
 - **Web/mobile UI**: ARIA roles, alt texts
 - Plus forbidden patterns from stack profiles
 
-**Forbidden pattern scanning** (from stack profiles):
-- Read stack profile(s) from `stacks/`. For each `forbidden_patterns` entry, grep committed files.
-- Match found = **FAIL** (reported as `AC-BP-FORBIDDEN-xxx` in the report)
+→ *On FAIL*: fix code quality issues from builder. Re-run from Gate 10.
+→ Update `_work/build/sc-[ID].yaml` → `gates.code_review.status`
 
-**Test quality checks** (from `rules/test-quality.md`):
-- Verify no `.skip()` or `.todo()` in test files
-- Verify computed value assertions have `# ORACLE:` blocks
-- Verify integration tests use real DB (no mock-soup)
-- If enforcement scripts are configured, run them: `scripts/check_test_quality.py`, `scripts/check_oracle_assertions.py`
+### Gate 11 — Final compilation
+Re-run full compilation (same command as GREEN phase compilation) to confirm all fixes haven't broken the build.
+→ *On FAIL*: fix and re-compile.
+→ Update `_work/build/sc-[ID].yaml` → `gates.final_compilation.status`
 
-### Step 6: Update tracker and produce report
-1. Generate structured PASS/FAIL report with evidence for each AC
-2. **Write gate results to manifest** (`specs/stories/[feature-id]-manifest.yaml`):
-   - `gates.validation`: status, cycle, passed/failed/not_verifiable AC IDs with evidence
-   - `gates.scope_check`: status, undeclared_files, missing_artifacts
+### Verdict and report
+1. Generate structured PASS/FAIL report with evidence for each gate
+2. Update `_work/build/sc-[ID].yaml` with all gate results
 3. Update `specs/feature-tracker.yaml`:
    - ALL PASS → status: `validated`, set `validated_at`
    - ANY FAIL → increment `cycles`, keep status: `testing`
-   - cycles >= 3 → add escalation note in `notes` field
+   - cycles >= 3 → add escalation note in `notes` field → ESCALATE to human
 
 ## Hard Constraints
 - **Prerequisite**: feature must be `building` or `testing` in tracker
@@ -171,17 +222,22 @@ On FAIL: check if pattern exists in `memory/LESSONS.md`. If yes: flag CRITICAL (
 
 ## Status Output (mandatory)
 ```
-Phase 3.5 — Validator | Feature: [feature-id]
-Status: PASS / FAIL / PARTIAL
-- Manifest: COMPLETE/SKELETON/MISSING
-- Spec contract: PASS/FAIL (N artifacts verified)
-- AC verification: X/Y PASS, Z FAIL, W NOT_VERIFIABLE
-- Scope check: PASS/FAIL
-- Visual checks: PASS/FAIL/N/A
-- Code checks: PASS/FAIL (N anti-patterns found)
-- Forbidden patterns: PASS/FAIL
-- Test quality: PASS/FAIL
-- Cycle: N/3
+Validation — 11 Gates | Feature: [feature-id]
+Status: ALL PASS / FAIL / PARTIAL
+
+Gate  1 — Security:              PASS/FAIL
+Gate  2 — Unit Tests:            PASS/FAIL (N pass, M fail)
+Gate  3 — Code Quality:          PASS/FAIL (method: tool/reviewer)
+Gate  4 — E2E Code:              PASS/FAIL/SKIPPED
+Gate  5 — WCAG + Wireframes:     PASS/FAIL/SKIPPED
+Gate  6 — E2E Execution:         PASS/FAIL/SKIPPED
+Gate  7 — E2E vs Wireframes:     PASS/FAIL/SKIPPED
+Gate  8 — AC Validation:         PASS/FAIL (X/Y pass)
+Gate  9 — Story Review:          PASS/FAIL
+Gate 10 — Code Review:           PASS/FAIL (console errors: 0/N)
+Gate 11 — Final Compilation:     PASS/FAIL
+
+Cycle: N/3
 Next: Feature validated / Returning to developer (N issues) / ESCALATING to human
 ```
 

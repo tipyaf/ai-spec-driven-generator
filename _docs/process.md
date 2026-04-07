@@ -65,14 +65,21 @@ flowchart TD
    - `test_intentions` with pre-computed oracle values (step-by-step math)
    - Implementation scope (files to create/modify)
    - Anti-patterns to avoid (from stack profile)
+   - Auto-generated validation ACs (AC-BP-COMPILE, AC-BP-TU, AC-BP-CONSOLE)
 
-2. **Feature tracker update**: pending --> refined
+2. **Wireframes** (UI projects only): HTML wireframes with `data-testid` attributes in `_work/ux/wireframes/`
+
+3. **Feature tracker update**: pending --> refined
+
+4. **PM tickets** (if PM tool configured): epic + story + validation checklist + wireframe attachments
 
 ### Rules
 - Every AC must have a `verify:` command (Tier 1 preferred, Tier 3 only when unavoidable)
 - Oracle values are computed during refinement, not during build -- the developer copies, never guesses
+- Wireframe gate: UI features get HTML wireframes with `data-testid` attributes, validated for WCAG 2.1 AA
 - UX gate: frontend features require a UX spec before refinement proceeds
 - ADR gate: architecture decisions must be documented before implementation
+- No commit during refine -- commit happens after /build validation
 
 ---
 
@@ -91,8 +98,11 @@ flowchart TD
     G --> H[Builder writes code]
     H --> I{Tests pass?}
     I -->|No| H
-    I -->|Yes| J[Commit]
-    J --> K[Update feature-tracker: building]
+    I -->|Yes| J[Compilation]
+    J --> K[11 Quality Gates]
+    K --> L{All pass?}
+    L -->|Yes| M[Atomic commit + PR/MR]
+    L -->|No| H
 ```
 
 ### TDD: RED then GREEN (mandatory)
@@ -136,13 +146,19 @@ flowchart TD
     K --> L[Feature: validated]
 ```
 
-### 5 Sequential Quality Gates
+### 11 Sequential Quality Gates
 
-1. **Security** -- OWASP Top 10 checklist (backend/exchange stories only). CRITICAL/HIGH blocks.
-2. **Tests** -- Mutation testing (70%+ score required). Surviving mutants get kill-tests.
-3. **UI** -- UX compliance check (frontend stories only)
-4. **AC Validation** -- Validator executes every `verify:` command from the story file
-5. **Review** -- 3-pass code review (KISS/readability, static analysis, safety/correctness)
+1. **Security** -- OWASP + stack forbidden patterns + AC-SEC-* verify commands
+2. **Unit Tests** -- Execute unit tests (test command from stack profile)
+3. **Code Quality** -- Tool (SonarQube/other) if configured, reviewer 3-pass fallback. NEVER skipped.
+4. **E2E Code** -- Write E2E tests from wireframes with `data-testid` selectors (UI only)
+5. **WCAG + Wireframes** -- WCAG 2.1 AA audit + wireframe conformity (UI only)
+6. **E2E Execution** -- Run E2E test suite (UI only)
+7. **E2E vs Wireframes** -- Validate E2E results match wireframe expectations (UI only)
+8. **AC Validation** -- Validator executes every `verify:` command from the story file
+9. **Story Review** -- Story-reviewer verifies every AC against committed code (mandatory)
+10. **Code Review** -- SOLID/KISS/DRY/YAGNI + scope check + 0 console errors
+11. **Final Compilation** -- Re-compile to confirm fixes haven't broken the build
 
 ### Validation cycles
 - Max 3 retry cycles per feature
@@ -181,7 +197,7 @@ stateDiagram-v2
     pending --> refined: /refine completes
     refined --> building: /build starts
     building --> testing: Code committed, tests pass
-    testing --> validated: /validate — all 5 gates pass
+    testing --> validated: /validate — all 11 gates pass
     validated --> done: /review PASS + human approval
 
     testing --> building: /validate FAIL (cycle < 3)
@@ -240,8 +256,8 @@ sequenceDiagram
     Note right of Build: Code committed
 
     User->>Val: /validate feature-name
-    Val->>Val: Security → Tests → UI → ACs → Review
-    Note right of Val: Max 3 cycles
+    Val->>Val: 11 gates: Security → TU → Quality → E2E → WCAG → ACs → Review → Compile
+    Note right of Val: Max 3 cycles, then escalate
 
     User->>Rev: /review
     Rev->>Rev: Verify ACs vs code

@@ -1,6 +1,6 @@
 # AI Spec-Driven Generator
 
-**Version 4.0.0** -- [Changelog](../CHANGELOG.md)
+**Version 4.1.0** -- [Changelog](../CHANGELOG.md)
 
 > Reusable AI agent framework for spec-driven code generation with Claude Code.
 > Full agent catalog, build lifecycle, and quality gates: [agents.md](agents.md)
@@ -68,6 +68,7 @@
 | check_test_quality.py | Pre-commit: no .skip, no mock-soup, no fixture-only tests |
 | check_oracle_assertions.py | Pre-commit: ORACLE blocks on numeric assertions |
 | check_write_coverage.py | Pre-commit: every table with reader has a writer |
+| check_story_commits.py | Pre-commit: atomic commit (story + manifest + tracker + code) |
 
 ---
 
@@ -75,8 +76,8 @@
 
 | Document | What it covers |
 |----------|----------------|
-| [agents.md](agents.md) | Full agent catalog (19 agents), build lifecycle diagram, quality gates |
-| [process.md](process.md) | Story lifecycle: idea, refine, build, review, done |
+| [agents.md](agents.md) | Full agent catalog (19 agents), build lifecycle diagram, 11 quality gates |
+| [process.md](process.md) | Story lifecycle: idea, refine (wireframes), build (TDD + 11 gates), review, done |
 | [workflow.md](workflow.md) | Board conventions, build order, branch strategy, _work/ directory structure |
 | [skills.md](skills.md) | Skill system: how skills are loaded, adding new skills, phase prerequisites |
 | [sonarqube.md](sonarqube.md) | SonarQube: install, configure, generate tokens, run scans, troubleshoot |

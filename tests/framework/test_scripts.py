@@ -25,6 +25,7 @@ ALL_CHECK_SCRIPTS = [
     "check_test_quality.py",
     "check_write_coverage.py",
     "check_oracle_assertions.py",
+    "check_story_commits.py",
 ]
 
 

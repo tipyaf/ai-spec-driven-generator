@@ -1,9 +1,50 @@
 # Changelog
 
+## [4.1.0] - 2026-04-07
+
+### Refine phase evolution
+- feat: wireframe gate for UI projects — auto-create HTML wireframes with data-testid attributes
+- feat: WCAG 2.1 AA validation on wireframes with loop-until-pass
+- feat: generic PM integration (Shortcut, Jira, GitLab, MCP) — replaces Shortcut-only
+- feat: auto-generated validation ACs (AC-BP-COMPILE, AC-BP-TU, AC-BP-CONSOLE, AC-BP-WCAG, AC-BP-WIREFRAME)
+- feat: UX/UI agent now triggered from /refine for wireframe creation
+
+### Build phase evolution
+- feat: 11 quality gates (was 7) — Security, Unit Tests, Code Quality, E2E Code, WCAG+Wireframes, E2E Execution, E2E vs Wireframes, AC Validation, Story Review, Code Review, Final Compilation
+- feat: RED phase with 4 steps (create TU, quality scan, review, validate)
+- feat: GREEN phase with 2 steps (code, compilation)
+- feat: code quality gate (Gate 3) NEVER skipped — reviewer 3-pass fallback when no tool configured
+- feat: Gate 10 (Code Review) now includes console error verification (0 errors required)
+- feat: compilation gate in both GREEN phase and Gate 11 (final validation)
+- feat: data-testid contract — wireframe HTML defines IDs, builder reproduces them, E2E targets them
+
+### Commit enforcement
+- feat: atomic commit after ALL 11 gates pass (story + manifest + tracker + code + tests)
+- feat: PR/MR auto-creation — detect gh/glab/az once, memorize in memory/
+- feat: check_story_commits.py enforcement script — validates atomic commit, YAML validity, verify: fields
+- feat: setup-hooks.sh updated with story commit check
+
+### Rules and agents
+- feat: agent-conduct.md — 7 new rules (Rules 11-17): explicit git add, atomic commit, real-time user feedback, user language, tool optionality, data-testid contract, specs as source of truth
+- feat: developer.md — GREEN phase, compilation, E2E, console errors, data-testid constraints
+- feat: validator.md — restructured for 11 gates with correction loop points
+- feat: refinement.md — wireframe workflow, PM integration, validation ACs
+- feat: ux-ui.md — /refine trigger, HTML wireframe generation, data-testid
+
+### Testing
+- feat: 231 framework tests (was 151) — new test files for refine and commit enforcement
+- feat: test_pipeline.py updated for 11 gates
+- feat: test_dataflow.py updated with wireframe flow and validation ACs
+- feat: test_refine.py — wireframe gate, WCAG, PM integration, validation ACs
+- feat: test_commit_enforcement.py — atomic commit, git add rules, check_story_commits.py
+
+### Documentation
+- docs: README updated — 11 gates, wireframe HTML, compilation, PM integration
+- docs: CLAUDE.md updated — 11 gates in phase workflow
+
 ## [4.0.11] - 2026-04-04
 
 - feat: 4 evolutions (TDAD, Trigger C, Rule 2b, token costs) + 151 framework self-tests
-
 
 ## [4.0.10] - 2026-04-04
 

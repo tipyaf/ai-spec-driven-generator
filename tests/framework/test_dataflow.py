@@ -1,7 +1,7 @@
 """
 Data flow contract tests — verifies that producers and consumers of key data
-structures (test_intentions, dependency_map, gates) agree on location, field
-names, and semantics.
+structures (test_intentions, dependency_map, gates, wireframes, validation ACs)
+agree on location, field names, and semantics.
 """
 
 from __future__ import annotations
@@ -154,17 +154,26 @@ class TestDependencyMapDataFlow:
 
 class TestGatesDataFlow:
     """
-    Build template gates must match the gates described in SKILL.md and CLAUDE.md.
+    Build template gates must match the 11 gates described in SKILL.md and CLAUDE.md.
     """
 
     BUILD_TEMPLATE_GATES = [
-        "tdd_red",
-        "tdd_green",
-        "code_review",
-        "security_audit",
-        "sonarqube",
+        "security",
+        "unit_tests",
+        "code_quality",
+        "e2e_code",
+        "wcag_wireframes",
+        "e2e_execution",
+        "e2e_wireframe_validation",
+        "ac_validation",
         "story_review",
-        "validation",
+        "code_review",
+        "final_compilation",
+    ]
+
+    BUILD_TEMPLATE_PHASES = [
+        "red_phase",
+        "green_phase",
     ]
 
     def test_build_template_has_all_gates(self):
@@ -172,52 +181,168 @@ class TestGatesDataFlow:
         for gate in self.BUILD_TEMPLATE_GATES:
             assert gate in template, f"build-template.yaml missing gate: {gate}"
 
+    def test_build_template_has_red_green_phases(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "build-template.yaml")
+        for phase in self.BUILD_TEMPLATE_PHASES:
+            assert phase in template, f"build-template.yaml missing phase: {phase}"
+
     def test_build_template_gates_have_status_field(self):
         template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "build-template.yaml")
-        # Each gate section should have a status: field
         gate_count = template.count("status: pending")
-        # validation also has status
+        # 11 gates + red_phase (3 sub-statuses) + green_phase (2 sub-statuses) + top-level statuses
         assert gate_count >= len(self.BUILD_TEMPLATE_GATES), (
             f"Expected at least {len(self.BUILD_TEMPLATE_GATES)} gates with 'status: pending', "
             f"found {gate_count}"
         )
 
-    def test_skill_md_documents_seven_gates(self):
-        """SKILL.md must document 7 sequential validation gates."""
+    def test_skill_md_documents_eleven_gates(self):
+        """SKILL.md must document 11 sequential validation gates."""
         skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
-        # Count "Gate N" patterns
         gate_refs = re.findall(r"\*\*Gate\s+(\d+)", skill)
         gate_numbers = sorted(set(int(g) for g in gate_refs))
-        assert gate_numbers == [1, 2, 3, 4, 5, 6, 7], (
-            f"SKILL.md should document Gates 1-7, found: {gate_numbers}"
+        assert gate_numbers == list(range(1, 12)), (
+            f"SKILL.md should document Gates 1-11, found: {gate_numbers}"
         )
 
-    def test_claudemd_documents_seven_gates(self):
-        """CLAUDE.md phase workflow must mention all 7 gates."""
+    def test_claudemd_documents_eleven_gates(self):
+        """CLAUDE.md phase workflow must mention all 11 gates."""
         claude_md = read_text(FRAMEWORK_ROOT / "rules" / "CLAUDE.md")
-        # Check that gates are mentioned in the phase workflow
-        for i in range(1, 8):
-            assert f"Gate {i}" in claude_md, (
+        for i in range(1, 12):
+            assert f"Gate {i}" in claude_md or f"Gate  {i}" in claude_md, (
                 f"rules/CLAUDE.md missing Gate {i} in phase workflow"
             )
 
-    def test_sonarqube_gate_is_optional(self):
-        """SonarQube gate must be documented as skippable."""
+    def test_code_quality_gate_never_skipped(self):
+        """Code quality gate (Gate 3) must be documented as NEVER skipped."""
         skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
-        # Should mention "skipped" for SonarQube
-        sonar_section = ""
-        for line in skill.splitlines():
-            if "sonarqube" in line.lower() or "gate 6" in line.lower():
-                sonar_section += line + "\n"
-        assert "skip" in sonar_section.lower(), (
-            "SonarQube gate must be documented as optional/skippable"
+        assert "never skip" in skill.lower() or "never skipped" in skill.lower(), (
+            "Code quality gate must be documented as NEVER skipped"
         )
 
     def test_story_review_gate_is_mandatory(self):
-        """Story review (Gate 7) must be documented as mandatory."""
+        """Story review (Gate 9) must be documented as mandatory."""
         skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
         assert "mandatory" in skill.lower() and "story" in skill.lower(), (
             "Story review gate must be documented as mandatory"
+        )
+
+    def test_ui_gates_skippable(self):
+        """Gates 4-7 must be skippable for non-UI projects."""
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "build-template.yaml")
+        ui_gates = ["e2e_code", "wcag_wireframes", "e2e_execution", "e2e_wireframe_validation"]
+        for gate in ui_gates:
+            # Must have 'skipped' as a possible status value
+            assert "skipped" in template, (
+                f"build-template.yaml must allow 'skipped' status for UI-only gate: {gate}"
+            )
+
+
+# ── Wireframe HTML data flow ────────────────────────────────────────────
+
+
+class TestWireframeDataFlow:
+    """
+    Wireframe HTML files flow from /refine → _work/ux/wireframes/ → /build (Gates 4-7).
+    """
+
+    def test_refine_skill_documents_wireframe_gate(self):
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "refine" / "SKILL.md")
+        assert _mentions(skill, "wireframe", "html"), (
+            "refine/SKILL.md must document wireframe HTML gate"
+        )
+
+    def test_refine_skill_stores_wireframes_in_work(self):
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "refine" / "SKILL.md")
+        assert "_work/ux/wireframes/" in skill, (
+            "refine/SKILL.md must store wireframes in _work/ux/wireframes/"
+        )
+
+    def test_build_skill_references_wireframes(self):
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
+        assert "wireframe" in skill.lower(), (
+            "build/SKILL.md must reference wireframes for UI gates"
+        )
+
+    def test_build_skill_references_data_testid(self):
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "build" / "SKILL.md")
+        assert "data-testid" in skill, (
+            "build/SKILL.md must reference data-testid from wireframes"
+        )
+
+    def test_refinement_agent_documents_wireframe_workflow(self):
+        content = read_text(FRAMEWORK_ROOT / "agents" / "refinement.md")
+        assert _mentions(content, "wireframe", "html"), (
+            "refinement.md must document wireframe HTML workflow"
+        )
+
+    def test_ux_ui_agent_produces_html_wireframes(self):
+        content = read_text(FRAMEWORK_ROOT / "agents" / "ux-ui.md")
+        assert _mentions(content, "html", "wireframe", "data-testid"), (
+            "ux-ui.md must document HTML wireframe output with data-testid"
+        )
+
+    def test_validator_agent_references_wireframes(self):
+        content = read_text(FRAMEWORK_ROOT / "agents" / "validator.md")
+        assert "wireframe" in content.lower(), (
+            "validator.md must reference wireframes for UI gates"
+        )
+
+    def test_story_template_has_ux_ref(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "story-template.yaml")
+        assert "ux_ref:" in template, (
+            "story-template.yaml must have ux_ref: field for wireframe reference"
+        )
+
+
+# ── Validation ACs data flow ──────────────────────────────────────────────
+
+
+class TestValidationACsDataFlow:
+    """
+    Auto-generated validation ACs (COMPILE, TU, CONSOLE) must be in the story template
+    and documented in refine SKILL.md.
+    """
+
+    VALIDATION_AC_IDS = [
+        "AC-BP-[FEATURE]-COMPILE",
+        "AC-BP-[FEATURE]-TU",
+        "AC-BP-[FEATURE]-CONSOLE",
+    ]
+
+    def test_story_template_has_validation_acs(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "story-template.yaml")
+        assert "validation_acs:" in template, (
+            "story-template.yaml must have validation_acs section"
+        )
+
+    def test_story_template_has_compile_ac(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "story-template.yaml")
+        assert "COMPILE" in template, (
+            "story-template.yaml must have AC-BP-[FEATURE]-COMPILE in validation_acs"
+        )
+
+    def test_story_template_has_tu_ac(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "story-template.yaml")
+        assert "-TU" in template, (
+            "story-template.yaml must have AC-BP-[FEATURE]-TU in validation_acs"
+        )
+
+    def test_story_template_has_console_ac(self):
+        template = read_text(FRAMEWORK_ROOT / "specs" / "templates" / "story-template.yaml")
+        assert "CONSOLE" in template, (
+            "story-template.yaml must have AC-BP-[FEATURE]-CONSOLE in validation_acs"
+        )
+
+    def test_refine_skill_documents_validation_acs(self):
+        skill = read_text(FRAMEWORK_ROOT / "skills" / "refine" / "SKILL.md")
+        assert _mentions(skill, "validation", "AC-BP"), (
+            "refine/SKILL.md must document auto-generated validation ACs"
+        )
+
+    def test_refinement_agent_documents_validation_acs(self):
+        content = read_text(FRAMEWORK_ROOT / "agents" / "refinement.md")
+        assert "validation" in content.lower() and "AC-BP" in content, (
+            "refinement.md must document auto-generated validation ACs"
         )
 
 
