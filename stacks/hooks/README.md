@@ -278,6 +278,19 @@ In addition to anti-pattern rules, the script supports external command checks v
 | `Bash(git commit*)` | Any git commit |
 | `Bash(git push*)` | Any git push |
 | `Bash(gh pr create*)` | PR creation |
+| `Bash(git checkout -b*)` | Branch creation |
+
+### Git Flow Enforcement Hooks
+
+These hooks prevent the most common Git Flow violations. They are **blocking** (exit 1 = action denied).
+
+| Hook | Matcher | What it blocks | Exception |
+|------|---------|---------------|-----------|
+| `pr-base-branch-guard` | `Bash(gh pr create*)` | PRs targeting `main` | Current branch is `release/*` |
+| `push-to-main-guard` | `Bash(git push*)` | Direct push to `main` | None |
+| `branch-origin-guard` | `Bash(git checkout -b*)` | Branching from `main` | None |
+
+These hooks read `$CLAUDE_TOOL_ARG_command` to inspect the command arguments before execution. If a violation is detected, the hook prints an error and exits 1, which blocks the action in Claude Code.
 
 ### PostToolUse (run after the action)
 | Matcher | Triggers on |

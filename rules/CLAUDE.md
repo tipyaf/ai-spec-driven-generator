@@ -261,6 +261,18 @@ develop → release branch → changelog + version bump + tag → PR targeting m
 | **`main` is read-only for agents** | Only release PRs merge into `main`. Agents NEVER push directly to `main`. |
 | **No cherry-picks between branches** | If something is missing, it means a release is needed — not a cherry-pick. |
 
+### Enforcement hooks (BLOCKING)
+
+These rules are enforced by Claude Code hooks in `settings.local.json` (see `stacks/hooks/settings-hooks-example.json`):
+
+| Hook | Blocks | Exception |
+|------|--------|-----------|
+| `pr-base-branch-guard` | `gh pr create --base main` | Current branch is `release/*` |
+| `push-to-main-guard` | `git push origin main` | None — main is read-only |
+| `branch-origin-guard` | `git checkout -b feat/X origin/main` | None — branch from `origin/develop` |
+
+If a hook blocks your action, do NOT bypass it. Fix the command to target the correct branch.
+
 ### Pre-flight check (before EVERY `gh pr create`)
 Before creating any PR, verify:
 1. `git log --oneline origin/develop..HEAD` — your commits are ahead of the integration branch

@@ -34,6 +34,36 @@
         ]
       },
       {
+        "_comment": "From hook-config.json > git_flow_enforcement[pr-base-branch-guard] — Block PRs targeting main unless release branch",
+        "matcher": "Bash(gh pr create*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); if echo \"$BRANCH\" | grep -q \"^release/\"; then echo \"✅ pr-base-branch-guard: release branch — main target allowed\"; exit 0; fi; ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"\\-\\-base[= ]main\"; then echo \"❌ pr-base-branch-guard: PRs MUST target develop, not main. Only release/* branches may target main.\"; exit 1; fi; if ! echo \"$ARGS\" | grep -q \"\\-\\-base\"; then echo \"❌ pr-base-branch-guard: --base flag missing. Use --base develop explicitly.\"; exit 1; fi; echo \"✅ pr-base-branch-guard: PR targets integration branch\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "_comment": "From hook-config.json > git_flow_enforcement[push-to-main-guard] — Block direct push to main",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"(origin|upstream)\\s+main|\\smain:|\\smain$\"; then echo \"❌ push-to-main-guard: Direct push to main is FORBIDDEN. Push to your feature branch and create a PR targeting develop.\"; exit 1; fi; echo \"✅ push-to-main-guard: not pushing to main\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "_comment": "From hook-config.json > git_flow_enforcement[branch-origin-guard] — Warn when branching from main",
+        "matcher": "Bash(git checkout -b*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"origin/main|\\smain$\"; then echo \"❌ branch-origin-guard: Feature branches must be created from origin/develop, not main.\"; exit 1; fi; echo \"✅ branch-origin-guard: branch origin OK\"; exit 0'"
+          }
+        ]
+      },
+      {
         "_comment": "From hook-config.json > anti_patterns.web_specific[hardcoded-colors] — only for web/fullstack projects",
         "matcher": "Bash(git commit*)",
         "hooks": [

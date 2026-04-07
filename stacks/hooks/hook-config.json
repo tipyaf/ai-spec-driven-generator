@@ -146,6 +146,33 @@
     "active": []
   },
 
+  "git_flow_enforcement": {
+    "description": "Prevents PRs targeting main and direct pushes to main. Only release/* branches may target main.",
+    "rules": [
+      {
+        "name": "pr-base-branch-guard",
+        "description": "Block gh pr create when --base is main (unless current branch is release/*)",
+        "trigger": "Bash(gh pr create*)",
+        "severity": "error",
+        "message": "PRs MUST target the integration branch (develop), not main. Only release branches may target main."
+      },
+      {
+        "name": "push-to-main-guard",
+        "description": "Block git push to main branch",
+        "trigger": "Bash(git push*)",
+        "severity": "error",
+        "message": "Direct push to main is forbidden. Push to your feature branch and create a PR targeting develop."
+      },
+      {
+        "name": "branch-origin-guard",
+        "description": "Block branch creation from main (should branch from develop)",
+        "trigger": "Bash(git checkout -b*)",
+        "severity": "error",
+        "message": "Feature branches must be created from origin/develop, not main."
+      }
+    ]
+  },
+
   "skip_dirs": ["node_modules", ".git", "__pycache__", ".venv", "venv", "dist", ".next", "build", "target"],
 
   "code_review": {
