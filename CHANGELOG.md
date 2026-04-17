@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.7] - 2026-04-17
+
+- fix(migration): rename space-separated agent names (Story Reviewer, Test Engineer)
+
+
 ## [5.0.6] - 2026-04-17
 
 ### Fixes (fourth dog-fooding pass)
