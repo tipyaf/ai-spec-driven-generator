@@ -25,14 +25,23 @@ from pathlib import Path
 
 # ── Agent rename map (v4 -> v5) ────────────────────────────────────────────
 
+# Agent rename map. Listed both lowercase (YAML values, paths) and Title-Case
+# (markdown table rows, prose) variants so v4 docs written in either style
+# get migrated. The capitalisation of the replacement mirrors the source.
 AGENT_RENAMES = {
-    "tester": "test-author",
-    "test-engineer": "test-author",
-    "reviewer": "code-reviewer",
-    "story-reviewer": "code-reviewer",
-    # "developer" and "spec-generator" are removed in v5 — we add a comment.
+    "tester":          "test-author",
+    "Tester":          "Test-Author",
+    "test-engineer":   "test-author",
+    "Test-Engineer":   "Test-Author",
+    "reviewer":        "code-reviewer",
+    "Reviewer":        "Code-Reviewer",
+    "story-reviewer":  "code-reviewer",
+    "Story-Reviewer":  "Code-Reviewer",
+    # "developer" / "Developer" is NOT auto-renamed — it's a common English
+    # word. A TODO comment is added instead (AGENT_REMOVE logic below).
+    # Same for "spec-generator" / "Spec-Generator".
 }
-AGENT_REMOVE = {"developer", "spec-generator"}
+AGENT_REMOVE = {"developer", "Developer", "spec-generator", "Spec-Generator"}
 
 # Any reference to "orchestrator" as an agent now points at scripts/orchestrator.py.
 # We do NOT rename the token itself (skills still invoke `orchestrator`) but we add
@@ -403,16 +412,23 @@ CLAUDE_MD_REPLACEMENTS = [
     (r"G1-G11", "G1–G14"),
     (r"G1–G11", "G1–G14"),
     # Agent renames — specific first, generic second, with lookbehind so we
-    # don't re-prefix already-renamed tokens.
+    # don't re-prefix already-renamed tokens. Capitalised variants are
+    # listed explicitly because mature v4 CLAUDE.md files use Title-Case
+    # in model catalogue tables ("| Tester | Opus | ... |").
     (r"\btest-engineer\b", "test-author"),
+    (r"\bTest-Engineer\b", "Test-Author"),
     (r"\btester\b", "test-author"),
+    (r"\bTester\b", "Test-Author"),
     (r"\bstory-reviewer\b", "code-reviewer"),
+    (r"\bStory-Reviewer\b", "Code-Reviewer"),
     # `reviewer` → `code-reviewer` but NOT when the word is already part of
     # "code-reviewer" (avoid "code-code-reviewer") or "peer-reviewer" etc.
-    (r"(?<!code-)(?<!peer-)(?<!story-)\breviewer\b(?!-agent)", "code-reviewer"),
+    (r"(?<!code-)(?<!Code-)(?<!peer-)(?<!Peer-)(?<!story-)(?<!Story-)\breviewer\b(?!-agent)", "code-reviewer"),
+    (r"(?<!Code-)(?<!Peer-)(?<!Story-)\bReviewer\b(?!-agent)", "Code-Reviewer"),
     # Removed agents — strip their references so nothing tries to dispatch them.
     (r"\bdeveloper\b(?=\s*(?:agent|,|\.|\n))", "builder"),
     (r"\bspec-generator\b", "refinement"),
+    (r"\bSpec-Generator\b", "Refinement"),
 ]
 
 CLAUDE_MD_V5_NOTE = """

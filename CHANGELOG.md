@@ -2,8 +2,25 @@
 
 ## [5.0.5] - 2026-04-17
 
-- fix(migration): surgical agent renames + project-named spec targeting
+### Fixes (third dog-fooding pass — one more bug on the 71-story monorepo)
 
+- **Agent renames now handle Title-Case tokens.** Mature v4 CLAUDE.md files
+  use Title Case in model catalogue tables (`| Tester | Opus | ... |`,
+  `| Reviewer | Audit quality |`). v5.0.4 regexes were lowercase-only
+  (`\btester\b`) and missed those rows. v5.0.5 adds explicit Title-Case
+  variants to both `AGENT_RENAMES` (agents subcommand) and
+  `CLAUDE_MD_REPLACEMENTS` (claude-md subcommand):
+    * Tester → Test-Author
+    * Test-Engineer → Test-Author
+    * Reviewer → Code-Reviewer (with same `(?<!Code-)(?<!Peer-)(?<!Story-)`
+      lookbehind as lowercase)
+    * Story-Reviewer → Code-Reviewer
+    * Spec-Generator → Refinement
+
+### Tests
+
+- 1 new regression test for Title-Case markdown tables. Framework
+  self-tests: **243/243 passing**.
 
 ## [5.0.4] - 2026-04-17
 

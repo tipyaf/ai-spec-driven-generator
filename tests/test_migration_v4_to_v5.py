@@ -282,6 +282,39 @@ def test_agent_rename_does_not_rewrite_arbitrary_prose(v4_project: Path):
     )
 
 
+def test_agent_rename_handles_capitalized_markdown_tables(v4_project: Path):
+    """v5.0.4 regression: mature v4 CLAUDE.md uses Title-Case agent names in
+    model catalogue tables (`| Tester | Opus | ... |`). The lowercase-only
+    pattern missed these. v5.0.5 adds explicit Title-Case variants so
+    tables like `| Reviewer | Write code |` become `| Code-Reviewer |
+    Write code |`."""
+    (v4_project / "CLAUDE.md").write_text(
+        "# Project\n\n"
+        "## Model catalogue\n"
+        "| Agent | Model | Why |\n"
+        "|-------|-------|-----|\n"
+        "| Tester | Opus | Writes failing tests |\n"
+        "| Reviewer | Opus | SOLID audit |\n"
+        "| Story-Reviewer | Sonnet | AC verification |\n"
+        "\n"
+        "Using SDD v4.1.1 framework.\n",
+        encoding="utf-8",
+    )
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+    claude = (v4_project / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "| Test-Author |" in claude, (
+        "Title-Case `| Tester |` in markdown table must be renamed"
+    )
+    assert "| Code-Reviewer |" in claude, (
+        "Title-Case `| Reviewer |` in markdown table must be renamed"
+    )
+    # Story-Reviewer → Code-Reviewer
+    assert "| Story-Reviewer |" not in claude, (
+        "Story-Reviewer must be renamed, not left in place"
+    )
+
+
 def test_spec_type_write_targets_project_named_spec(tmp_path: Path):
     """v5.0.3 regression: when `specs/` contains multiple root specs
     (e.g. main project + sub-epic), the script wrote `type:` to the first
