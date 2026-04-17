@@ -2,8 +2,16 @@
 
 ## [5.0.6] - 2026-04-17
 
-- fix(migration): handle Title-Case agent names in CLAUDE.md tables
+### Fixes (fourth dog-fooding pass)
 
+- **Space-separated agent names renamed too.** v4 docs interleave three
+  stylings for the same agent: `story-reviewer` (kebab), `Story-Reviewer`
+  (Title-Kebab), AND `Story Reviewer` (Title + space). v5.0.5 handled
+  the first two; v5.0.6 adds the space-separated variants:
+    * `Story Reviewer` / `story reviewer` → `Code-Reviewer` / `code-reviewer`
+    * `Test Engineer` / `test engineer` → `Test-Author` / `test-author`
+  Previously `| Story Reviewer | Audit |` in a table row produced
+  `| Story Code-Reviewer |` (the first word was left untouched).
 
 ## [5.0.5] - 2026-04-17
 

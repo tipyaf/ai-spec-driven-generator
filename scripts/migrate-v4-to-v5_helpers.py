@@ -421,6 +421,11 @@ CLAUDE_MD_REPLACEMENTS = [
     (r"\bTester\b", "Test-Author"),
     (r"\bstory-reviewer\b", "code-reviewer"),
     (r"\bStory-Reviewer\b", "Code-Reviewer"),
+    # Space-separated variants (common in prose and table rows).
+    (r"\bStory Reviewer\b", "Code-Reviewer"),
+    (r"\bstory reviewer\b", "code-reviewer"),
+    (r"\bTest Engineer\b", "Test-Author"),
+    (r"\btest engineer\b", "test-author"),
     # `reviewer` → `code-reviewer` but NOT when the word is already part of
     # "code-reviewer" (avoid "code-code-reviewer") or "peer-reviewer" etc.
     (r"(?<!code-)(?<!Code-)(?<!peer-)(?<!Peer-)(?<!story-)(?<!Story-)\breviewer\b(?!-agent)", "code-reviewer"),
