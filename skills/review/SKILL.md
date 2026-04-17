@@ -1,65 +1,63 @@
 ---
 name: review
-description: Review code quality, security, and test coverage for all validated features before PR. Use when all features are validated and ready for final review.
+description: Read-only diagnostic — replays all applicable gates on a story or the entire branch. Produces a PASS/FAIL verdict with evidence but NEVER creates a PR or pushes. Use freely at any time for audit.
 ---
 
-## Phase guard — verify before proceeding
+# /review
 
-**Prerequisites** (check filesystem):
-1. `specs/feature-tracker.yaml` must exist
-2. ALL features in the tracker must have `status: validated`
-   - If ANY feature has a different status → Tell user which features are not ready
-   - Suggest `/build` or `/validate` for incomplete features
+## Usage
+/review [--story <story-id> | --all]
 
-**If prerequisites are not met** → Tell user: "Some features still need validation" → list them with status
+## What it does
 
-## Setup — Read these files before starting
+Runs the full gate chain (G1 → G14 applicable to the project type) in **read-only** mode. Every check that `/build` and `/ship` would perform is replayed, but no state transition is written beyond a diagnostic report. `/review` NEVER pushes and NEVER creates a PR — that is reserved for `/ship`.
 
-1. Read `agents/reviewer.md` (core instructions)
-2. Read `agents/security.md` (core instructions)
-3. Read `agents/tester.md` (core instructions — for test quality check)
-4. Read `specs/feature-tracker.yaml` (verify all validated)
-5. Read ALL `specs/stories/*.yaml` files (all build contracts)
+Use `/review` to:
+- Audit a story after manual tweaks without changing its tracker status.
+- Confirm the whole branch is green before calling `/ship`.
+- Investigate a failure without incrementing the cycles counter.
 
-Only read `.ref.md` files if you need detailed checklists or report templates.
+## How it works
 
-## Two review modes
+1. Parse args: `--story <id>` for per-story audit, `--all` for branch-wide replay.
+2. Invoke `python3 scripts/orchestrator.py --mode review` with the same flag.
+3. The orchestrator:
+   - Runs tamper detection on git history.
+   - For each in-scope story: replays every gate from the active project-type YAML.
+   - Aggregates results and writes a diagnostic report to `_work/build/review-<timestamp>.yaml`.
+4. Relay the PASS/FAIL verdict with per-gate evidence.
 
-This skill covers two distinct review types:
+## Arguments
 
-### Story review (per-story, runs after each build)
-- Dispatches `agents/story-reviewer.md`
-- Runs immediately after a single story's build completes
-- Verifies every AC in that story's file one by one
-- Posts a structured PASS/FAIL verdict per AC
-- Does NOT look at other stories or cross-feature concerns
+| Arg | Required | Description |
+|---|---|---|
+| `--story <id>` | One of | Audit a single story. |
+| `--all` | One of | Audit every story on the current branch. |
 
-### Code review (all features, runs at end)
-- Dispatches `agents/reviewer.md`
-- Runs when ALL features are validated and ready for PR
-- Reviews all changes together for cross-cutting concerns
-- Covers code quality, security, architecture, and test quality
+If neither is provided, default to `--all`.
 
-## Workflow (Code review — full)
+## Flags
 
-1. Read the git diff or PR changes
-2. **Pass 1 — KISS & Readability**: function length, nesting, naming, dead code, duplication
-3. **Pass 2 — Static Analysis**: linting, type checking, formatting, anti-patterns
-4. **Pass 3 — Safety & Correctness**: secrets, error handling, input validation, SQL safety
-5. **Pass 4 — Anti-patterns check**: read `anti_patterns` from stack profiles (`stacks/*.md`), grep for violations in changed files
-6. Run security audit (OWASP Top 10, auth, secrets, dependencies)
-7. Verify test quality (no mock-soup, real integration tests, forbidden patterns)
-8. **MSW contract validation**: if the project uses MSW (Mock Service Worker), verify that mock handlers match the actual API contracts defined in the spec
-9. **Verify ALL ACs across ALL stories**: re-run every `verify:` command from every story file
-10. Produce structured PASS/FAIL report
-11. If FAIL → return issues to developer with file:line references → suggest `/build` to fix
+| Flag | Description |
+|---|---|
+| `--story <id>` | Target a single story. |
+| `--all` | Target the full branch. |
 
-## Next step — ALWAYS tell the user
+## Exit conditions
 
-After `/review` completes, ALWAYS end your response with one of:
+- **Success** (0): every audited gate passed.
+- **Failure** (1): at least one gate failed. Dev inspects report and decides whether to run `/build`, `/validate`, or manual fixes.
+- **Config error** (3): missing spec / stack / manifest.
 
-**If PASS:**
-> **Next step:** All features passed review. The project is ready for deployment. Create a release PR when you're ready, or run `/scan-full` for a final SonarQube audit.
+Escalation is not triggered by `/review` — read-only mode does not consume cycles.
 
-**If FAIL:**
-> **Next step:** Review found [N] issues. Run `/build [feature]` to fix the flagged issues, then `/review` again.
+## Files read / written
+
+- Reads: every artefact `/build` reads plus `_work/build/sc-*.yaml` for cached gate results.
+- Writes: `_work/build/review-<timestamp>.yaml` diagnostic report only. No tracker updates.
+
+## Related
+
+- `/build` — run the pipeline and actually change state.
+- `/ship` — gate-of-last-resort; calls `/review` internally before creating the PR.
+- `/status` — passive dashboard view (no gate execution).

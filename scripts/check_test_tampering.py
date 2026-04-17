@@ -26,10 +26,22 @@ Exit code: 0 = pass, 1 = tampering detected
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from ui_messages import fail as ui_fail, success as ui_success, warn as ui_warn  # noqa: E402
+except Exception:  # pragma: no cover
+    def ui_fail(gate, reason, fix="", **_):
+        print(f"[FAIL {gate}] {reason} :: fix: {fix}")
+    def ui_success(gate, reason, **_):
+        print(f"[PASS {gate}] {reason}")
+    def ui_warn(text, **_):
+        print(f"[WARN] {text}")
 
 RED_C = "\033[0;31m"
 GREEN_C = "\033[0;32m"
@@ -38,6 +50,42 @@ NC = "\033[0m"
 
 violations: list[str] = []
 warnings: list[str] = []
+
+
+# --- AST diff (v5) -------------------------------------------------------
+# The v4 approach counted assert statements textually. That missed a
+# narrow-but-critical case: if the builder REMOVED one assertion but ADDED
+# two new ones, the count increased and the tamper was hidden.
+#
+# AST diff identifies each assertion by its structural "signature" (a
+# pre-order dump of the ast.Assert node) and checks set-difference between
+# RED and GREEN. Any signature in RED but not in GREEN is a removed
+# assertion — even if GREEN added 100 new assertions.
+
+
+def _assert_signatures(content: str) -> set[str]:
+    """Return the set of AST-dump signatures for every Assert in `content`."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return set()
+    signatures: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assert):
+            try:
+                dumped = ast.dump(node.test, annotate_fields=False)
+            except Exception:
+                dumped = repr(node.test)
+            signatures.add(dumped)
+    return signatures
+
+
+def diff_assertions_ast(red_content: str, green_content: str) -> list[str]:
+    """Return list of assertion signatures present in RED but missing from GREEN."""
+    red_sigs = _assert_signatures(red_content)
+    green_sigs = _assert_signatures(green_content)
+    removed = red_sigs - green_sigs
+    return sorted(removed)
 
 
 def find_project_root() -> Path:
@@ -182,17 +230,26 @@ def check_file_tampering(
             f"Builder must not delete tests. If a test is wrong, fix it with a comment."
         )
 
-    # Check 2: Assert statements removed (net count) -- now a VIOLATION, not warning
-    red_asserts = extract_assertions(red_content, is_python)
-    green_asserts = extract_assertions(green_content, is_python)
-
-    if len(green_asserts) < len(red_asserts):
-        removed_count = len(red_asserts) - len(green_asserts)
-        violations.append(
-            f"{filepath}: {removed_count} assertion(s) REMOVED (RED had {len(red_asserts)}, "
-            f"GREEN has {len(green_asserts)}). Builder must not remove assertions. "
-            f"Fix the code to satisfy the assertions, not the other way around."
-        )
+    # Check 2: Assert statements removed (v5 AST diff — not just count).
+    # Any assertion whose AST signature exists in RED but not in GREEN is a
+    # violation, even if the builder added dozens of new assertions.
+    if is_python:
+        removed_sigs = diff_assertions_ast(red_content, green_content)
+        if removed_sigs:
+            violations.append(
+                f"{filepath}: {len(removed_sigs)} assertion(s) REMOVED by AST diff. "
+                f"Examples: {removed_sigs[:2]}. Builder must not remove assertions; "
+                f"adding new ones does not excuse removing old ones."
+            )
+    else:
+        red_asserts = extract_assertions(red_content, is_python)
+        green_asserts = extract_assertions(green_content, is_python)
+        if len(green_asserts) < len(red_asserts):
+            removed_count = len(red_asserts) - len(green_asserts)
+            violations.append(
+                f"{filepath}: {removed_count} assertion(s) REMOVED (RED had {len(red_asserts)}, "
+                f"GREEN has {len(green_asserts)}). Builder must not remove assertions."
+            )
 
     # Check 2b: Assertion weakening -- strong assertions replaced with weak ones
     if is_python:
@@ -281,17 +338,80 @@ def update_build_file(
     build_file.write_text(content)
 
 
+def _scan_branch(project_root: Path) -> int:
+    """Walk every pair of (test-touching) commits on the branch and AST-diff.
+
+    This is what the orchestrator runs at pre-flight. It catches a builder
+    that committed a RED test then quietly removed assertions in a later
+    commit — a bypass that would pass the v4 'staged vs HEAD' check.
+    """
+    try:
+        base = subprocess.run(
+            ["git", "merge-base", "origin/main", "HEAD"],
+            capture_output=True, text=True, cwd=project_root, timeout=10,
+        ).stdout.strip() or "HEAD~20"
+        shas = subprocess.run(
+            ["git", "log", f"{base}..HEAD", "--format=%H", "--reverse"],
+            capture_output=True, text=True, cwd=project_root, timeout=20,
+        ).stdout.strip().splitlines()
+    except Exception as exc:
+        ui_warn(f"--scan-branch: could not inspect git log ({exc})")
+        return 0
+    if len(shas) < 2:
+        ui_success("tamper", "--scan-branch: fewer than 2 commits, nothing to diff")
+        return 0
+    issues = []
+    # Walk consecutive commit pairs. For each commit that touches a test
+    # file, diff assertions vs the previous revision of the same file.
+    for i in range(1, len(shas)):
+        prev_sha, cur_sha = shas[i - 1], shas[i]
+        files = subprocess.run(
+            ["git", "show", "--name-only", "--format=", cur_sha],
+            capture_output=True, text=True, cwd=project_root, timeout=10,
+        ).stdout.strip().splitlines()
+        for f in files:
+            if not f.endswith(".py"):
+                continue
+            if "test_" not in f and "_test" not in f:
+                continue
+            prev_content = get_file_at_commit(f, prev_sha, project_root) or ""
+            cur_content = get_file_at_commit(f, cur_sha, project_root) or ""
+            if not prev_content or not cur_content:
+                continue
+            removed = diff_assertions_ast(prev_content, cur_content)
+            if removed:
+                issues.append(f"{cur_sha[:8]} {f}: removed {len(removed)} assert(s)")
+    if issues:
+        for i in issues:
+            ui_fail("tamper", i, fix="restore the missing assertion or justify with a RESTORED: comment")
+        return 1
+    ui_success("tamper", "--scan-branch: no assertion removals across branch commits")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
         description="Check test tampering between RED and GREEN"
     )
-    parser.add_argument("--story", required=True, type=str, help="Story ID")
+    parser.add_argument("--story", required=False, type=str, help="Story ID")
     parser.add_argument("--red-commit", type=str, help="Override RED commit SHA")
     parser.add_argument("--green-commit", type=str, help="Override GREEN commit SHA")
     parser.add_argument(
         "--test-cmd", type=str, help="Explicit test command to verify GREEN phase"
     )
+    parser.add_argument(
+        "--scan-branch", action="store_true",
+        help="Orchestrator mode: AST-diff every test file across main..HEAD commits",
+    )
     args = parser.parse_args()
+
+    if args.scan_branch:
+        return _scan_branch(find_project_root())
+
+    if not args.story:
+        ui_fail("tamper", "--story is required unless --scan-branch is used",
+                fix="pass --story <id> or --scan-branch")
+        return 2
 
     # Bypass: "chore: cleanup" commits are legitimate test removals (e.g. after re-refinement)
     project_root = find_project_root()

@@ -1,10 +1,10 @@
 {
-  "_comment": "GENERATED EXAMPLE — These hooks are derived from hook-config.json patterns. Do not hardcode patterns here; update hook-config.json and regenerate. This example shows a TypeScript/React web project, but the same config can generate hooks for any language.",
+  "_comment": "SDD v5 hooks. Les hooks git donnent du feedback rapide mais l'orchestrateur est la source de vérité — toutes ces vérifications sont rejouées à /build, /validate, /review, /ship. Les hooks --no-verify ne compromettent pas la qualité finale, juste la vélocité du feedback.",
 
   "hooks": {
     "PreToolUse": [
       {
-        "_comment": "From hook-config.json > anti_patterns.rules[debug-artifacts] — filter adapted to project language",
+        "_comment": "G1 security: block debug artifacts before committing",
         "matcher": "Bash(git commit*)",
         "hooks": [
           {
@@ -14,7 +14,7 @@
         ]
       },
       {
-        "_comment": "From hook-config.json > anti_patterns.rules[incomplete-code]",
+        "_comment": "G1 security: block incomplete code markers",
         "matcher": "Bash(git commit*)",
         "hooks": [
           {
@@ -24,7 +24,7 @@
         ]
       },
       {
-        "_comment": "From hook-config.json > anti_patterns.rules[hardcoded-secrets]",
+        "_comment": "G1 security: block hardcoded secrets",
         "matcher": "Bash(git commit*)",
         "hooks": [
           {
@@ -34,59 +34,119 @@
         ]
       },
       {
-        "_comment": "From hook-config.json > git_flow_enforcement[pr-base-branch-guard] — Block PRs targeting main unless release branch",
-        "matcher": "Bash(gh pr create*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); if echo \"$BRANCH\" | grep -q \"^release/\"; then echo \"✅ pr-base-branch-guard: release branch — main target allowed\"; exit 0; fi; ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"\\-\\-base[= ]main\"; then echo \"❌ pr-base-branch-guard: PRs MUST target develop, not main. Only release/* branches may target main.\"; exit 1; fi; if ! echo \"$ARGS\" | grep -q \"\\-\\-base\"; then echo \"❌ pr-base-branch-guard: --base flag missing. Use --base develop explicitly.\"; exit 1; fi; echo \"✅ pr-base-branch-guard: PR targets integration branch\"; exit 0'"
-          }
-        ]
-      },
-      {
-        "_comment": "From hook-config.json > git_flow_enforcement[push-to-main-guard] — Block direct push to main",
-        "matcher": "Bash(git push*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"(origin|upstream)\\s+main|\\smain:|\\smain$\"; then echo \"❌ push-to-main-guard: Direct push to main is FORBIDDEN. Push to your feature branch and create a PR targeting develop.\"; exit 1; fi; echo \"✅ push-to-main-guard: not pushing to main\"; exit 0'"
-          }
-        ]
-      },
-      {
-        "_comment": "From hook-config.json > git_flow_enforcement[branch-origin-guard] — Warn when branching from main",
-        "matcher": "Bash(git checkout -b*)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"origin/main|\\smain$\"; then echo \"❌ branch-origin-guard: Feature branches must be created from origin/develop, not main.\"; exit 1; fi; echo \"✅ branch-origin-guard: branch origin OK\"; exit 0'"
-          }
-        ]
-      },
-      {
-        "_comment": "From hook-config.json > anti_patterns.web_specific[hardcoded-colors] — only for web/fullstack projects",
+        "_comment": "Pre-commit: atomic story commit check (check_story_commits.py)",
         "matcher": "Bash(git commit*)",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILES=$(git diff --cached --name-only -- \"*.tsx\" \"*.jsx\" \"*.vue\" \"*.svelte\" | head -50); if [ -n \"$FILES\" ]; then FOUND=$(echo \"$FILES\" | xargs grep -l \"blue-[0-9]\\|red-[0-9]\\|green-[0-9]\\|yellow-[0-9]\\|gray-[0-9]\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"❌ hardcoded-colors: Use CSS variables / design tokens instead of hardcoded color classes\"; echo \"$FOUND\"; exit 1; fi; fi; echo \"✅ hardcoded-colors: clean\"; exit 0'"
+            "command": "python3 scripts/check_story_commits.py"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-commit: ORACLE comment evaluation (check_oracle_assertions.py) — v5 evaluates the math, not just presence",
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_oracle_assertions.py"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-commit: Design System conformity (check_ds_conformity.py) — UI files only",
+        "matcher": "Bash(git commit*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_ds_conformity.py"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-push: TDD order (check_tdd_order.py --scan-branch)",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_tdd_order.py --scan-branch"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-push: test tampering AST diff across branch (check_test_tampering.py --scan-branch)",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_test_tampering.py --scan-branch"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-push: story-commit scan across branch (check_story_commits.py --scan-branch)",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_story_commits.py --scan-branch"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-push: RED phase trivia scan across branch",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 scripts/check_red_phase.py --scan-branch"
+          }
+        ]
+      },
+      {
+        "_comment": "Pre-push: Git Flow — block PRs targeting main unless from release/*",
+        "matcher": "Bash(gh pr create*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'BRANCH=$(git rev-parse --abbrev-ref HEAD 2>/dev/null); if echo \"$BRANCH\" | grep -q \"^release/\"; then echo \"✅ pr-base-branch-guard: release branch — main target allowed\"; exit 0; fi; ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"\\-\\-base[= ]main\"; then echo \"❌ pr-base-branch-guard: PRs MUST target develop, not main.\"; exit 1; fi; if ! echo \"$ARGS\" | grep -q \"\\-\\-base\"; then echo \"❌ pr-base-branch-guard: --base flag missing. Use --base develop explicitly.\"; exit 1; fi; echo \"✅ pr-base-branch-guard: PR targets integration branch\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "_comment": "Git Flow: block direct push to main",
+        "matcher": "Bash(git push*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"(origin|upstream)\\s+main|\\smain:|\\smain$\"; then echo \"❌ push-to-main-guard: Direct push to main is FORBIDDEN.\"; exit 1; fi; echo \"✅ push-to-main-guard: not pushing to main\"; exit 0'"
+          }
+        ]
+      },
+      {
+        "_comment": "Git Flow: warn when branching from main",
+        "matcher": "Bash(git checkout -b*)",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash -c 'ARGS=\"$CLAUDE_TOOL_ARG_command\"; if echo \"$ARGS\" | grep -qE \"origin/main|\\smain$\"; then echo \"❌ branch-origin-guard: Feature branches must be created from origin/develop.\"; exit 1; fi; echo \"✅ branch-origin-guard: branch origin OK\"; exit 0'"
           }
         ]
       }
     ],
     "PostToolUse": [
       {
-        "_comment": "From hook-config.json > hook_commands.post_edit — applied to component files",
+        "_comment": "Post-edit feedback: DS hardcoded colors on tsx files",
         "matcher": "Edit(*.tsx)",
         "hooks": [
           {
             "type": "command",
-            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_file_path\"; if [ -n \"$FILE\" ] && [ -f \"$FILE\" ]; then FOUND=$(grep -n \"blue-[0-9]\\|red-[0-9]\\|green-[0-9]\\|yellow-[0-9]\\|gray-[0-9]\" \"$FILE\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"⚠️ hardcoded-colors: Use CSS variables / design tokens instead of hardcoded color classes\"; echo \"$FOUND\"; exit 1; fi; fi; exit 0'"
+            "command": "bash -c 'FILE=\"$CLAUDE_TOOL_ARG_file_path\"; if [ -n \"$FILE\" ] && [ -f \"$FILE\" ]; then FOUND=$(grep -n \"blue-[0-9]\\|red-[0-9]\\|green-[0-9]\\|yellow-[0-9]\\|gray-[0-9]\" \"$FILE\" 2>/dev/null); if [ -n \"$FOUND\" ]; then echo \"⚠️ hardcoded-colors: Use DS tokens instead of hardcoded color classes\"; echo \"$FOUND\"; exit 1; fi; fi; exit 0'"
           }
         ]
       },
       {
-        "_comment": "From hook-config.json > anti_patterns.rules[debug-artifacts] — post-edit check",
+        "_comment": "Post-edit feedback: debug artifacts in python files",
         "matcher": "Write(*.py)",
         "hooks": [
           {

@@ -1,46 +1,62 @@
-# ai-spec-driven-generator
+# ai-spec-driven-generator — v5
 
-An AI framework that generates production-ready code from structured YAML specs. 19 specialized agents, 10 skills, 10 enforcement scripts, 11 quality gates. Works with **Claude Code** and **Cursor**.
+An AI framework that generates production-ready code from structured YAML
+specs. **18 specialised agents, 20 enforcement scripts, adaptive gates G1–G14,
+4 stack plugins built-in** (and custom stacks via plugin system). Works with
+**Claude Code** and **Cursor**.
+
+v5 ships **3 project-type implementations** (`web-ui`, `web-api`, `cli`) out of
+the 7 declared (`library`, `ml-pipeline`, `mobile`, `embedded` land in v5.x).
+The framework core stays Python + YAML; stack-awareness lives in the project.
 
 ## How it works
 
 ```
-/spec       Human defines the product (constitution, scoping, UX, architecture)
-     ↓
-/refine     Break each feature into stories with verify: commands + test_intentions
-            (Trigger A: formulas with oracle math, Trigger C: UI rendering assertions)
-            + wireframe gate (UI projects): HTML wireframes with data-testid → WCAG validation
-     ↓
-/build      TDD pipeline per story:
-            RED (test-engineer writes failing tests → quality scan → review)
-          → GREEN (builder makes them pass → compilation)
-          → 11 quality gates (all must pass to reach "validated"):
-              Gate  1: Security          — OWASP + stack forbidden patterns
-              Gate  2: Unit Tests        — execute unit tests
-              Gate  3: Code Quality      — tool or reviewer fallback (NEVER skipped)
-              Gate  4: E2E Code          — E2E from wireframes with data-testid (UI only)
-              Gate  5: WCAG + Wireframes — accessibility + wireframe conformity (UI only)
-              Gate  6: E2E Execution     — run E2E suite (UI only)
-              Gate  7: E2E vs Wireframes — validate E2E results vs wireframes (UI only)
-              Gate  8: AC Validation     — execute every verify: command
-              Gate  9: Story Review      — story-reviewer verifies every AC
-              Gate 10: Code Review       — quality + scope + 0 console errors
-              Gate 11: Final Compilation — re-compile to confirm fixes
-          → ALL PASS? atomic commit + auto PR/MR
-          → FAIL? fix + re-validate (max 3 cycles, then escalate to human)
-     ↓
-/review     Final cross-feature review (all features must be validated)
-     ↓
-Deploy + Release (human decision)
+/spec    Human defines the product (constitution, scope, UX, architecture)
+    ↓
+/refine  Break each feature into stories with verify: + test_intentions
+         (+ wireframes with data-testid for web-ui/mobile)
+    ↓
+/build   Orchestrator auto-dispatches the builder, runs TDD RED → GREEN,
+         then every applicable gate (adaptive per spec.type):
+
+            Core gates (all types)
+              G1    Security (OWASP + AC-SEC + deps)
+              G2    Unit tests (3 runs, 0 flakiness)
+              G2.1  Mutation testing ≥ 80% on changed files
+              G2.2  Regression suite (all prior stories)
+              G2.3  Contract diff (API / AST / DB / CLI)
+              G3    Code quality (tool mandatory)
+              G4    Build final (artefact)
+              G4.1  Smoke boot (app actually starts)
+              G5    AC validation (Tier 1 mechanical)
+              G6    Story review (AC Tier 2/3 ↔ diff)
+              G7    Code review (scope, SOLID, 0 console errors)
+              G8    Integration cross-stories (if touches validated module)
+
+            Conditional gates (per spec.type)
+              G9.1–G9.6  web-ui / mobile  — DS, wireframe, visual,
+                                           interaction, a11y, behavioural
+              G10        All (opt-in lib) — perf budget + baseline
+              G11        web-api / web-ui / ml-pipeline — observability
+              G12        web-api / web-ui — DAST-lite
+              G13        If migration — rollback + data preserved
+              G14        At /ship — release readiness
+
+         → ALL PASS: status = validated
+         → FAIL: cycle ≤ 3, then status = escalated (requires /resume)
+    ↓
+/ship    Single exit: runs /review on the full branch; on PASS
+         push + gh pr create with tag `sdd-validated-v5`.
 ```
 
 ## Principles
 
 | Principle | Rule |
 |-----------|------|
-| **Agnostic** | Works with any language, any project type. Web, API, CLI, mobile, data pipeline, ML, embedded. Agents adapt based on `spec.type`. |
-| **Autonomous** | Humans decide (product, UX, architecture, deploy). Machines verify (tests, review, security). Auto-proceed when gates pass, escalate after 3 failures. |
-| **Accompaniment** | Guides the user at every step. Informs of each gate result in real-time. Each phase ends with a clear "Next step" when manual action is required. Never leaves the user without guidance. Responds in the user's language. |
+| **Agnostic** | Core stays Python + YAML. Projects extend with stack plugins (`_work/stacks/`). 4 stacks built-in (`python-fastapi`, `typescript-react`, `postgres`, `nodejs-express`); community-extensible via `stacks/CUSTOM_STACK_GUIDE.md`. Honest framing: agnostic where it counts, opinionated where it must be. |
+| **Autonomous** | Humans decide (product, UX, architecture, deploy). Machines verify. Escalation after 3 cycles is **blocking** — only `/resume <story-id> "reason"` unblocks. Bypass detection via AST diff between commits. |
+| **Accompaniment** | `/help [command]`, `/status`, `/next`, `/resume` keep the user informed. Unified messages via `scripts/ui_messages.py`. Never leaves the user without a next step. Responds in the user's language. |
 
 ## Quick start
 
@@ -52,177 +68,212 @@ cd ai-spec-driven-generator
 ./scripts/init-project.sh my-project /path/to/workspace
 ```
 
-Creates: git submodule, `CLAUDE.md`, `_work/` directories, skills symlinks, hook config.
+Creates: git submodule, `CLAUDE.md` (from v5 template), `_work/` directories,
+skills symlinks, hook config.
 
 ### 2. Open in Claude Code or Cursor
 
-The AI reads `CLAUDE.md` and follows the framework workflow automatically.
+The AI reads `CLAUDE.md` and follows the workflow automatically.
 
 ### 3. Build
 
 ```
+/next                        # Tape ça en arrivant le matin — le framework te dit quoi faire
 /spec                        # Define your project
 /refine candidate-profile    # Break a feature into stories
-/build candidate-profile     # TDD pipeline + 11 quality gates
-/validate candidate-profile  # Re-run verify: commands independently
-/review                      # Final review before PR
+/build sc-0012               # TDD RED → GREEN + gates (single auto-dispatched /build)
+/ship sc-0012                # Run /review on the branch; on PASS push + open PR
 ```
 
 Additional skills:
 
 ```
-/ux candidate-profile        # UX design (spec + YAML + HTML prototype)
-/scan                        # SonarQube — local changes only
-/scan-full                   # SonarQube — full repo + hotspots
-/sonar                       # SonarQube — status dashboard
-/migrate                     # Migrate v3.x project to v4.0
+/ux candidate-profile          # UX design (IA, flows, wireframes, DS tokens)
+/validate sc-0012              # Audit-only rerun of gates (read-only)
+/review [story-id|--all]       # Read-only audit — no PR, just verdict
+/scan [--full] [--report]      # SonarQube / semgrep / eslint scan
+/status [story-id]             # Dashboard view
+/help [command]                # Contextual help
+/resume sc-0012 "reason..."    # Unlock an escalated/tampered story
+/migrate [--to VERSION]        # Run migration scripts (v4 → v5)
 ```
 
-### 4. Configure SonarQube (optional)
+**Framework works without CI/CD.** For a tiers-belt: `scripts/generate-ci.sh`
+emits a GitHub Actions or GitLab CI workflow that invokes `orchestrator.py`.
 
-```bash
-cp framework/stacks/hooks/.env.example .env
-```
+## Le contrat `/ship`
 
-```env
-SONAR_TOKEN=squ_your_token_here
-SONAR_HOST_URL=http://localhost:9000
-SONAR_PROJECT_KEY=your-project-key
-```
+> **Tant que `/ship <story-id>` n'émet pas "PR CREATED" avec le tag
+> `sdd-validated-v5`, le code n'a pas le droit de quitter la machine du dev.**
 
-`.env` is gitignored. Each project can have its own config. Falls back to shell env vars (`~/.zshrc`).
+`/ship` est la seule porte de sortie. Le dev ne lance jamais `gh pr create`
+manuellement. `/ship` invoque `/review` (toutes les gates applicables rejouées
+sur la branche complète) ; si PASS, push + PR créée par l'agent
+`release-manager` avec titre, description, evidence `_work/build/<id>.yaml`,
+et tag `sdd-validated-v5`. Une PR créée à la main n'a pas le tag — et est
+rejetée en review humaine.
 
-> Full guide: [`_docs/sonarqube.md`](_docs/sonarqube.md)
+La chaîne d'assurance pré-PR compte **9 maillons** (§7 de
+`_docs/PIPELINE.md`) : tests passent · tests testent vraiment (mutation) ·
+build compile · app démarre · régression prior-stories · contrats
+inter-modules · ACs satisfaits · code propre/sûr/observable/performant · PR
+prête.
 
-### 5. Update the framework
+## Quality gates (G1–G14)
 
-```bash
-cd my-project
-git submodule update --remote framework
-```
+| Gate | Name | Applies to | Blocks on |
+|---|---|---|---|
+| G1 | Security | All | OWASP patterns, AC-SEC fail, dep vulns |
+| G2 | Unit tests | All | Fail, coverage < threshold, flakiness |
+| G2.1 | Mutation testing | All | Score < 80% on changed files |
+| G2.2 | Regression suite | All | Prior-story test fails |
+| G2.3 | Contract diff | All (API/lib/DB/CLI) | Breaking change undeclared |
+| G3 | Code quality | All | Tool violation or no tool configured |
+| G4 | Build final | All | Build error, type error |
+| G4.1 | Smoke boot | All | App fails to start / respond |
+| G5 | AC validation | All | Tier-1 `verify:` command fails |
+| G6 | Story review (AC ↔ code) | All | AC Tier 2/3 not implemented |
+| G7 | Code review | All | Scope, console errors, SOLID |
+| G8 | Integration cross-stories | If touches validated module | Contract break inter-module |
+| G9.1 | Design System | web-ui, mobile | Hardcoded token, unauthorised component |
+| G9.2 | Wireframe conformity | web-ui, mobile | `data-testid` missing, hierarchy mismatch |
+| G9.3 | Visual regression | web-ui, mobile | Pixel diff > threshold on 3 viewports |
+| G9.4 | Interaction verification | web-ui, mobile | `interactions:` expected ≠ actual |
+| G9.5 | Accessibility (WCAG) | web-ui, mobile | axe AA violation, keyboard trap |
+| G9.6 | Behavioral regression | web-ui, mobile | Prior-story `interactions:` broken |
+| G10 | Performance | All (opt-in for library) | > 5% regression vs baseline |
+| G11 | Observability | web-api, web-ui, ml-pipeline | Ratio logs/metrics/traces below min |
+| G12 | Runtime security / DAST | web-api, web-ui | Fuzz + OWASP ZAP-lite violations |
+| G13 | Migration safety | If migration | Rollback KO, data loss, seed not preserved |
+| G14 | Release readiness | At `/ship` | CHANGELOG / VERSION / tags incoherent |
 
-## What's enforced
+## TDD enforcement (machine, not honor)
 
-### Quality gates (per story, sequential — all 11 must pass)
+The orchestrator (`scripts/orchestrator.py`) is the source of truth. Git hooks
+are feedback-only. `--no-verify` or weakened assertions are caught at the next
+orchestrator pass via AST diff between commits → story moves to `tampered`,
+only `/resume` unblocks.
 
-| Gate | What it checks | Blocks on |
-|------|---------------|-----------|
-| 1. Security | OWASP patterns, AC-SEC-* verify commands | Any violation |
-| 2. Unit Tests | Execute unit tests (test command from stack profile) | Any failure |
-| 3. Code Quality | Tool (SonarQube/other) or reviewer 3-pass fallback — **NEVER skipped** | Issues found |
-| 4. E2E Code | Write E2E tests from wireframes with `data-testid` selectors | UI only |
-| 5. WCAG + Wireframes | WCAG 2.1 AA audit + wireframe conformity | UI only |
-| 6. E2E Execution | Run E2E test suite | UI only |
-| 7. E2E vs Wireframes | Validate E2E results match wireframe expectations | UI only |
-| 8. AC Validation | Every `verify:` command from story file | Any command fails |
-| 9. Story Review | Story-reviewer verifies every AC against code | Any AC fails |
-| 10. Code Review | Quality, scope, 0 console errors/stacktraces | Issues found |
-| 11. Final Compilation | Re-compile to confirm fixes haven't broken the build | Compilation error |
+**20 scripts** in `scripts/`. 6 refactored in v5 (AST):
 
-### TDD enforcement (machine, not honor)
-
-| Script | When | Blocks on |
+| Script | Gate | Blocks on |
 |--------|------|-----------|
-| `check_red_phase.py` | After RED | Tests pass, trivial failures, no production imports |
-| `check_test_intentions.py` | After RED | Spec intentions without matching tests (supports `--require-ui-intentions` for Trigger C) |
-| `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests |
-| `check_msw_contracts.py` | After RED | MSW handlers using wrong field names |
-| `check_tdd_order.py` | After GREEN | Code committed before tests |
-| `check_test_tampering.py` | After GREEN | Deleted tests, weakened assertions |
+| `check_red_phase.py` | After RED | Trivial failures, no real production import |
+| `check_test_intentions.py` | After RED | Spec intentions without matching tests (embedding similarity, fallback regex) |
+| `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests (AST, f-strings, dynamic routes) |
+| `check_msw_contracts.py` | After RED | MSW vs backend field names (Pydantic heritage chain resolved) |
+| `check_test_tampering.py` | After GREEN | AST diff — any assertion removed |
+| `check_oracle_assertions.py` | G1, pre-commit | Parses and evaluates `# ORACLE:` expression in sandbox |
 
-### Pre-commit checks
+Plus `check_tdd_order.py`, `check_story_commits.py`, `check_test_quality.py`,
+`check_write_coverage.py` (retained) and 10 new scripts for G8–G14 and G9.x.
+Full list: `_docs/PIPELINE.md §5`.
 
-| Script | Blocks on |
-|--------|-----------|
-| `check_test_quality.py` | `.skip()`, mock-soup, fixture-only tests, weak assertions (Rule 2b banlist) |
-| `check_oracle_assertions.py` | Numeric assertions without ORACLE math proof |
-| `check_write_coverage.py` | Tables with readers but no tested writers |
-| `check_story_commits.py` | Production code staged without story file/manifest/tracker |
+## Agents (18)
 
-### Additional enforcement
+| Agent | Role | Model | Changed from v4 |
+|---|---|---|---|
+| product-owner | Scoping, spec YAML, constitution | Opus | — |
+| ux-ui | Wireframes, flows, DS tokens | Sonnet | — |
+| architect | Architecture, manifest, component inventory | Opus | — |
+| refinement | Story breakdown, `verify:`, `interactions:`, oracle | Opus | — |
+| builder-service | Backend: routers, services, repos | Sonnet | — |
+| builder-frontend | Frontend: components, hooks, MSW contracts | Sonnet | — |
+| builder-infra | Docker, CI/CD, proxy | Sonnet | — |
+| builder-migration | Database migrations + roundtrip | Sonnet | — |
+| builder-exchange | Exchange adapters (safety-critical) | Opus | — |
+| **test-author** | TDD RED (failing tests) + GREEN (no tamper). Modes `red`/`green`. | Opus | **Merged** `tester` + `test-engineer` |
+| validator | Independent `verify:` runner (Tier 1) | Sonnet | — |
+| **code-reviewer** | G6 semantic AC↔code (mode `story`) + G7 quality/scope (mode `code`) | Opus | **Merged** `reviewer` + `story-reviewer` |
+| security | OWASP + static + dep audit | Sonnet/Opus | — |
+| devops | CI/CD, deployment | Sonnet | — |
+| **observability-engineer** | Structured logs, metrics, traces, alerts | Sonnet | **New** (G11) |
+| **performance-engineer** | Perf budgets, baseline, N+1, profiling | Sonnet | **New** (G10) |
+| **data-migration-engineer** | Data transformations (distinct from schema migrations) | Opus | **New** (G13) |
+| **release-manager** | Version bump, CHANGELOG, tags, `gh pr create` | Sonnet | **New** (G14, used by `/ship`) |
 
-| Mechanism | What it does |
-|-----------|-------------|
-| **Filesystem phase gates** | Phase is "done" when its artefact exists on disk |
-| **feature-tracker.yaml** | Per-feature state (pending → refined → building → validated) |
-| **Dependency map** | Build file maps touched functions → existing tests → connected components (TDAD) |
-| **Implementation manifest** | Developer declares scope before coding, reviewer verifies git diff matches |
-| **Cycle counter** | Max 3 validation cycles per feature, then human escalation |
-| **Code review hook** | `code_review.py` — anti-patterns + external checks, JSON verdict |
-| **Forbidden patterns** | Validator greps committed files against stack profile rules |
-| **Stale detection** | Warns on stories stuck in "building" with no recent commits |
-| **LESSONS.md** | Recurring failures auto-logged, read by all agents before starting |
+**Removed in v5**: `developer` (duplicate of the 5 builders), `orchestrator`
+(now `scripts/orchestrator.py`), `spec-generator` (YAML is source of truth).
 
-## Agents (19)
+## Stack plugin system
 
-| Agent | Role | Model |
-|-------|------|-------|
-| Product Owner | Scoping, spec writing, AC format | Sonnet |
-| UX/UI Designer | Wireframes, flows, design system | Sonnet |
-| Architect | Architecture, manifest, component inventory | Opus |
-| Refinement | Story breakdown, verify: commands, AC-SEC/AC-BP | Opus |
-| Developer | Code implementation (generic builder) | Opus |
-| Validator | Independent verification, spec contract | Sonnet |
-| Tester | Test writing, mutation testing | Opus |
-| Reviewer | 3-pass code review + manifest scope | Opus |
-| Security | OWASP Top 10 audit | Sonnet/Opus |
-| DevOps | CI/CD, deployment | Sonnet |
-| Test Engineer | TDD RED phase — failing tests before code | Opus |
-| Spec Generator | YAML overlay merging to markdown | Sonnet |
-| Story Reviewer | Per-story AC verification (Gate 7) | Sonnet |
-| Builder (Service) | Backend: routers, services, repositories | Sonnet |
-| Builder (Frontend) | Frontend: components, hooks, MSW contracts | Sonnet |
-| Builder (Infra) | Docker, CI/CD, proxy config | Sonnet |
-| Builder (Migration) | Database migrations (Alembic) | Sonnet |
-| Builder (Exchange) | Safety-critical exchange integrations | Opus |
-| Orchestrator | Dispatch builders, run gates, manage state | Opus |
+Core = Python + YAML. Projects pick stacks and can add custom ones without
+touching the framework core.
 
-Each agent has a core file (`agents/[name].md`) and a template file (`agents/[name].ref.md`). Skills load only the agents needed — never all at once.
+```
+my-project/_work/stacks/
+├── registry.yaml                 # active stacks for this project
+├── python-fastapi/               # built-in, copied from framework
+│   ├── profile.yaml
+│   ├── ac-templates.yaml
+│   └── checks/
+├── typescript-react/             # built-in
+├── go-gin/                       # custom — 4 files: profile, ac-templates, smoke-boot, README
+│   └── ...
+```
+
+Adding a custom stack = 4 files in `_work/stacks/<name>/` + one line in
+`registry.yaml`. Full guide: [`stacks/CUSTOM_STACK_GUIDE.md`](stacks/CUSTOM_STACK_GUIDE.md).
 
 ## Project structure (after init)
 
 ```
 my-project/
 ├── framework/              # Git submodule → this repo
-├── _work/                  # Working artifacts (per-story state)
-│   ├── spec/               #   Spec overlays (sc-0000-initial.yaml + per-story)
-│   ├── build/              #   Pipeline state per story (gates, files, ACs)
-│   ├── ux/                 #   UX artifacts (wireframes, prototypes)
-│   └── stacks/             #   Project-specific stack profiles
+├── _work/
+│   ├── stacks/             # Active stacks (registry + profiles)
+│   ├── spec/               # Per-story spec overlays
+│   ├── build/              # Pipeline state per story (gates) + test-registry.yaml
+│   ├── contracts/          # API/AST/DB/CLI snapshots (G2.3)
+│   ├── visual-baseline/    # Pixel baselines (G9.3)
+│   ├── perf-baseline/      # Perf metrics (G10)
+│   ├── data-fixtures/      # Seed data for migrations (G13)
+│   └── ux/wireframes/      # HTML wireframes with data-testid
 ├── specs/
-│   ├── constitution.md     #   Non-negotiable project principles
-│   ├── [project].yaml      #   YAML spec (source of truth)
-│   ├── [project]-arch.md   #   Architecture plan
-│   ├── feature-tracker.yaml #  Per-feature state tracking
-│   └── stories/            #   Story files (build contracts)
-├── memory/                 #   Project memory + LESSONS.md
-├── apps/                   #   Application code
+│   ├── constitution.md
+│   ├── <project>.yaml
+│   ├── <project>-arch.md
+│   ├── design-system.yaml  # UI projects — tokens + authorised components
+│   ├── feature-tracker.yaml
+│   └── stories/            # Story files + manifests
+├── memory/                 # Project memory + LESSONS.md
+├── apps/                   # Application code
 ├── .claude/
-│   ├── skills/             #   Symlinks → framework skills
-│   └── settings.json       #   Hook configuration
-├── .env                    #   SonarQube config (gitignored)
-├── CLAUDE.md               #   AI rules (from framework template)
-└── .cursorrules            #   Cursor rules
+│   ├── skills/             # Symlinks → framework/skills
+│   └── settings.json       # Hooks: 20 scripts wired via settings
+├── .env                    # SonarQube config (gitignored)
+├── CLAUDE.md               # From rules/CLAUDE.md.template
+└── .cursorrules            # Cursor rules
 ```
-
-> Full framework file tree: [`_docs/INDEX.md`](_docs/INDEX.md)
 
 ## Documentation
 
 | Document | Content |
-|----------|---------|
-| [`_docs/INDEX.md`](_docs/INDEX.md) | Navigation hub — all agents, skills, scripts, templates |
-| [`_docs/agents.md`](_docs/agents.md) | Agent catalog with sequence diagram |
-| [`_docs/process.md`](_docs/process.md) | Story lifecycle (idea → done) |
-| [`_docs/workflow.md`](_docs/workflow.md) | Board conventions, Git Flow, `_work/` structure |
-| [`_docs/skills.md`](_docs/skills.md) | Skills system guide |
+|---|---|
+| [`_docs/PIPELINE.md`](_docs/PIPELINE.md) | The whole pipeline (commands, gates G1–G14, 18 agents, 20 scripts, stack plugins, assurance chain, state machine) |
+| [`rules/GUIDE.md`](rules/GUIDE.md) | Full rules reference (principles, coding standards, test quality, agent conduct, commits, git flow) |
+| [`rules/CHEATSHEET.md`](rules/CHEATSHEET.md) | 1-page TL;DR for any agent |
+| [`stacks/CUSTOM_STACK_GUIDE.md`](stacks/CUSTOM_STACK_GUIDE.md) | Author a custom stack plugin in 4 files |
 | [`_docs/sonarqube.md`](_docs/sonarqube.md) | SonarQube setup, config, troubleshooting |
 | [`_docs/test-methodology.md`](_docs/test-methodology.md) | Two-loop test approach (spec→oracle + mutation) |
-| [`_docs/token-costs.md`](_docs/token-costs.md) | Token cost analysis per agent and skill session |
+| [`_docs/token-costs.md`](_docs/token-costs.md) | Token cost per agent and per skill session |
+| [`_docs/INDEX.md`](_docs/INDEX.md) | Navigation hub |
+
+## Migration
+
+| From | To | Command |
+|---|---|---|
+| v3.x | v4.0 | `framework/scripts/migrate-v3-to-v4.sh` |
+| v4.0.x | v4.1.0 | `framework/scripts/migrate-v4.0-to-v4.1.sh` |
+| v4.1.x | v5.0 | `framework/scripts/migrate-v4-to-v5.sh --dry-run` then `--backup` |
+
+v5 is a breaking change. The migration script produces a dry-run report, backs
+up to `_backup_v4/`, and supports `--rollback`.
 
 ## Contributing
 
-Every improvement is a commit + PR on this repo. Projects get updates via `git submodule update --remote framework`.
+Every improvement is a commit + PR. Projects get updates via
+`git submodule update --remote framework`.
 
 ## License
 

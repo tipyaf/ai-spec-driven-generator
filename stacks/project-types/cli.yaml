@@ -1,0 +1,156 @@
+# Project type: cli
+# Applies to: Command-line tools, one-shot scripts, shell utilities.
+# No UI, no running service — the "app" is the binary itself.
+
+name: cli
+description: Command-line tool. The artifact is an executable/script.
+
+detection:
+  markers:
+    - pyproject.toml           # with [project.scripts] or click/typer/argparse
+    - Cargo.toml               # with [[bin]]
+    - go.mod                   # with main.go
+    - package.json             # with "bin" field
+  anti_markers:
+    - src/App.tsx              # excludes web-ui
+    - index.html
+
+# CLI doesn't inherit from web-api (no HTTP, no observability ratio)
+# It has its own focused set.
+gates:
+  - id: G1
+    name: Security
+    required: true
+    agent: security
+    scripts:
+      - check_oracle_assertions.py
+    external_tools:
+      - semgrep
+      - bandit
+      - pip-audit
+      - npm audit
+      - cargo audit
+    blocks_on: [owasp_pattern, ac_sec_fail, dep_vuln_high]
+
+  - id: G2
+    name: Unit tests
+    required: true
+    runs: 3
+    coverage_min_line: 80
+    coverage_min_branch: 70
+    blocks_on: [test_fail, coverage_below, flaky]
+
+  - id: G2.1
+    name: Mutation testing
+    required: true
+    scope: changed_files
+    min_score: 80
+    blocks_on: [mutation_score_below]
+
+  - id: G2.2
+    name: Regression suite
+    required: true
+    source: _work/build/test-registry.yaml
+    blocks_on: [prior_story_test_fail]
+
+  - id: G2.3
+    name: Contract diff (CLI interface)
+    required: true
+    description: |
+      CLI command surface is its contract. A removed/renamed subcommand or flag
+      without deprecation declaration is a breaking change.
+    script: check_contract_diff.py
+    kind: cli_interface
+    snapshot: _work/contracts/{story_id}/cli_surface.json
+    blocks_on: [subcommand_removed, flag_removed, arg_type_changed]
+
+  - id: G3
+    name: Code quality
+    required: true
+    tools_any_of: [sonarqube, semgrep, ruff+mypy, eslint, clippy]
+    blocks_on: [tool_violation, no_tool_configured]
+
+  - id: G4
+    name: Build final
+    required: true
+    description: Produce the executable/wheel/binary.
+    blocks_on: [build_error, type_error]
+
+  - id: G4.1
+    name: Smoke boot
+    required: true
+    description: CLI must respond to --help, --version, and a canonical invocation.
+    strategy: subprocess
+    steps:
+      - invoke: "{binary} --help"
+        expect_exit: 0
+        expect_stdout_contains: ["Usage", "Commands"]
+      - invoke: "{binary} --version"
+        expect_exit: 0
+        expect_stdout_matches: "\\d+\\.\\d+"
+      - invoke: "{binary} {canonical_command}"
+        canonical_command_from: specs/stories/{story_id}.yaml#smoke_command
+        expect_exit: 0
+    blocks_on: [exit_nonzero, output_missing, no_canonical_command_declared]
+
+  - id: G5
+    name: AC validation
+    required: true
+    blocks_on: [verify_command_fail]
+
+  - id: G6
+    name: Story review
+    required: true
+    agent: code-reviewer
+    mode: story
+    blocks_on: [ac_tier23_not_implemented]
+
+  - id: G7
+    name: Code review
+    required: true
+    agent: code-reviewer
+    mode: code
+    blocks_on: [scope_violation, stderr_spam, solid_violation]
+
+  - id: G8
+    name: Integration tests cross-stories
+    required: false
+    trigger: touches_validated_module
+
+  - id: G10
+    name: Performance
+    required: true
+    metrics:
+      - runtime_ms_on_benchmark_input
+      - memory_peak_mb
+      - startup_time_ms
+    baseline: _work/perf-baseline/{story_id}.json
+    regression_threshold_pct: 5
+    blocks_on: [regression_above_threshold]
+
+  # NO G11 Observability — CLI logs go to stderr, ratio-based gate not meaningful.
+  # NO G12 DAST — no running service.
+  # G13 Migration — only if CLI manages state files/DB; declared per-story via manifest.
+
+  - id: G13
+    name: State/config migration safety
+    required: false
+    trigger: touches_state_file_or_config_schema
+    script: check_migration_safety.py
+    blocks_on: [config_loss, rollback_fail]
+
+  - id: G14
+    name: Release readiness
+    required: false
+    trigger: invoked_by_ship
+    script: check_release_artifacts.py
+    blocks_on: [artifact_missing, version_inconsistent]
+
+escalation:
+  max_cycles: 3
+  on_escalation:
+    - set feature_tracker status to "escalated"
+    - refuse subsequent /build until /resume invoked
+
+ci:
+  github_actions_template: ci-templates/cli.yml

@@ -1,161 +1,150 @@
-# Stack Profile: [Language] + [Framework]
+# Stack Profile Template (v5)
 
-> This template is used by the Architect agent (Phase 1) to create stack profiles for the project.
-> Stack profiles belong to the **project**, not the framework.
-> Copy this template to your project's `stacks/` directory and fill it in.
+> **v5 change**: stack profiles are now **directories** containing YAML files.
+> The former single `.md` file became the stack's `README.md`. Machine-consumable
+> config moved to `profile.yaml`, `ac-templates.yaml`, and optionally
+> `smoke-boot.yaml` / `migration-strategy.yaml` / `checks/*.py`.
+>
+> See `stacks/CUSTOM_STACK_GUIDE.md` for a step-by-step authoring guide with a
+> full `go-gin` example.
 
-## Coding Best Practices
+---
 
-### Project structure
-- [Recommended project structure patterns for this stack]
+## Directory layout
 
-### Conventions
-- [Naming conventions, formatting, linting rules]
-- [Type system usage]
-  - In typed languages, distinguish between ABSENT values (property not in object) and NULL values (property present, value is null). Never conflate the two.
-  - Use optional (`field?: T`) only when the property can genuinely be absent (undefined) — e.g. optional input params, conditional API response fields.
-  - Use nullable (`field: T | null`) when the property is always present but its value can be null — e.g. nullable DB columns.
-  - Never use `field?: T | null` — this conflates both concepts.
-- [Import/export patterns]
-
-### Anti-patterns
-- [Common mistakes to avoid with this stack]
-
-
-## Security Rules
-
-### Input validation (OWASP A03)
-- [How to validate input in this stack]
-
-### Authentication & Authorization (OWASP A01, A07)
-- [Auth best practices specific to this framework]
-
-### Injection prevention (OWASP A03)
-- [SQL injection, XSS, command injection prevention]
-
-### Data exposure (OWASP A01)
-- [How to avoid leaking sensitive data]
-
-### Headers & CORS
-- [Security headers and CORS configuration]
-
-### Dependencies
-- [Dependency management and audit tools]
-
-### Logging
-- [Secure logging practices]
-
-## Performance Rules
-- [Stack-specific performance optimizations]
-- [Caching strategies]
-- [Async patterns if applicable]
-
-## Testing Rules
-
-### Framework and tools
-- [Test framework: pytest, vitest, jest, go test, etc.]
-- [Integration test approach: real DB, test client, etc.]
-- [Mutation testing tool: mutmut, stryker, etc.]
-- [Coverage tool and minimum threshold]
-- [Property-based testing tool: Hypothesis, fast-check, etc.]
-
-### Test patterns
-- [How to write integration tests in this stack]
-- [How to mock external APIs (not internal DB)]
-- [How to write fixtures/factories]
-- [How to set up test databases]
-
-### Enforcement configuration
-- [What to put in test_enforcement.json for this stack]
-- [Where are backend_test_dirs, integration_test_dirs, etc.]
-- [What write_path_keywords are relevant]
-
-## Component Architecture (UI projects only)
-
-> Skip this section for API-only, CLI, library, embedded, or data pipeline projects.
-
-### Smart/Dumb mapping for this stack
-- **Dumb components**: [How presentational components work in this framework — e.g., React: pure function with props, Vue: props-only SFC, Angular: @Input/@Output]
-- **Smart components**: [How container components work — e.g., React: hooks + context, Vue: composables + store, Angular: services + observables]
-- **Shared component directory**: [Path where reusable dumb components live — e.g., `src/components/ui/`, `src/shared/components/`]
-- **Feature component directory**: [Path where feature-specific smart components live — e.g., `src/features/[name]/components/`]
-
-### Component rules specific to this stack
-- [State management pattern: Redux, Zustand, Pinia, NgRx, etc.]
-- [How to pass data down: props, slots, children, content projection]
-- [How to emit events up: callbacks, custom events, @Output, emit]
-- [Styling approach: CSS modules, styled-components, Tailwind, scoped styles]
-
-## SOLID Application in This Stack
-- [How SRP maps to this framework (e.g., controllers/services/repos)]
-- [How DIP works (dependency injection mechanism)]
-- [Common SOLID violations specific to this stack]
-
-## Auto-generated AC Templates
-
-> These ACs are automatically added to features by the Refinement agent (Phase 2.5).
-> Adapt the templates below to match the stack's specifics.
-
-### For features with API endpoints
 ```
-AC-SEC-[FEATURE]-INPUT:
-  Given any API endpoint for [feature]
-  When receiving user input
-  Then all fields are validated through [stack-specific validation mechanism]
-
-AC-SEC-[FEATURE]-AUTH:
-  Given a protected endpoint for [feature]
-  When a request is made without valid authentication
-  Then a 401 response is returned with no data leakage
-
-AC-SEC-[FEATURE]-AUTHZ:
-  Given a protected endpoint for [feature]
-  When a user tries to access another user's data
-  Then a 403 response is returned
-
-AC-SEC-[FEATURE]-ERRORS:
-  Given any API endpoint for [feature]
-  When an unexpected error occurs
-  Then a generic error message is returned (no stack trace) and the error is logged
-
-AC-BP-[FEATURE]-TYPING:
-  Given all functions in [feature]
-  When reviewing the code
-  Then all functions have complete type annotations and data validation
+stacks/templates/<stack-name>/         # framework-provided stacks
+_work/stacks/<stack-name>/             # project-provided custom stacks
+├── profile.yaml           [REQUIRED] commands, forbidden patterns, coverage
+├── ac-templates.yaml      [REQUIRED] ac_sec + ac_bp auto-injected by refinement
+├── smoke-boot.yaml        [OPTIONAL] G4.1 boot strategy (omit for library stacks)
+├── migration-strategy.yaml[OPTIONAL] only for data stacks (see postgres)
+├── checks/                [OPTIONAL] stack-specific Python enforcement scripts
+│   └── check_<rule>.py
+└── README.md              [RECOMMENDED] human-facing coding standards & examples
 ```
 
-### For features with database operations
+---
+
+## `profile.yaml` — required fields
+
+| Field | Type | Description |
+|---|---|---|
+| `name` | string | Machine id, lowercase, must match directory name |
+| `version` | string | Semver of the profile — bump on breaking forbidden-pattern changes |
+| `languages` | list[str] | Primary languages (e.g. `[python]`, `[go]`, `[kotlin, java]`) |
+| `test_command` | string | One-shot test command, run by the orchestrator for G2 |
+| `build_command` | string | Build artefact command, run for G4 |
+| `smoke_boot` | mapping | Inline G4.1 strategy OR reference to `smoke-boot.yaml` |
+
+### Optional but recommended
+
+- `min_version` — minimum language/framework major version
+- `test_coverage_command`, `type_check_command`, `lint_command`, `format_command`
+- `coverage: {line_min: int, branch_min: int, mutation_min: int}`
+- `forbidden_patterns: [{regex, reason, severity, exclude?}]`
+- `tools: {required: [...], recommended: [...], optional: [...]}`
+- `checks: [{id, script, runs_on, description}]`
+- `conventions: {source_dir, test_dir, entrypoint, ...}`
+
+---
+
+## `ac-templates.yaml` — required sections
+
+Two top-level sections, each a list of AC objects:
+
+```yaml
+ac_sec:   # Security ACs
+  - id: AC-SEC-<RULE-ID>
+    applies_to: [endpoint, service, query, ...]   # story component kinds
+    text: "One-sentence intent."
+    verify: "command run by validator, or 'static -- description'"
+
+ac_bp:    # Best Practice ACs
+  - id: AC-BP-<RULE-ID>
+    applies_to: [...]
+    text: "..."
+    verify: "..."
 ```
-AC-BP-[FEATURE]-QUERIES:
-  Given database queries for [feature]
-  When loading related data
-  Then optimized queries are used to prevent N+1 problems
 
-AC-SEC-[FEATURE]-INJECTION:
-  Given database operations for [feature]
-  When building queries
-  Then parameterized queries or ORM are used (no raw string interpolation)
+**Required IDs**: at least one `AC-SEC-*` and at least one `AC-BP-*` must exist.
+This is enforced by `tests/test_stack_plugins.py`.
+
+The refinement agent injects each AC whose `applies_to:` intersects the story's
+component list. `verify:` is executed literally by the validator during G5
+(Tier 1 ACs) — so prefer executable commands over `static --` descriptions when
+mechanically possible.
+
+---
+
+## `smoke-boot.yaml` — optional (G4.1)
+
+Declares how the orchestrator verifies the artefact boots and responds.
+
+```yaml
+strategy: <uvicorn_healthcheck | node_healthcheck | vite_preview_healthcheck | ...>
+start_command: "..."
+pre_boot_command: null        # optional: build step before boot
+working_dir: "."
+env: {KEY: "value"}
+healthcheck:
+  url: "http://localhost:PORT/health"
+  expect_status: 200
+  method: GET
+  poll_interval_s: 1
+  timeout_s: 30
+teardown:
+  signal: SIGTERM
+  grace_period_s: 5
 ```
 
-### For features with file uploads
+Omit this file for library stacks where "boot" doesn't apply — G4.1 is then
+skipped for that stack.
+
+---
+
+## `checks/` — optional stack-specific scripts
+
+Python 3 scripts run by the orchestrator when their trigger matches. Declared
+in `profile.yaml`:
+
+```yaml
+checks:
+  - id: my-rule
+    script: checks/check_my_rule.py
+    runs_on: [change, story, review]   # when the orchestrator dispatches this
+    description: "one-line intent"
 ```
-AC-SEC-[FEATURE]-UPLOAD:
-  Given a file upload endpoint for [feature]
-  When a file is uploaded
-  Then file type is validated (whitelist), size is limited, and file is stored outside webroot
-```
 
-## Story Refiner Instructions
+Built-in examples:
+- `stacks/templates/typescript-react/checks/check_msw_contracts.py`
+- `stacks/templates/postgres/checks/check_write_coverage.py`
 
-When refining a story that uses this stack, the Story Refiner MUST:
+---
 
-1. Read this file before writing any ACs
-2. Copy all AC-SEC-* items into the story's `### Security (AC-SEC-*)` section
-3. Copy all AC-BP-* items into the story's `### Best Practice (AC-BP-*)` section
-4. Substitute placeholders (`<module>`, `<component>`, `<service>`, etc.) with actual names for this story
-5. Add project-specific overrides AFTER the standard items -- never replace them
-6. Add story-specific AC-FUNC-* items in the `### Functional (AC-FUNC-*)` section
+## `README.md` — human documentation
 
-The Validator will execute each `verify:` command literally. Ensure patterns and file paths match the story's actual implementation.
+Free-form Markdown with:
+- Language + framework versions targeted
+- Security / best-practice highlights (summarize what's in `ac-templates.yaml`)
+- Forbidden patterns table with rationale
+- Naming conventions
+- Canonical test patterns
+- Story refiner instructions
 
-> **Note**: Test intentions (Trigger A for computed values, Trigger C for UI rendering) are handled by the refinement agent's playbook (`agents/refinement.md`), not by stack profiles. Stack profiles only provide AC-SEC and AC-BP templates.
+---
+
+## Story Refiner interaction
+
+When refining a story the Story Refiner MUST:
+
+1. Load `ac-templates.yaml` for every `enabled` stack in `_work/stacks/registry.yaml`.
+2. Inject each AC whose `applies_to:` intersects the story's component list.
+3. Substitute placeholders (`<module>`, `<component>`, `<service>`, `<router>`, etc.)
+   with actual file/module names for this story.
+4. Add project-specific overrides AFTER the standard items — never replace them.
+5. Add story-specific AC-FUNC-* items in the `### Functional (AC-FUNC-*)` section.
+
+> **Note**: Test intention templates (Trigger A for computed values, Trigger C
+> for UI rendering) are handled by the refinement agent's playbook, not by
+> stack profiles. Stack profiles only provide `AC-SEC` and `AC-BP` templates.

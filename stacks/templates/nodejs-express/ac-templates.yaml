@@ -1,0 +1,45 @@
+# AC templates for nodejs-express (v5 plugin format)
+
+ac_sec:
+  - id: AC-SEC-CORS-ALLOWLIST
+    applies_to: [middleware, server]
+    text: "CORS is configured with an explicit allowlist — not `cors()` defaults."
+    verify: "grep -rnE 'cors\\(\\s*\\)' src/ || exit 0 && exit 1"
+  - id: AC-SEC-HELMET
+    applies_to: [middleware, server]
+    text: "helmet() middleware is registered to set security headers (XSS, frame options, HSTS)."
+    verify: "grep -rn 'helmet' src/"
+  - id: AC-SEC-INPUT-VALIDATION
+    applies_to: [endpoint, route, handler]
+    text: "Request inputs validated with zod/joi/express-validator — no raw body forwarded to services."
+    verify: "grep -rnE 'zod|joi|express-validator|\\.parse\\(|\\.validate\\(' src/<route>.ts"
+  - id: AC-SEC-NO-SHELL-EXEC-TEMPLATE
+    applies_to: [endpoint, service]
+    text: "No child_process.exec with template strings containing user input — use execFile with argv."
+    verify: "grep -rnE 'child_process\\.exec\\(\\s*`[^`]*\\$\\{' src/ || exit 0 && exit 1"
+  - id: AC-SEC-ERROR-HANDLER
+    applies_to: [middleware, server]
+    text: "A central error-handling middleware returns generic messages and logs with context."
+    verify: "grep -rnE 'app\\.use\\(\\s*\\([^)]*err' src/"
+
+ac_bp:
+  - id: AC-BP-ENDPOINT-ASYNC
+    applies_to: [endpoint, handler]
+    text: "Handlers that do I/O are async and await on promises — no dangling callbacks."
+    verify: "grep -nE 'async\\s*\\(' src/routes/<route>.ts"
+  - id: AC-BP-STRUCTURED-LOGGER
+    applies_to: [middleware, service]
+    text: "Uses a structured logger (pino, winston) with request correlation ID."
+    verify: "grep -rnE 'pino|winston|logger\\.info|logger\\.error' src/"
+  - id: AC-BP-SUPERTEST
+    applies_to: [endpoint]
+    text: "Integration tests use supertest against the real Express app — no mocked express app."
+    verify: "grep -rn 'supertest' tests/"
+  - id: AC-BP-TYPING
+    applies_to: [endpoint, service]
+    text: "TypeScript strict types for request/response (Request<Params, ResBody, ReqBody>)."
+    verify: "tsc --noEmit"
+  - id: AC-BP-GRACEFUL-SHUTDOWN
+    applies_to: [server]
+    text: "Server handles SIGTERM/SIGINT with graceful shutdown, closing connections cleanly."
+    verify: "grep -rnE 'SIGTERM|SIGINT' src/server.ts"

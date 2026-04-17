@@ -1,83 +1,51 @@
 ---
 name: validate
-description: Independently validate an implementation against its story file. Executes every verify: command, takes screenshots, greps for anti-patterns. Use after development to verify before review.
+description: Validate a built story against its spec contract — replays every verify: command and checks AC mapping. Independent of /build; useful to confirm an implementation without rerunning the full gate chain.
 ---
 
-## Phase guard — verify before proceeding
+# /validate
 
-**Prerequisites** (check filesystem):
-1. `specs/feature-tracker.yaml` must exist
-2. The target feature must have `status: building` or `status: testing` in the tracker
-3. `specs/stories/[feature-id].yaml` must exist (the build contract)
+## Usage
+/validate <story-id>
 
-**If any prerequisite is missing** → Tell user: "Nothing to validate yet" → suggest `/build`
+## What it does
 
-## Setup — Read these files before starting
+Runs the spec-contract check for a single story via the orchestrator. Unlike `/build`, this mode does not compile, test-run, or dispatch a builder. It focuses on re-executing every `verify:` command from the story file (G5 AC validation) and confirming each AC maps to actual committed code (G6 story review in read-only mode).
 
-1. Read `agents/validator.md` (core instructions)
-2. Read `specs/stories/[feature-id].yaml` (the build contract — ACs with verify commands)
-3. Read `memory/LESSONS.md` (known patterns)
-4. Read stack profiles from `stacks/` (forbidden patterns)
+Use it when the dev wants a fast confirmation after a manual fix without triggering the full RED/GREEN loop.
 
-Only read `agents/validator.ref.md` if you need the report template format.
+## How it works
 
-## Workflow
+1. Verify prerequisites (story file present, status at least `building`).
+2. Invoke `python3 scripts/orchestrator.py --mode validate --story <id>`.
+3. The orchestrator replays G5 (each `verify:` command, Tier 1 + Tier 2) and G6 (AC Tier 2/3 semantic check via `code-reviewer` mode `story`).
+4. Emits PASS / FAIL / NOT_VERIFIABLE per AC via `ui_messages`.
+5. Updates `_work/build/sc-<id>.yaml` validation block.
 
-1. Read the story file — extract ALL `verify:` commands
-2. Read the git diff to identify what changed
-3. **Execute EVERY `verify:` command** from the story file:
-   - Tier 1 (`grep`/`bash`): run directly, capture output
-   - Tier 2 (`curl`/`playwright`): start dev server if needed, run command
-   - Tier 3 (`runtime-only`): document what was checked and how
-4. Visual checks (UI projects only): screenshot modified pages, verify design system
-5. Code checks: grep for anti-patterns in modified files (from stack profiles)
-6. Scope check: verify git diff only touches files listed in story's `scope` section
-7. Produce structured PASS/FAIL report with evidence for each AC
-8. Update `specs/feature-tracker.yaml`:
-   - ALL PASS → status: `validated`
-   - ANY FAIL → increment `cycles`, keep status: `testing`
-   - cycles >= 3 → add escalation note, keep status: `testing`
+## Arguments
 
-## Escalation limit
+| Arg | Required | Description |
+|---|---|---|
+| `story-id` | Yes | Story to validate. |
 
-**Maximum 3 validation cycles** before mandatory human escalation:
-- Cycle 1-3: fix issues found, re-validate
-- After cycle 3: STOP. Do NOT attempt a 4th cycle. Escalate to the user with:
-  - List of ACs still failing
-  - Evidence collected so far
-  - Suggested manual investigation steps
+## Flags
 
-## Structured verdicts
+None.
 
-Every AC receives one of three verdicts:
+## Exit conditions
 
-| Verdict | Meaning |
-|---|---|
-| **PASS** | Verify command succeeded, output matches expected oracle |
-| **FAIL** | Verify command ran but output does not match, or command returned non-zero |
-| **NOT_VERIFIABLE** | Verify command cannot run in current environment (e.g., missing service, Tier 3 runtime-only) |
+- **Success** (0): all AC PASS or NOT_VERIFIABLE.
+- **Failure** (1): at least one AC FAIL. Fix and re-run `/validate` or `/build`.
+- **Escalation** (2): 3 cycles exhausted. Resume via `/resume`.
+- **Config error** (3): bad story file or spec.
 
-NOT_VERIFIABLE is not a failure — it is flagged for manual checking. The overall validation passes only if there are zero FAILs.
+## Files read / written
 
-## Build file gate updates
+- Reads: `specs/stories/<id>.yaml`, `specs/feature-tracker.yaml`, `_work/build/sc-<id>.yaml`.
+- Writes: `_work/build/sc-<id>.yaml` (validation block), `specs/feature-tracker.yaml` (cycles).
 
-After validation completes, update the build state file:
-1. Read `_work/build/sc-[ID].yaml`
-2. Set each gate status to the corresponding verdict (PASS / FAIL / NOT_VERIFIABLE)
-3. Set `validation_timestamp` to current time
-4. Set `validation_cycle` to the current cycle number
+## Related
 
-## Artefact checklist
-- [ ] Validation report (structured PASS/FAIL/NOT_VERIFIABLE with evidence)
-- [ ] `_work/build/sc-[ID].yaml` — gate statuses updated
-- [ ] `specs/feature-tracker.yaml` — updated
-
-## Next step — tell the user ONLY when manual action is required
-
-Only display a "Next step" when the user needs to act. Do NOT display during automatic loops.
-
-**If ALL PASS:**
-> **Next step:** Feature `[name]` validated. Run `/build [next-feature]` to continue, or `/review` if all features are validated. Remaining: [list features with status].
-
-**If ESCALATED:**
-> **Next step:** Escalated after 3 failed cycles. Failing ACs: [list]. Please review and decide how to proceed.
+- `/build` — full pipeline including validate.
+- `/review` — replays validate across all stories.
+- `/ship` — final validate before PR creation.

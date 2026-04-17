@@ -1,0 +1,54 @@
+# AC templates for python-fastapi (v5 plugin format)
+#
+# The refinement agent injects these into stories based on `applies_to`.
+# Each entry becomes an AC with a `verify:` command the validator executes
+# literally. Substitute <module>, <router>, <service> placeholders with
+# actual file names when injecting.
+
+ac_sec:
+  - id: AC-SEC-ENDPOINT-401
+    applies_to: [endpoint]
+    text: "Every protected endpoint returns 401 when no Authorization header/cookie is present."
+    verify: "grep -rn '401' tests/test_<module>.py"
+  - id: AC-SEC-ENDPOINT-PII
+    applies_to: [endpoint]
+    text: "Endpoint response does not include password hashes, raw secrets, or unnecessary internal IDs."
+    verify: "static -- read response_model schema, confirm sensitive columns excluded"
+  - id: AC-SEC-INPUT-PYDANTIC
+    applies_to: [endpoint]
+    text: "All inputs validated by Pydantic schema — no raw dict unpacking into DB queries."
+    verify: "grep -rn '\\.dict()' app/routers/<router>.py"
+  - id: AC-SEC-SQL-INJECTION
+    applies_to: [service, repository, query]
+    text: "All queries use SQLAlchemy ORM or parameter binding — never f-string or concatenation."
+    verify: "grep -rnE 'f\"SELECT|f.SELECT|f\"INSERT|f\"UPDATE|f\"DELETE' app/ || exit 0 && exit 1"
+  - id: AC-SEC-NO-HARDCODED-SECRETS
+    applies_to: [endpoint, service, config]
+    text: "No secrets or API keys hardcoded in source files; use env vars or secret manager."
+    verify: "grep -rnE 'password\\s*=\\s*[\"\\x27][^\"\\x27]+|api_key\\s*=\\s*[\"\\x27][^\"\\x27]+' app/ || exit 0 && exit 1"
+  - id: AC-SEC-ERROR-GENERIC
+    applies_to: [endpoint]
+    text: "Unexpected errors return a generic message (no stack trace leak) and are logged with context."
+    verify: "static -- read exception handler in app/main.py"
+
+ac_bp:
+  - id: AC-BP-ENDPOINT-RESPONSE-MODEL
+    applies_to: [endpoint]
+    text: "Every endpoint declares response_model= and status_code=."
+    verify: "grep -n 'response_model=' app/routers/<router>.py"
+  - id: AC-BP-ENDPOINT-ASYNC
+    applies_to: [endpoint]
+    text: "Every endpoint is declared async (async def)."
+    verify: "grep -nE '^async def|^    async def' app/routers/<router>.py"
+  - id: AC-BP-DB-DEPENDS
+    applies_to: [endpoint]
+    text: "DB session is injected via Depends() — never instantiated directly in handler."
+    verify: "grep -n 'SessionLocal()' app/routers/<router>.py || exit 0 && exit 1"
+  - id: AC-BP-TYPING
+    applies_to: [endpoint, service]
+    text: "All public functions have complete type annotations (mypy --strict passes)."
+    verify: "mypy --strict app/<module>.py"
+  - id: AC-BP-TEST-ASYNCCLIENT
+    applies_to: [endpoint]
+    text: "Integration tests use real httpx.AsyncClient with ASGITransport — no mocked DB sessions."
+    verify: "grep -nE 'ASGITransport|AsyncClient' tests/test_<module>.py"

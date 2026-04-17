@@ -100,11 +100,11 @@ Run unit tests only (test command from stack profile). All must pass.
 → *On FAIL*: return to builder, fix code to satisfy TDD. Re-run from Gate 2.
 → Update `_work/build/sc-[ID].yaml` → `gates.unit_tests.status`
 
-### Gate 3 — Code quality
-This gate is **NEVER skipped**.
-- If code quality tool configured (SonarQube or other) → run full scan + coverage report
-- If no tool configured → dispatch `agents/reviewer.md` with extended scope: code quality, maintainability, readability, patterns, security. The reviewer's 3 passes (KISS/readability, static analysis, safety/correctness) serve as the quality gate.
-→ *On FAIL*: fix code quality issues, re-run unit tests (Gate 2), then re-run Gate 3.
+### Gate G3 — Code quality
+This gate is **NEVER skipped** and a code quality tool is **mandatory** in v5 (no subjective reviewer fallback). Accepted tools: SonarQube, semgrep, or the `eslint+ruff+mypy` (or equivalent stack linters) combination.
+- Tool configured → run full scan + coverage report.
+- No tool configured → `/build` refuses to start and points the dev to `stacks/templates/<stack>/README.md` for setup instructions.
+→ *On FAIL*: fix code quality issues, re-run G2, then re-run G3.
 → Update `_work/build/sc-[ID].yaml` → `gates.code_quality.status`
 
 ### Gate 4 — E2E code from wireframes (UI projects only)
@@ -148,13 +148,13 @@ Execute EVERY `verify:` command from the story file.
 → *On FAIL*: return to builder, fix code, re-run from Gate 8.
 → Update `_work/build/sc-[ID].yaml` → `gates.ac_validation.status`
 
-### Gate 9 — Story Review
-Dispatch `agents/story-reviewer.md` — verifies every AC against committed code with structured PASS/FAIL verdict. **Mandatory.** Story CANNOT be marked `validated` without PASS.
-→ *On FAIL*: return to builder, fix based on review feedback. Re-run from Gate 8.
+### Gate G6 — Story Review (semantic AC↔code)
+Dispatch `agents/code-reviewer.md` in `scope: story` — verifies every AC Tier 2/3 against committed code with structured PASS/FAIL verdict and file:line evidence. **Mandatory.** Story CANNOT be marked `validated` without PASS.
+→ *On FAIL*: return to builder, fix based on review feedback. Re-run from G5.
 → Update `_work/build/sc-[ID].yaml` → `gates.story_review.status`
 
-### Gate 10 — Code Review
-Dispatch `agents/reviewer.md` — code quality (SOLID/KISS/DRY/YAGNI), scope conformity (only touched listed files?), static analysis, readability.
+### Gate G7 — Code Review (quality, scope)
+Dispatch `agents/code-reviewer.md` in `scope: code` — code quality (SOLID/KISS/DRY/YAGNI), scope conformity (only touched listed files?), static analysis, readability, 0 console errors.
 
 **Also verifies 0 console errors/stacktraces:**
 - **Frontend (web/mobile UI)**: Check browser console output. Filter for `error`, `Error`, `stacktrace`, `Uncaught`, `MISSING_MESSAGE`. Warnings are noted but do not block.

@@ -1,0 +1,29 @@
+# G4.1 smoke-boot strategy for python-fastapi.
+#
+# The orchestrator spawns the start_command in a subprocess, polls the
+# healthcheck URL until it returns expect_status, and fails the gate if
+# timeout_s elapses without a successful response. Teardown is automatic.
+
+strategy: uvicorn_healthcheck
+start_command: "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+working_dir: "."
+env:
+  # Minimum env required to boot. Project overrides in _work/stacks/registry.yaml.
+  PYTHONUNBUFFERED: "1"
+  ENV: "smoke"
+
+healthcheck:
+  url: "http://localhost:8000/health"
+  expect_status: 200
+  expect_body_contains: null    # optional — e.g. '"status":"ok"'
+  method: GET
+  poll_interval_s: 1
+  timeout_s: 30
+
+teardown:
+  signal: SIGTERM
+  grace_period_s: 5
+  # If the process ignores SIGTERM, orchestrator sends SIGKILL after grace_period_s.
+
+# If the project has no /health endpoint, override healthcheck.url in
+# _work/stacks/registry.yaml (see stacks/CUSTOM_STACK_GUIDE.md).

@@ -1,0 +1,68 @@
+# Stack profile: nodejs-express (v5 plugin format, NEW in v5)
+#
+# Targets Express 4.x / 5.x with Jest or Vitest, TypeScript recommended.
+
+name: nodejs-express
+version: 1.0
+languages: [javascript, typescript]
+min_version: "18"  # Node.js LTS
+
+# --- Build & test commands ------------------------------------------------
+test_command: "jest --ci"
+test_coverage_command: "jest --ci --coverage"
+build_command: "tsc --build"
+type_check_command: "tsc --noEmit"
+lint_command: "eslint src/ --max-warnings 0"
+format_command: "prettier --check src/"
+
+# --- Coverage thresholds --------------------------------------------------
+coverage:
+  line_min: 80
+  branch_min: 70
+  mutation_min: 80
+
+# --- Forbidden patterns ---------------------------------------------------
+forbidden_patterns:
+  - regex: "app\\.use\\(\\s*cors\\(\\s*\\)\\s*\\)"
+    reason: "default cors() allows all origins — configure an explicit allowlist"
+    severity: error
+  - regex: "res\\.send\\(\\s*req\\.(?:query|body|params)"
+    reason: "echoing user input unescaped enables XSS — sanitize or use res.json"
+    severity: error
+  - regex: "eval\\("
+    reason: "security: eval() enables arbitrary code execution"
+    severity: error
+  - regex: "child_process\\.exec\\(\\s*`[^`]*\\$\\{"
+    reason: "shell command injection: use execFile with argv array, never string template"
+    severity: error
+  - regex: "process\\.env\\.NODE_ENV\\s*===\\s*\"development\""
+    reason: "don't branch on NODE_ENV for security logic — always secure by default"
+    severity: warning
+  - regex: "console\\.log\\("
+    reason: "use a structured logger (pino, winston)"
+    severity: warning
+    exclude: ["tests/", "**/*.test.*", "**/*.spec.*"]
+
+# --- Smoke boot (G4.1) ----------------------------------------------------
+smoke_boot:
+  strategy: node_healthcheck
+  start_command: "node dist/server.js"
+  healthcheck_url: "http://localhost:3000/health"
+  timeout_s: 30
+
+# --- Tools -----------------------------------------------------------------
+tools:
+  required: [jest, eslint, tsc]
+  recommended: [supertest, stryker-mutator, pino, helmet]
+  optional: [sonarqube, snyk, npm-audit]
+
+# --- Checks (stack-local enforcement scripts) -----------------------------
+checks: []  # nodejs-express has no stack-specific checks yet
+
+# --- File conventions -----------------------------------------------------
+conventions:
+  source_dir: src/
+  test_dir: tests/
+  test_file_pattern: "*.test.ts"
+  entrypoint: "src/server.ts"
+  build_output: dist/

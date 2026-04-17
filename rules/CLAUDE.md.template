@@ -1,178 +1,250 @@
-# CLAUDE.md — Rules for Claude Code
+# CLAUDE.md — Rules for Claude Code (v5)
 
 ## Context
-This project uses the **ai-spec-driven-generator** framework (in `framework/`).
-You must follow a structured, phase-based process with human validation and persistent memory.
+This project uses the **ai-spec-driven-generator** framework v5 (in `framework/`).
+You must follow a structured, phase-based process with human validation,
+persistent memory, and machine-verifiable acceptance criteria.
 
-## Fundamental Principles
+**Start here if you want the minimum briefing**:
+- `framework/rules/CHEATSHEET.md` — 1-page TL;DR (commands, top-10 rules, gates, exit codes)
+- `framework/rules/GUIDE.md` — full rules (principles, coding standards, test quality, agent conduct, commits, git flow)
+- `framework/_docs/PIPELINE.md` — the whole pipeline (commands, gates, agents, scripts, state machine)
 
-These three principles apply to EVERY action, EVERY agent, EVERY phase:
+## Fundamental principles
 
 | Principle | Rule |
 |-----------|------|
-| **Agnostic** | Adapt to the project type. Never assume web. Check `spec.type` before applying platform-specific rules (WCAG, Playwright, CSS, responsive). |
-| **Autonomous** | Humans decide (product, architecture, infra), machines verify (tests, review, security). Auto-proceed when automated gates pass. Escalate to human after 3 failures only. |
-| **Accompaniment** | Guide and challenge the user. Every human-validated phase ends with clear options, trade-offs, and next steps. Never leave the user without guidance. |
+| **Agnostic** | Core framework is Python + YAML. Stack-awareness lives in `_work/stacks/`. Four built-in stacks: `python-fastapi`, `typescript-react`, `postgres`, `nodejs-express`. Projects can add custom stacks — see `framework/stacks/CUSTOM_STACK_GUIDE.md`. Check `spec.type` before applying platform-specific rules. |
+| **Autonomous** | Humans decide (product, UX, architecture, go-live). Machines verify (tests, quality, security, perf). Auto-proceed when gates pass. Escalation after 3 failed cycles is **blocking** — only `/resume <story-id> "reason"` clears it. |
+| **Accompaniment** | `/help`, `/status`, `/next`, `/resume` and unified messages (`framework/scripts/ui_messages.py`) keep the user in the loop. No silent execution. Respond in the user's language. |
 
-## Skills (primary entry points)
+## Commands in v5
 
-Use skills to dispatch to the right agent(s). Each skill loads ONLY the agents it needs — never load all agents at once.
+Tape `/next` quand tu arrives le matin — le framework te dit quoi faire.
 
-| Skill | When to use | Agents loaded |
-|-------|-------------|---------------|
-| `/spec` | Start a new project or define a feature | product-owner, ux-ui, architect |
-| `/refine` | Break a feature into actionable stories | refinement, product-owner |
-| `/build` | Implement a refined story | developer, validator |
-| `/review` | Review code quality before PR | reviewer, security, tester |
-| `/validate` | Verify implementation against spec | validator |
+| Skill | What it does |
+|---|---|
+| `/spec` | Define a new project (constitution, scope, UX, architecture). |
+| `/ux <feature>` | UX design — IA, flows, wireframes, DS tokens (UI projects). |
+| `/refine <feature>` | Break feature into stories with `verify:` + oracle values. |
+| `/build <story-id>` | Orchestrator: auto-dispatch builder, TDD RED→GREEN, run gates. |
+| `/validate <story-id>` | Read-only rerun of gates on current repo. |
+| `/review [story-id\|--all]` | Read-only audit — PASS/FAIL verdict. Never creates PR. |
+| `/ship <story-id>` | **Single exit** — runs `/review`; on PASS pushes + opens PR with `sdd-validated-v5` tag. |
+| `/scan [--full] [--report]` | SonarQube / semgrep / eslint scan. |
+| `/next [--scope …] [--json]` | Prioritised action list (BLOCKING / IN-PROGRESS / READY / PENDING SHIP / SUGGESTIONS). |
+| `/status [story-id]` | Dashboard view — stats, gates, escalations, history. |
+| `/help [command]` | Contextual help. |
+| `/resume <story-id> "reason"` | Unlock an escalated/tampered story (reason mandatory). |
+| `/migrate [--to VERSION]` | Run migration scripts. |
 
-**Default workflow**: `/spec` → `/refine` → `/build` → `/validate` → `/review`
+**Default workflow**: `/spec` → `/refine` → `/build` → `/ship` (per story).
+`/validate` and `/review` are audit-only intermediate steps.
 
-## Loading agents (IMPORTANT)
+## Loading agents (important)
 
-When you need an agent, read ONLY its core file:
-- `framework/agents/[name].md` — core instructions (always read this)
-- `framework/agents/[name].ref.md` — templates and examples (read only when you need a specific template)
-
-**NEVER read all agent files at once.** Load the minimum needed for the current task.
-
-### Model dispatch rule (mandatory)
-
-When dispatching an agent, read the `model:` field from its YAML frontmatter and **pass it as the `model` parameter** when using the Agent tool to spawn the subagent. This ensures each agent runs on the appropriate model tier (Opus for reasoning-heavy tasks, Sonnet for systematic tasks).
+v5 has **18 agents** in `framework/agents/`. Skills load only what they need —
+never load all agents at once. Each agent file declares its `model:` in YAML
+frontmatter; pass that model when spawning the subagent.
 
 - If the agent frontmatter says `model: opus` → spawn with `model: "opus"`
 - If the agent frontmatter says `model: sonnet` → spawn with `model: "sonnet"`
-- If no `model:` field → use the current session model (no override)
-- To override an agent's model for this project, add a section `§Agent Model Overrides` below with the agent name and desired model.
+- If no `model:` field → use the current session model
+- To override per project, see `§Agent model overrides` at the bottom.
+
+## Gates G1–G14
+
+v5 uses unified gate numbering adaptive per `spec.type`. Only applicable gates
+run — the rest are absent from the log (not "skipped"). See
+`framework/rules/CHEATSHEET.md` for one-liner table and
+`framework/_docs/PIPELINE.md` for the full reference.
+
+Core gates (all types): G1 Security · G2 Unit tests · G2.1 Mutation · G2.2
+Regression · G2.3 Contract diff · G3 Code quality · G4 Build · G4.1 Smoke boot ·
+G5 AC mechanical · G6 Story review · G7 Code review · G8 Integration cross-stories.
+
+Conditional gates: G9.1–G9.6 (web-ui/mobile) · G10 Performance · G11
+Observability (web-api/web-ui/ml-pipeline) · G12 DAST-lite (web-api/web-ui) ·
+G13 Migration safety · G14 Release readiness (at `/ship`).
+
+## Enforcement scripts (20)
+
+All in `framework/scripts/`. The orchestrator runs them; git hooks
+(`scripts/setup-hooks.sh`) give feedback. Every `--no-verify` is detected at the
+next orchestrator pass and moves the story to `status: tampered`.
+
+Script categories: 6 refactored in v5 (AST) + 4 retained + 10 new (interaction
+tests, visual regression, behavioral regression, observability, performance
+budget, release artifacts, migration safety, contract diff, DS conformity,
+integration coverage).
+
+Full list: `framework/_docs/PIPELINE.md §5`.
 
 ## On session start
 
 ### New project (no memory file exists)
-When a user describes a project idea or asks to build something:
-1. Tell the user: "We'll define your project together before writing any code. I'll guide you through 4 phases: Scoping → Design → Architecture → then we build."
-2. Launch `/spec` — this guides through Phase 0, 0.5, and 1 with human validation at each step
-3. After `/spec` is complete: launch `/refine` to break features into stories
-4. Only then: `/build` for each refined story
+1. Tell the user: "We'll define your project together before writing any code.
+   I'll guide you through Constitution → Scope → Clarify → UX → Architecture
+   → then we build."
+2. Launch `/spec`.
+3. After `/spec`: launch `/refine` for the first feature.
+4. Only then: `/build <story-id>` for each refined story, ending each with `/ship`.
 
 **NEVER jump to code.** Always start with `/spec`.
 
 ### Existing project (memory file exists)
-1. Read `memory/[project-name].md` to restore context
-2. Read `memory/LESSONS.md` for known pitfalls
-3. Identify the current phase
-4. Summarize the project state to the user: what's done, what's next, what decisions are needed
-5. Resume where it left off — use the appropriate skill
+1. Read `memory/<project-name>.md` to restore context.
+2. Read `memory/LESSONS.md` for known pitfalls.
+3. Read `specs/feature-tracker.yaml` to know feature states.
+4. Run `/next` — summarise BLOCKING + IN-PROGRESS items to the user.
+5. Resume with the appropriate skill.
 
 ## Phase workflow
+
 ```
-Phase 0: Scoping        → /spec    → product-owner.md   → ✅ Human
-Phase 0.5: Design       → /spec    → ux-ui.md           → ✅ Human
-Phase 0.7: Ordering     → /spec    → product-owner.md   → ✅ Human
-Phase 1: Plan            → /spec    → architect.md       → ✅ Human
-Phase 2: Scaffold        → /build   → developer.md       → 🤖 Auto
-  ┌─── Per feature: ─────────────────────────────────────────────┐
-  │ Phase 2.5: Refinement → /refine  → refinement.md  → ✅ Human │
-  │ Phase 3: Implement    → /build   → developer.md   → 🤖 Auto  │
-  │ Phase 3.5: Validate   → /validate → validator.md  → 🤖 Auto  │
-  │ Phase 4: Test         → /build   → tester.md      → 🤖 Auto  │
-  └───────────────────────────────────────────────────────────────┘
-Phase 5: Review          → /review  → reviewer.md       → 🤖 Auto
-Phase 5.5: Security      → /review  → security.md       → 🤖 Auto
-Phase 6: Deploy Config   →           devops.md          → ✅ Human
-Phase 7: Release         →           orchestrator.md    → ✅ Human
+═══════════════════════════════════════════════════════════
+PHASE 0 — CONCEPTION (/spec) — Human validation at each step
+═══════════════════════════════════════════════════════════
+  Constitution → specs/constitution.md
+  Scoping (PO) → specs/<project>.yaml
+  Clarify      → specs/<project>-clarifications.md
+  UX/UI        → specs/<project>-ux.md (web-ui/mobile)
+  Architecture → specs/<project>-arch.md
+  Tracker init → specs/feature-tracker.yaml
+
+═══════════════════════════════════════════════════════════
+PHASE 1 — CONSTRUCTION (per story loop) — Auto
+═══════════════════════════════════════════════════════════
+  /refine <feature> → story file + manifest + oracle values → ✅ Human validation
+  /build <story-id> → Orchestrator runs TDD RED→GREEN + gates G1..G14
+                   → /validate is optional audit during build cycles
+                   → PASS: status = validated (no PR yet)
+                   → FAIL: cycle ≤ 3, then status = escalated
+
+═══════════════════════════════════════════════════════════
+PHASE 2 — SHIP (/ship) — Single exit
+═══════════════════════════════════════════════════════════
+  /ship <story-id> runs /review internally on the full branch.
+    PASS → push + gh pr create + tag `sdd-validated-v5`
+    FAIL → no PR, detailed report
+
+═══════════════════════════════════════════════════════════
+PHASE 3 — DEPLOY / RELEASE — ✅ Human
+═══════════════════════════════════════════════════════════
 ```
-
-## Validation model
-
-| Phase | Skill | Agent | Validation | Gate (file must exist) |
-|-------|-------|-------|------------|------------------------|
-| 0: Constitution | /spec | — | Human | `specs/constitution.md` |
-| 0.1: Scoping | /spec | PO | Human | `specs/[project-name].yaml` |
-| 0.2: Clarify | /spec | PO | Human | `specs/[project-name]-clarifications.md` |
-| 0.3: Design | /spec | UX/UI | Human | `specs/[project-name]-ux.md` |
-| 0.5: Ordering | /spec | PO+Arch | Human | Features ordered in arch doc |
-| 1: Plan | /spec | Architect | Human | `specs/[project-name]-arch.md` |
-| 2: Scaffold | /build | Developer | Auto | Project compiles/starts |
-| 2.5: Refine | /refine | Refinement | Human | `specs/stories/[feature].yaml` |
-| 3: Implement | /build | Developer | Auto | Code + tests written |
-| 3.5: Validate | /validate | Validator | Auto | ALL `verify:` commands PASS |
-| 4: Review | /review | Reviewer+Security+Tester | Auto | Quality + security PASS |
-| 5: Deploy | — | DevOps | Human | Infrastructure decision |
-| 6: Release | — | — | Human | Go/no-go decision |
-
-## Git branching model (recommended)
-
-This project uses a **Git Flow** branching model:
-
-| Branch | Role | Merges into |
-|--------|------|-------------|
-| `main` | **Production** — releases only (changelog, version, tag) | — |
-| `develop` | **Integration** — all feature work merges here first | `main` (at release time) |
-
-### Rules
-- **All feature branches start from `develop`** — `git checkout -b feat/XXX origin/develop`
-- **All PRs target `develop`** — `gh pr create --base develop` (NEVER `--base main` except releases)
-- **`main` is read-only for agents** — only release PRs merge into `main`
-
-## Git worktree rule — parallel work isolation
-
-When a feature branch is checked out, all unrelated work MUST be done in a **git worktree**:
-
-| Situation | Action |
-|-----------|--------|
-| On `feat/123` and need to work on `456` | `git worktree add .worktrees/feat-456 -b feat/456 origin/develop` |
-| Worktree work done | Commit, push, PR targeting `develop`. Then `git worktree remove .worktrees/feat-456` |
-
-**Rules**: Worktrees in `.worktrees/` (gitignored). Branch from `origin/develop`. One per task. Clean up after merge.
-
-## Strict rules
-1. **Always read memory** at session start
-2. **Always update memory** after each phase
-3. **Always follow phase order** — no shortcuts
-4. **Never load all agents** — use skills to load only what's needed
-5. **Never over-engineer** — follow the spec, nothing more
-6. **Never code before** scoping + design + plan are validated
-7. **Never mix branches** — unrelated work goes in a worktree
-8. **All PRs target the integration branch** — NEVER `main` directly (except releases)
 
 ## Phase guards
 
-Before executing a skill, verify its prerequisites are met:
+Before executing a skill, verify prerequisites on the filesystem:
 
 | Skill | Prerequisites | If missing |
-|-------|--------------|------------|
+|---|---|---|
 | `/spec` | None — this is the starting point | — |
-| `/refine` | Spec validated (Phase 0 + 0.5 + 1 done) | → Tell user: "Let's define the project first" → launch `/spec` |
-| `/build` | Story refined with ACs (Phase 2.5 done) | → Tell user: "This story needs refinement first" → launch `/refine` |
-| `/validate` | Implementation exists (Phase 3 done) | → Tell user: "Nothing to validate yet" → launch `/build` |
-| `/review` | Validation passed (Phase 3.5 done) | → Tell user: "Let's validate first" → launch `/validate` |
+| `/refine` | `specs/<project>.yaml` + `specs/<project>-arch.md` + `specs/feature-tracker.yaml` | → "Let's define the project first" → `/spec` |
+| `/build` | `specs/stories/<id>.yaml` + feature status=`refined` | → "Story needs refinement" → `/refine` |
+| `/validate` | Feature status=`building` or `validated` | → "Nothing to validate yet" → `/build` |
+| `/review` | At least one feature in `validated` state | → list features not ready |
+| `/ship` | Feature status=`validated` | → "Run /build first" |
+| `/resume` | Feature status=`escalated` or `tampered` + `reason` argument | → "Reason is mandatory" |
 
-## Agent role guards
+## Feature tracker states
 
-| Agent | CAN do | CANNOT do |
-|-------|--------|-----------|
-| Product Owner | Write specs, challenge scope | Write code, make technical decisions |
-| UX/UI Designer | Design UI, specify flows | Write code, choose frameworks |
-| Architect | Plan architecture, create manifest | Write implementation code |
-| Refinement | Break features into stories | Write code, make architecture decisions |
-| Developer | Write code, create files | Self-validate, skip manifest |
-| Validator | Run checks, take screenshots | Modify source code, fix bugs |
-| Tester | Write tests, run suites | Modify feature code |
-| Reviewer | Audit quality, flag issues | Modify files directly |
-| Security | Audit security, flag vulns | Modify files directly |
-| DevOps | Configure CI/CD, deployment | Modify feature code |
-| Orchestrator | Coordinate phases, enforce gates | Skip phases, bypass validation |
+| State | Meaning | Set by |
+|---|---|---|
+| `pending` | Declared in spec, not refined | `/spec` |
+| `refined` | Story file + manifest + oracle values written | `/refine` |
+| `building` | `/build` running or cycling | `/build` |
+| `validated` | All applicable gates passed | `/build` on PASS |
+| `shipped` | PR created with `sdd-validated-v5` tag | `/ship` |
+| `escalated` | Max cycles, requires `/resume` | `/build` (terminal) |
+| `tampered` | Bypass detected, requires `/resume` | Any tamper check (terminal) |
 
-## File locations
-- **Framework agents**: `framework/agents/*.md` (core) + `framework/agents/*.ref.md` (templates)
-- **Phase prompts**: `framework/prompts/phases/`
-- **Spec templates**: `framework/specs/templates/`
-- **Stack profile template**: `framework/stacks/stack-profile-template.md`
-- **Project specs**: `specs/`
-- **Project memory**: `memory/[project-name].md`
-- **Project lessons**: `memory/LESSONS.md`
-- **Project stack profiles**: `stacks/`
-- **Application code**: `apps/` and `packages/`
+## Acceptance criteria format (unified)
+
+**ONE format** — spec, story files, validation reports:
+
+```yaml
+acceptance_criteria:
+  - id: "AC-FUNC-AUTH-01"              # AC-<TYPE>-<FEATURE>-<NUMBER>
+    type: "FUNC"                       # FUNC | SEC | BP | UX
+    description: "Given a valid email and password / When user submits / Then session created"
+    verify: "curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:3000/api/auth/login -d '{\"email\":\"test@test.com\",\"password\":\"pass\"}'"
+    tier: 2                            # 1 (grep/bash) | 2 (curl/playwright) | 3 (runtime)
+```
+
+- `verify: static` is **banned** — rewrite until you have a shell command.
+- AC-SEC-* must be Tier 1 (code artefacts, not runtime).
+- No AC without `verify:`.
+
+## Git flow (summary — full rules in GUIDE.md §6)
+
+| Branch | Role |
+|---|---|
+| `main` | Production only (release PRs) |
+| `develop` | Integration — feature PRs target here |
+| `feat/*` | One per feature, branched from `origin/develop` |
+
+All PRs target the integration branch. `/ship` is the only way to create a PR.
+Manually-created PRs lack the `sdd-validated-v5` tag and are rejected at human
+review.
+
+Unrelated work goes in a `.worktrees/` worktree branched from `origin/develop`.
+
+## Strict rules (see GUIDE.md §7 for the full list)
+
+1. Always read memory at session start.
+2. Always update tracker + memory at state transitions.
+3. Always follow phase order (filesystem enforces it).
+4. Never load all agents — skills load what they need.
+5. Never code before conception phases are complete.
+6. Never skip `verify:` commands.
+7. Always run enforcement scripts before commits.
+8. Never assert computed values without ORACLE.
+9. Never skip a `test_intention` from the spec.
+10. Never `git add .` / `git add -A`.
+11. Never mix branches — unrelated work goes in a worktree.
+12. All PRs target the integration branch (never `main` except releases).
+13. **`/ship` is the only way out** — never `gh pr create` manually.
+
+## Agent model overrides
+
+Override the default model per agent. Leave blank to use the agent's declared model.
+
+| Agent | Default | Override |
+|---|---|---|
+| architect | Opus | |
+| refinement | Opus | |
+| builder-service | Sonnet | |
+| builder-frontend | Sonnet | |
+| builder-infra | Sonnet | |
+| builder-migration | Sonnet | |
+| builder-exchange | Opus | |
+| test-author | Opus | |
+| code-reviewer | Opus | |
+| validator | Sonnet | |
+| security | Sonnet/Opus | |
+| observability-engineer | Sonnet | |
+| performance-engineer | Sonnet | |
+| data-migration-engineer | Opus | |
+| release-manager | Sonnet | |
+| product-owner | Opus | |
+| ux-ui | Sonnet | |
+| devops | Sonnet | |
+
+## `_work/` directory convention
+
+All live agent state lives under `_work/`.
+
+| Path | Purpose | Who writes it |
+|---|---|---|
+| `_work/stacks/` | Active stacks (registry + profiles) | Dev initial + `/spec` |
+| `_work/build/<id>.yaml` | Per-story gate state | Orchestrator |
+| `_work/build/test-registry.yaml` | Tests per story (G2.2) | Orchestrator |
+| `_work/contracts/<id>/` | API/AST/DB/CLI snapshots (G2.3) | Orchestrator |
+| `_work/visual-baseline/<id>/` | Visual baselines (G9.3) | Orchestrator |
+| `_work/perf-baseline/<id>.json` | Perf baseline (G10) | Orchestrator |
+| `_work/data-fixtures/<id>/` | Seed data (G13) | Orchestrator |
+| `_work/ux/wireframes/` | HTML wireframes with `data-testid` | `/ux` |
 
 ## Workflow state IDs (board state mapping)
 
@@ -186,138 +258,23 @@ Before executing a skill, verify its prerequisites are met:
 | In Review | `<!-- FILL -->` |
 | Done | `<!-- FILL -->` |
 
-## Epic priority table (epic-to-agent mapping)
+## Epic priority table
 
-<!-- Fill in with your project's epics. The build orchestrator uses this to determine build order and dispatch to the correct builder agent. -->
+<!-- The build orchestrator uses this to determine build order + builder dispatch. -->
 
-| Epic | Epic ID | Agent | Priority |
-|------|---------|-------|----------|
-| <!-- Epic name --> | `<!-- FILL -->` | <!-- service_builder / frontend_builder / infra_engineer / alembic_engineer / exchange_adapter --> | <!-- 1-N, lower = higher priority --> |
+| Epic | Epic ID | Builder | Priority |
+|------|---------|---------|----------|
+| <!-- Epic name --> | `<!-- FILL -->` | <!-- builder-service / builder-frontend / builder-infra / builder-migration / builder-exchange --> | <!-- 1-N --> |
 
-## Agent model overrides
+## File locations
 
-Override the default model (Sonnet/Opus) per agent. Leave empty to use defaults from the model tier recommendations above.
-
-| Agent | Default model | Override |
-|-------|---------------|----------|
-| Developer / Builder | Opus | <!-- leave blank for default --> |
-| Test Engineer | Opus | |
-| Refinement | Opus | |
-| Reviewer (Pass 1+3) | Opus | |
-| Reviewer (Pass 2) | Automated | |
-| Validator | Sonnet | |
-| Security | Sonnet (per-feature) / Opus (full) | |
-| Product Owner | Sonnet | |
-| Architect | Opus | |
-| UX/UI | Sonnet | |
-| DevOps | Sonnet | |
-| Orchestrator | Opus | |
-
-## `_work/` directory convention
-
-All live agent working state lives under the `_work/` directory. This is project-specific content produced by agents during the build lifecycle.
-
-| Path | Purpose | Who writes it |
-|------|---------|---------------|
-| `_work/spec/sc-0000-initial.yaml` | Baseline product spec (never modified by agents) | Dev (once, at project start) |
-| `_work/spec/sc-[ID].yaml` | Per-story overlay (new/changed entries only) | Story Refiner |
-| `_work/build/sc-[ID].yaml` | Build file: domain_context, ac_verifications, anti_patterns, gate results | Build Orchestrator (creates), Builder (extends) |
-| `_work/stacks/` | Project-owned stack profiles (copied from templates) | Dev (initial), customized per project |
-| `_work/ux/` | UX agent working files (prototype HTML, components YAML) | UX Designer |
-
-### Build file schema
-
-The build file (`_work/build/sc-[ID].yaml`) is written by the orchestrator at dispatch time and extended by the builder before writing code. All pipeline state lives here.
-
-```yaml
-story: sc-123
-agent: service_builder
-dispatched_at: "YYYY-MM-DD"
-domain_context: {}        # relevant slice of spec
-ac_verifications:         # copied from _work/spec/sc-[ID].yaml
-  - id: AC-FUNC-01
-    criterion: "description"
-    verify: 'shell command'
-anti_patterns: [...]      # from stack profile forbidden_patterns
-test_patterns: [...]      # from stack profile test patterns
-lessons: [...]            # from LESSONS.md if applicable
-files:
-  modified: []            # builder fills before coding
-  created: []
-  deleted: []
-gates:
-  tdd_red:     {status: pending, commit: "", test_count: 0, failing: 0}
-  tdd_green:   {status: pending, commit: "", tampering: []}
-  code_review: {status: pending}
-  validation:  {status: pending}
-```
-
-## Agents
-
-### Workflow agents (invoked directly via skills)
-
-| Agent | Skill | What it does |
-|-------|-------|-------------|
-| Story Refiner / Refinement | `/refine` | Refines stories: adds ACs, creates spec overlay, sets priority |
-| Build Orchestrator | `/build` | Finds refined stories, sorts by priority, dispatches to builder, runs quality gates |
-| Story Reviewer | `/review` | Verifies ACs against committed code, posts PASS/FAIL verdict |
-| UX Designer | `/ux` | Produces IA, user flows, design tokens, wireframe specs |
-| Spec Generator | `/spec` | Merges YAML spec overlays into readable markdown |
-| Validator | `/validate` | Independent AC verification using verify: commands |
-
-### Builder agents (dispatched by the orchestrator)
-
-| Agent | Scope | When used |
-|-------|-------|-----------|
-| Service Builder (builder-service) | Backend services: models, routers, schemas, tests | Most backend stories |
-| Frontend Builder (builder-frontend) | Pages, components, hooks, API client, tests | Frontend stories |
-| Infra Engineer (builder-infra) | Docker, CI/CD, proxy, config | Infrastructure stories |
-| Migration Engineer (builder-migration) | Database migrations, schema alignment tests | Alembic/migration stories |
-| Exchange Adapter (builder-exchange) | Exchange integrations, order logic (safety-critical) | CCXT/exchange stories |
-
-### Quality gate agents (run automatically)
-
-| Agent | Trigger | What it does |
-|-------|---------|-------------|
-| Test Engineer (test-engineer) | TDD RED phase (before builder) | Writes failing tests from spec before code exists |
-| Code Reviewer | After every build commit | 3-pass review: KISS, lint/security, safety/correctness |
-| Security Auditor | After backend/exchange builds | OWASP Top 10 checks; CRITICAL/HIGH blocks story |
-| Validator | After code review passes | Independent AC verification; max 3 retry cycles |
-
-## Skills (full list)
-
-| Skill | When to use | Agents loaded |
-|-------|-------------|---------------|
-| `/spec` | Start a new project or define a feature | product-owner, ux-ui, architect |
-| `/refine` | Break a feature into actionable stories | refinement, product-owner |
-| `/build` | Implement a refined story | build-orchestrator, builder agents |
-| `/validate` | Verify implementation against story file | validator |
-| `/review` | Review all validated features before PR | reviewer, security, tester |
-| `/scan` | Scan local changes only (staged + unstaged vs integration branch) | (inline) |
-| `/scan-full` | Full codebase SonarQube analysis with hotspots and trends | (inline) |
-| `/sonar` | SonarQube scan of local changes | (inline) |
-| `/ux` | Design UI before building frontend stories | ux-ui |
-| `/migrate` | Migrate a v3.x project to v4.0 structure | (inline — runs `scripts/migrate-v3-to-v4.sh`) |
-
-## Enforcement scripts (all 9)
-
-Scripts live in `scripts/` (or `ai-framework/scripts/`). All read `test_enforcement.json` at the project root.
-
-### Orchestrator gates (run at TDD boundary -- agents cannot self-certify)
-
-| Script | Gate | Blocks when |
-|--------|------|-------------|
-| `check_red_phase.py` | After RED | Tests pass, trivial failures, no production imports |
-| `check_test_intentions.py` | After RED | Spec intentions without matching tests |
-| `check_coverage_audit.py` | After RED | Endpoints/tables/components without tests |
-| `check_msw_contracts.py` | After RED | MSW handlers using frontend field names instead of backend |
-| `check_test_tampering.py` | After GREEN | Deleted tests, weakened assertions |
-| `check_tdd_order.py` | After GREEN | Code commits without preceding RED commit |
-
-### Pre-commit checks (agents run before every commit)
-
-| Script | Blocks when |
-|--------|-------------|
-| `check_test_quality.py` | .skip(), mock-soup, fixture-only tests |
-| `check_write_coverage.py` | Tables with readers but no tested writers |
-| `check_oracle_assertions.py` | Numeric assertions without ORACLE comment blocks |
+- **Framework agents**: `framework/agents/*.md` (18 agents)
+- **Skills**: `framework/skills/*/SKILL.md` (invoked via `.claude/skills/` symlinks)
+- **Scripts**: `framework/scripts/` (orchestrator, 20 check scripts, setup hooks)
+- **Project-type definitions**: `framework/stacks/project-types/*.yaml`
+- **Stack plugins (built-in)**: `framework/stacks/templates/{python-fastapi,typescript-react,postgres,nodejs-express}/`
+- **Project stacks**: `_work/stacks/`
+- **Rules reference**: `framework/rules/GUIDE.md` (+ `CHEATSHEET.md` TL;DR)
+- **Pipeline reference**: `framework/_docs/PIPELINE.md`
+- **Memory**: `memory/<project-name>.md` + `memory/LESSONS.md`
+- **Specs**: `specs/<project>.yaml`, `specs/stories/*.yaml`, `specs/feature-tracker.yaml`

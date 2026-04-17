@@ -1,0 +1,66 @@
+# Stack profile: postgres (v5 plugin format)
+#
+# Data layer stack. Paired with python-fastapi or nodejs-express for full app.
+# Targets PostgreSQL 14+ with optional TimescaleDB extension, Alembic migrations.
+
+name: postgres
+version: 1.0
+languages: [sql, python]  # migrations are Python (Alembic) or plain SQL
+min_version: "14"         # Postgres major
+
+# --- Build & test commands ------------------------------------------------
+# The paired application stack drives tests. These commands target schema-only ops.
+test_command: "pytest tests/db/ -xvs"
+test_coverage_command: "pytest tests/db/ --cov=alembic --cov-report=xml"
+build_command: "alembic upgrade head"
+type_check_command: null  # n/a for pure SQL migrations
+lint_command: "sqlfluff lint alembic/versions/"
+
+# --- Coverage thresholds --------------------------------------------------
+coverage:
+  line_min: 70    # lower threshold: much of migration code is one-shot DDL
+  branch_min: 60
+  mutation_min: 0  # mutation testing not meaningful for SQL migrations
+
+# --- Forbidden patterns ---------------------------------------------------
+forbidden_patterns:
+  - regex: "SELECT\\s+\\*"
+    reason: "SELECT * leaks sensitive columns and breaks on schema change"
+    severity: error
+  - regex: "timestamp\\s+without\\s+time\\s+zone"
+    reason: "always use timestamptz to avoid timezone ambiguity"
+    severity: error
+  - regex: "def\\s+downgrade\\(\\)\\s*->\\s*None\\s*:\\s*\\n\\s*pass\\b"
+    reason: "empty downgrade() blocks rollback — implement real downgrade or document why"
+    severity: error
+  - regex: "op\\.execute\\(\\s*f[\"']"
+    reason: "SQL injection: don't f-string user-controlled values into op.execute()"
+    severity: error
+
+# --- Smoke boot (G4.1) not applicable: DB boot is apply-migration + query -----
+# Use migration-strategy.yaml instead (see below).
+smoke_boot:
+  strategy: migration_apply_then_query
+  start_command: "alembic upgrade head"
+  healthcheck_query: "SELECT 1"
+  timeout_s: 60
+
+# --- Tools -----------------------------------------------------------------
+tools:
+  required: [alembic, psycopg2 or asyncpg]
+  recommended: [sqlfluff, schemathesis]
+  optional: [pg_prove, timescaledb]
+
+# --- Checks (stack-local enforcement scripts) -----------------------------
+checks:
+  - id: write-coverage
+    script: checks/check_write_coverage.py
+    runs_on: [story, review]
+    description: "For every data store with a read endpoint there must be production code that writes to it"
+
+# --- File conventions -----------------------------------------------------
+conventions:
+  migrations_dir: alembic/versions/
+  models_dir: app/models/
+  seed_dir: tests/fixtures/seeds/
+  schema_namespaces: [auth, trading, audit]  # project-configurable

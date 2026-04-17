@@ -17,3 +17,12 @@ output/*
 
 # Node
 node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv-sdd-dev/
+.pytest_cache/
+
+# Claude Code local settings (per-dev, not shared)
+.claude/settings.local.json

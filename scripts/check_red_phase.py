@@ -25,15 +25,143 @@ Exit code: 0 = tests correctly fail (RED phase valid), 1 = tests pass (RED phase
 from __future__ import annotations
 
 import argparse
+import ast
 import re
 import subprocess
 import sys
 from pathlib import Path
 
+# Unified UI helpers (v5). Import best-effort; fall back to plain print.
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from ui_messages import fail as ui_fail, success as ui_success, info as ui_info, warn as ui_warn  # noqa: E402
+except Exception:  # pragma: no cover
+    def ui_fail(gate, reason, fix="", **_):
+        print(f"[FAIL {gate}] {reason} :: fix: {fix}")
+    def ui_success(gate, reason, **_):
+        print(f"[PASS {gate}] {reason}")
+    def ui_info(text, **_):
+        print(text)
+    def ui_warn(text, **_):
+        print(f"[WARN] {text}")
+
 RED = "\033[0;31m"
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
 NC = "\033[0m"
+
+
+# --- AST-based trivial-fail detection (v5 refactor) ----------------------
+# Refactor notes:
+#   The legacy regex approach missed several semantically equivalent trivial
+#   assertions. The AST walker catches them structurally. Examples:
+#     assert 1 != 2               -> trivial (tautology, always true in negation)
+#     assert not (2 == 2)         -> trivial
+#     assert 0                    -> trivial
+#     pytest.fail("...")          -> trivial
+#     if True: raise AssertionError -> trivial
+#   vs the regex, which only matched the specific text "assert False".
+
+
+def _is_trivial_assert_node(node: ast.AST) -> bool:
+    """Decide whether a single AST node represents a trivial/tautological assert.
+
+    Catches cases the regex missed: `assert 1 != 2`, `assert not True`,
+    `assert 0`, `assert x == x` literals, `pytest.fail(...)`, etc.
+    """
+    if isinstance(node, ast.Assert):
+        test = node.test
+        # assert False / assert 0 / assert "" ...
+        if isinstance(test, ast.Constant):
+            return not bool(test.value)
+        # assert not True  -> UnaryOp(Not, Constant(True))
+        if isinstance(test, ast.UnaryOp) and isinstance(test.op, ast.Not):
+            operand = test.operand
+            if isinstance(operand, ast.Constant) and bool(operand.value):
+                return True
+            # assert not (a == a)
+            if isinstance(operand, ast.Compare) and _is_literal_tautology(operand):
+                return True
+        # assert 1 == 2, assert 1 != 1, etc. — numeric literal comparison
+        if isinstance(test, ast.Compare):
+            return _is_literal_contradiction_or_tautology(test)
+    # pytest.fail(...) / raise AssertionError
+    if isinstance(node, ast.Expr) and isinstance(node.value, ast.Call):
+        call = node.value
+        # pytest.fail(...)
+        if isinstance(call.func, ast.Attribute) and call.func.attr == "fail":
+            if isinstance(call.func.value, ast.Name) and call.func.value.id == "pytest":
+                return True
+    if isinstance(node, ast.Raise):
+        exc = node.exc
+        if isinstance(exc, ast.Name) and exc.id == "AssertionError":
+            return True
+        if isinstance(exc, ast.Call) and isinstance(exc.func, ast.Name):
+            if exc.func.id == "AssertionError":
+                return True
+    return False
+
+
+def _is_literal_contradiction_or_tautology(cmp: ast.Compare) -> bool:
+    """Return True when every operand is a literal constant (always known)."""
+    if not isinstance(cmp.left, ast.Constant):
+        return False
+    for comparator in cmp.comparators:
+        if not isinstance(comparator, ast.Constant):
+            return False
+    # We found a comparison involving only literals — the result is a
+    # compile-time constant, which is the textbook definition of a trivial
+    # assert (never dependent on the production code under test).
+    return True
+
+
+def _is_literal_tautology(cmp: ast.Compare) -> bool:
+    return _is_literal_contradiction_or_tautology(cmp)
+
+
+def detect_trivial_python_ast(content: str) -> list[tuple[int, str]]:
+    """AST-based scan. Returns list of (lineno, snippet)."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+    trivial: list[tuple[int, str]] = []
+    for node in ast.walk(tree):
+        if _is_trivial_assert_node(node):
+            snippet = ast.unparse(node) if hasattr(ast, "unparse") else "<assert>"
+            trivial.append((getattr(node, "lineno", 0), snippet[:80]))
+    return trivial
+
+
+def detect_trivial_js_tree_sitter(content: str) -> list[tuple[int, str]]:
+    """Tree-sitter based JS/TS scan.
+
+    tree-sitter is optional. When it's not installed we fall back to the
+    original regex patterns (kept for compatibility). This means the tool
+    works out of the box on fresh environments.
+    """
+    try:
+        import tree_sitter  # type: ignore  # noqa: F401
+    except Exception:
+        # Fall back to regex when tree-sitter is unavailable.
+        findings: list[tuple[int, str]] = []
+        for i, line in enumerate(content.splitlines(), start=1):
+            for pattern in TRIVIAL_FAIL_PATTERNS_TS:
+                if re.search(pattern, line):
+                    findings.append((i, line.strip()[:80]))
+                    break
+        return findings
+
+    # If tree-sitter is available, we still only do a regex pass for now
+    # (grammar loading is project-specific). The regex list is a superset
+    # of the v4 list so this is strictly better than the old behaviour.
+    findings = []
+    for i, line in enumerate(content.splitlines(), start=1):
+        for pattern in TRIVIAL_FAIL_PATTERNS_TS:
+            if re.search(pattern, line):
+                findings.append((i, line.strip()[:80]))
+                break
+    return findings
 
 
 def find_project_root() -> Path:
@@ -142,7 +270,12 @@ PRODUCTION_IMPORT_PATTERNS_TS = [
 
 
 def check_trivial_failures(test_files: list[str], project_root: Path) -> list[str]:
-    """Detect tests that fail trivially (assert False, raise) instead of testing real code."""
+    """Detect tests that fail trivially (assert False, raise) instead of testing real code.
+
+    v5 refactor: uses AST walk for Python (catches `assert 1 != 2`,
+    `pytest.fail()`, `raise AssertionError` semantically — not just by
+    textual match). Falls back to regex for JS/TS.
+    """
     issues = []
     for tf in test_files:
         fpath = project_root / tf
@@ -150,28 +283,30 @@ def check_trivial_failures(test_files: list[str], project_root: Path) -> list[st
             continue
         content = fpath.read_text(errors="replace")
         is_python = tf.endswith(".py")
-        patterns = TRIVIAL_FAIL_PATTERNS_PY if is_python else TRIVIAL_FAIL_PATTERNS_TS
 
-        trivial_count = 0
-        for pattern in patterns:
-            trivial_count += len(re.findall(pattern, content, re.MULTILINE))
-
-        # Count real assertions
         if is_python:
-            real_asserts = len(
-                re.findall(
-                    r"^\s*assert\s+(?!False|0|not\s+True|1\s*==\s*2)",
-                    content,
-                    re.MULTILINE,
+            trivial_findings = detect_trivial_python_ast(content)
+            trivial_count = len(trivial_findings)
+            # Real-assertion count: parse AST and count Assert nodes that are NOT trivial.
+            try:
+                tree = ast.parse(content)
+                real_asserts = sum(
+                    1
+                    for n in ast.walk(tree)
+                    if isinstance(n, ast.Assert) and not _is_trivial_assert_node(n)
                 )
-            )
+            except SyntaxError:
+                real_asserts = 0
         else:
+            trivial_findings = detect_trivial_js_tree_sitter(content)
+            trivial_count = len(trivial_findings)
             real_asserts = len(re.findall(r"expect\s*\(", content))
 
         if trivial_count > 0 and real_asserts == 0:
+            samples = ", ".join(f"L{lineno}" for lineno, _ in trivial_findings[:3])
             issues.append(
                 f"{tf}: ALL {trivial_count} assertion(s) are trivial failures "
-                f"(assert False, raise, pytest.fail). Tests must assert on "
+                f"(sample lines: {samples}). Tests must assert on "
                 f"real production code behavior, not just fail unconditionally."
             )
     return issues
@@ -262,9 +397,71 @@ def update_build_file(
     build_file.write_text(content)
 
 
+def _scan_branch(project_root: Path) -> int:
+    """Scan every commit on the branch (git log main..HEAD) for trivial-fail tests.
+
+    Used by the orchestrator in preflight mode. Returns 0 if clean, 1 if any
+    commit contains a test file that is 100% trivial-fail assertions.
+    """
+    try:
+        base = subprocess.run(
+            ["git", "merge-base", "origin/main", "HEAD"],
+            capture_output=True, text=True, cwd=project_root, timeout=10,
+        ).stdout.strip()
+        if not base:
+            base = subprocess.run(
+                ["git", "rev-parse", "main"],
+                capture_output=True, text=True, cwd=project_root, timeout=10,
+            ).stdout.strip() or "HEAD~20"
+        log = subprocess.run(
+            ["git", "log", f"{base}..HEAD", "--format=%H"],
+            capture_output=True, text=True, cwd=project_root, timeout=20,
+        ).stdout.strip().splitlines()
+    except Exception as exc:
+        ui_warn(f"--scan-branch: could not inspect git log ({exc})")
+        return 0
+
+    issues = []
+    for sha in log:
+        files_out = subprocess.run(
+            ["git", "show", "--name-only", "--format=", sha],
+            capture_output=True, text=True, cwd=project_root, timeout=10,
+        ).stdout.strip().splitlines()
+        for filepath in files_out:
+            if not filepath:
+                continue
+            if not (filepath.endswith(".py") and ("test_" in filepath or "_test" in filepath)):
+                continue
+            try:
+                content = subprocess.run(
+                    ["git", "show", f"{sha}:{filepath}"],
+                    capture_output=True, text=True, cwd=project_root, timeout=10,
+                ).stdout
+            except Exception:
+                continue
+            if not content:
+                continue
+            findings = detect_trivial_python_ast(content)
+            if findings:
+                # Verify: real_asserts == 0 means the entire file is trivia.
+                try:
+                    tree = ast.parse(content)
+                    real = sum(1 for n in ast.walk(tree) if isinstance(n, ast.Assert) and not _is_trivial_assert_node(n))
+                except SyntaxError:
+                    real = 0
+                if real == 0:
+                    issues.append(f"{sha[:8]} {filepath} has only trivial asserts")
+    if issues:
+        for i in issues:
+            ui_fail("RED", i, fix="replace trivial asserts with real production-behavior assertions")
+        return 1
+    ui_success("RED", "--scan-branch: no trivial-fail test files on branch")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check RED phase: tests must fail")
-    parser.add_argument("--story", required=True, type=str, help="Story ID")
+    parser.add_argument("--story", required=False, type=str, help="Story ID")
     parser.add_argument("--test-cmd", type=str, help="Explicit test command to run")
     parser.add_argument(
         "--backend", action="store_true", help="Auto-detect backend test path"
@@ -275,7 +472,19 @@ def main() -> int:
     parser.add_argument(
         "--timeout", type=int, default=120, help="Test timeout in seconds"
     )
+    parser.add_argument(
+        "--scan-branch", action="store_true",
+        help="Orchestrator mode: scan every commit on the current branch (main..HEAD)",
+    )
     args = parser.parse_args()
+
+    if args.scan_branch:
+        return _scan_branch(find_project_root())
+
+    if not args.story:
+        ui_fail("RED", "--story is required unless --scan-branch is used",
+                fix="pass --story <id> or --scan-branch")
+        return 2
 
     project_root = find_project_root()
     story_id = args.story

@@ -1,0 +1,21 @@
+# G4.1 smoke-boot strategy for nodejs-express.
+
+strategy: node_healthcheck
+start_command: "node dist/server.js"
+working_dir: "."
+env:
+  NODE_ENV: "production"
+  PORT: "3000"
+
+pre_boot_command: "npm run build"
+
+healthcheck:
+  url: "http://localhost:3000/health"
+  expect_status: 200
+  method: GET
+  poll_interval_s: 1
+  timeout_s: 30
+
+teardown:
+  signal: SIGTERM
+  grace_period_s: 5

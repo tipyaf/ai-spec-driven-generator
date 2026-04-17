@@ -1,0 +1,9 @@
+stacks:
+  - name: typescript-react
+    source: framework
+    profile: stacks/templates/typescript-react/profile.yaml
+    ac_templates: stacks/templates/typescript-react/ac-templates.yaml
+    smoke_boot: stacks/templates/typescript-react/smoke-boot.yaml
+    enabled: true
+
+overrides: {}

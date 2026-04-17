@@ -1,0 +1,45 @@
+# AC templates for typescript-react (v5 plugin format)
+
+ac_sec:
+  - id: AC-SEC-NO-TOKEN-LOCALSTORAGE
+    applies_to: [component, hook, auth]
+    text: "No auth tokens stored in localStorage — use HttpOnly cookies or in-memory only."
+    verify: "grep -rnE 'localStorage\\.setItem\\([\"\\x27](?:token|access_token|refresh_token|auth)' src/ || exit 0 && exit 1"
+  - id: AC-SEC-NO-DANGEROUSLY-SET-HTML
+    applies_to: [component]
+    text: "No dangerouslySetInnerHTML on user content; render via JSX."
+    verify: "grep -rn 'dangerouslySetInnerHTML' src/<component>.tsx || exit 0 && exit 1"
+  - id: AC-SEC-API-URL-ENV
+    applies_to: [api, hook]
+    text: "API base URL comes from import.meta.env (VITE_*) — no hardcoded hosts."
+    verify: "grep -rnE 'https?://[a-zA-Z]' src/api/ || exit 0 && exit 1"
+  - id: AC-SEC-NO-CONSOLE-LOG
+    applies_to: [component, hook, service]
+    text: "No console.log leaking user data or tokens in production code."
+    verify: "grep -rn 'console\\.log' src/ | grep -v '\\.test\\.' || exit 0 && exit 1"
+
+ac_bp:
+  - id: AC-BP-NO-ANY
+    applies_to: [component, hook, service]
+    text: "No `any` type without a `// reason:` comment explaining why."
+    verify: "grep -rnE ': any\\b' src/<file> || exit 0"
+  - id: AC-BP-LOADING-ERROR-STATES
+    applies_to: [component]
+    text: "Data-fetching components handle loading and error states explicitly."
+    verify: "static -- read component, confirm skeleton/spinner and error UI"
+  - id: AC-BP-A11Y-LABELS
+    applies_to: [component]
+    text: "All interactive elements have aria-label or visible text."
+    verify: "static -- confirm buttons/inputs/links have aria-label or text content"
+  - id: AC-BP-MSW-TESTS
+    applies_to: [hook, api]
+    text: "useQuery/useMutation hooks tested with MSW (mock service worker)."
+    verify: "grep -rnE 'msw|setupServer|http\\.(get|post|put|delete)' src/<component>.test.tsx"
+  - id: AC-BP-NO-FS-IN-TESTS
+    applies_to: [test]
+    text: "Tests don't use fs.readFileSync / existsSync against source files."
+    verify: "grep -rnE 'readFileSync|existsSync' src/<component>.test.tsx || exit 0 && exit 1"
+  - id: AC-BP-TSC-STRICT
+    applies_to: [component, hook, service]
+    text: "TypeScript strict mode passes with zero errors on changed files."
+    verify: "tsc --noEmit"

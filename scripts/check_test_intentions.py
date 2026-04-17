@@ -37,6 +37,45 @@ try:
 except ImportError:
     yaml = None  # type: ignore[assignment]
 
+# Optional: embedding-based semantic match. If sentence-transformers is
+# installed we use it; otherwise we fall back to the existing regex
+# heuristics (which are still applied as a second pass for recall).
+_SENTENCE_TRANSFORMERS_AVAILABLE = False
+try:
+    from sentence_transformers import SentenceTransformer  # type: ignore
+    _SENTENCE_TRANSFORMERS_AVAILABLE = True
+except Exception:
+    SentenceTransformer = None  # type: ignore
+
+
+def _embedding_model():
+    """Load the local embedding model once, cached on the module."""
+    global _EMBED_MODEL
+    if "_EMBED_MODEL" in globals():
+        return _EMBED_MODEL
+    if not _SENTENCE_TRANSFORMERS_AVAILABLE:
+        _EMBED_MODEL = None
+        return None
+    try:
+        _EMBED_MODEL = SentenceTransformer("all-MiniLM-L6-v2")
+    except Exception:
+        _EMBED_MODEL = None
+    return _EMBED_MODEL
+
+
+def _semantic_match(intent: str, test_blob: str, threshold: float = 0.55) -> bool:
+    """Cosine-similarity check. Returns False when embeddings are unavailable."""
+    model = _embedding_model()
+    if model is None:
+        return False
+    try:
+        import numpy as np  # provided alongside sentence-transformers
+        vectors = model.encode([intent, test_blob], normalize_embeddings=True)
+        cos = float(np.dot(vectors[0], vectors[1]))
+        return cos >= threshold
+    except Exception:
+        return False
+
 RED = "\033[0;31m"
 GREEN = "\033[0;32m"
 YELLOW = "\033[1;33m"
@@ -183,8 +222,17 @@ def check_intention_covered(
     description = intention.get("description", "")
     assertions = intention.get("assertions", [])
 
+    # Build an intention blob used for semantic matching.
+    intent_blob = " ".join(filter(None, [func_name, description, *assertions]))
+
     for filepath, content in test_contents.items():
         content_lower = content.lower()
+
+        # Check 0 (v5): embedding semantic match — skipped when the lib is
+        # unavailable. When it IS available it catches cases where the test
+        # describes the same behaviour in different words.
+        if _semantic_match(intent_blob, content):
+            return None
 
         # Check 1: Test function name contains the function reference
         for variant in pattern.split("|"):

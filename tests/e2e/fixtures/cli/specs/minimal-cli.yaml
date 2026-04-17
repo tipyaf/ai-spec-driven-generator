@@ -1,0 +1,6 @@
+name: minimal-cli
+type: cli
+description: Minimal CLI fixture for e2e testing of the SDD pipeline.
+version: 0.1.0
+stacks:
+  - python-cli

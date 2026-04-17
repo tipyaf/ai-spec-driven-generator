@@ -1,0 +1,61 @@
+# _work/stacks/registry.yaml — EXAMPLE
+#
+# This file is copied into your project's _work/stacks/registry.yaml by
+# init-project.sh. It declares WHICH stacks are active in this project and
+# WHERE the orchestrator loads their profile.yaml / ac-templates.yaml / checks/.
+#
+# The orchestrator reads this at the start of every /build, /validate, /review,
+# /ship and does NOT scan the filesystem for stacks. If a stack isn't listed
+# here, its checks and ACs are ignored.
+#
+# See stacks/CUSTOM_STACK_GUIDE.md to add a custom stack.
+
+stacks:
+  # --- Built-in stacks (source: framework) -------------------------------
+  # Paths are resolved relative to the framework root (../framework for a
+  # git-submodule install; configurable via SDD_FRAMEWORK_ROOT env var).
+  - name: python-fastapi
+    source: framework
+    profile: stacks/templates/python-fastapi/profile.yaml
+    ac_templates: stacks/templates/python-fastapi/ac-templates.yaml
+    smoke_boot: stacks/templates/python-fastapi/smoke-boot.yaml
+    enabled: true
+
+  - name: typescript-react
+    source: framework
+    profile: stacks/templates/typescript-react/profile.yaml
+    ac_templates: stacks/templates/typescript-react/ac-templates.yaml
+    smoke_boot: stacks/templates/typescript-react/smoke-boot.yaml
+    enabled: true
+
+  - name: postgres
+    source: framework
+    profile: stacks/templates/postgres/profile.yaml
+    ac_templates: stacks/templates/postgres/ac-templates.yaml
+    migration_strategy: stacks/templates/postgres/migration-strategy.yaml
+    enabled: true
+
+  # --- Example of a community / custom stack (source: local path) --------
+  # Uncomment and adjust when you add a custom stack under _work/stacks/<name>/.
+  # See stacks/CUSTOM_STACK_GUIDE.md for the minimal structure required.
+  #
+  # - name: go-gin
+  #   source: _work/stacks/go-gin        # relative to project root
+  #   profile: _work/stacks/go-gin/profile.yaml
+  #   ac_templates: _work/stacks/go-gin/ac-templates.yaml
+  #   smoke_boot: _work/stacks/go-gin/smoke-boot.yaml
+  #   enabled: true
+
+# --- Project-level overrides (optional) ----------------------------------
+# If a built-in profile field doesn't fit this project, override here instead
+# of editing the framework file. The orchestrator merges overrides on top of
+# the stack profile at load time.
+overrides:
+  # python-fastapi:
+  #   test_command: "pytest -xvs --no-header"
+  #   coverage:
+  #     line_min: 85
+  # typescript-react:
+  #   smoke_boot:
+  #     healthcheck:
+  #       url: "http://localhost:4173/app"

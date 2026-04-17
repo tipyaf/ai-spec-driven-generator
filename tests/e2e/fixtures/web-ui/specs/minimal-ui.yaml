@@ -1,0 +1,6 @@
+name: minimal-ui
+type: web-ui
+description: Minimal React+Vite fixture for e2e testing of the SDD pipeline.
+version: 0.1.0
+stacks:
+  - typescript-react

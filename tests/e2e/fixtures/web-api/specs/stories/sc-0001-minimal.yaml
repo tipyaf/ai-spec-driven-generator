@@ -1,0 +1,14 @@
+id: sc-0001-minimal
+title: Expose /health and /echo endpoints
+feature_id: sc-0001-minimal
+status: refined
+acceptance_criteria:
+  - id: ac-1
+    tier: 1
+    description: /health returns 200 with {"status":"ok"}
+    verify: "pytest tests/test_main.py::test_health -x"
+  - id: ac-2
+    tier: 1
+    description: /echo/<msg> echoes the message
+    verify: "pytest tests/test_main.py::test_echo -x"
+smoke_command: "python -c 'from app.main import app; print(len(app.routes))'"

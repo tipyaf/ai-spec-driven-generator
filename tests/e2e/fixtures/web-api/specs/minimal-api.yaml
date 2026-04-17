@@ -1,0 +1,6 @@
+name: minimal-api
+type: web-api
+description: Minimal FastAPI fixture for e2e testing of the SDD pipeline.
+version: 0.1.0
+stacks:
+  - python-fastapi

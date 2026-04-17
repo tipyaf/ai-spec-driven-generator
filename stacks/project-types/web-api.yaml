@@ -1,0 +1,217 @@
+# Project type: web-api
+# Applies to: HTTP APIs, gRPC services, GraphQL servers, backend-only services.
+# The orchestrator reads this file to know which gates to run for projects
+# declaring `spec.type: web-api` in their root YAML spec.
+
+name: web-api
+description: Backend service exposing an API (HTTP/gRPC/GraphQL). No UI.
+
+# --- Detection hints (used by /spec auto-detect) ---
+# If the project root contains ANY of these files AND no UI frontend,
+# the framework proposes `spec.type: web-api`.
+detection:
+  markers:
+    - pyproject.toml     # with FastAPI/Flask/Django/Starlette dependencies
+    - go.mod             # with gin/echo/chi
+    - Cargo.toml         # with axum/actix-web/rocket
+    - package.json       # with express/fastify/koa/nestjs (no react/vue/svelte)
+  anti_markers:
+    # Presence of any of these downgrades the confidence (suggests web-ui)
+    - src/App.tsx
+    - src/App.jsx
+    - src/App.vue
+    - index.html
+
+# --- Gates pipeline (order matters) ---
+# Each gate has: id, name, required (bool), agent/script, blocks_on.
+# `required: false` means conditional — orchestrator skips silently if
+# preconditions not met (not "skipped", absent from log).
+gates:
+  - id: G1
+    name: Security
+    required: true
+    agent: security
+    scripts:
+      - check_oracle_assertions.py
+    external_tools:
+      - semgrep                # if installed
+      - bandit                 # Python
+      - gosec                  # Go
+      - pip-audit              # dep vulns
+      - npm audit
+      - cargo audit
+    blocks_on: [owasp_pattern, ac_sec_fail, dep_vuln_high]
+
+  - id: G2
+    name: Unit tests
+    required: true
+    script: null             # uses stack_profile.test_command
+    runs: 3                   # 3 consecutive runs, 0 flakiness tolerance
+    coverage_min_line: 80     # overridable in stack_profile
+    coverage_min_branch: 70
+    blocks_on: [test_fail, coverage_below, flaky]
+
+  - id: G2.1
+    name: Mutation testing
+    required: true
+    tools_by_language:
+      python: mutmut
+      javascript: stryker
+      typescript: stryker
+      go: go-mutesting
+      rust: cargo-mutants
+      java: pitest
+    scope: changed_files      # not full repo (keep under 5min)
+    min_score: 80
+    blocks_on: [mutation_score_below]
+
+  - id: G2.2
+    name: Regression suite
+    required: true
+    description: Re-run all tests from previously validated stories.
+    source: _work/build/test-registry.yaml
+    runs: 3
+    blocks_on: [prior_story_test_fail]
+
+  - id: G2.3
+    name: Contract diff
+    required: true
+    description: Detect breaking API/library/DB changes vs prior validated stories.
+    script: check_contract_diff.py
+    snapshots:
+      api: _work/contracts/{story_id}/openapi.yaml
+      library: _work/contracts/{story_id}/public_api.json
+      db: _work/contracts/{story_id}/schema.sql
+    blocks_on: [breaking_change_undeclared]
+
+  - id: G3
+    name: Code quality
+    required: true
+    description: Mandatory tool — no subjective fallback. `/build` refuses to start if no tool configured.
+    tools_any_of:
+      - sonarqube
+      - semgrep
+      - eslint+ruff+mypy
+    blocks_on: [tool_violation, no_tool_configured]
+
+  - id: G4
+    name: Build final
+    required: true
+    description: Produce the shippable artifact.
+    script: null             # uses stack_profile.build_command
+    blocks_on: [build_error, type_error, critical_warning]
+
+  - id: G4.1
+    name: Smoke boot
+    required: true
+    description: App must actually start and respond.
+    strategy: docker_compose_healthcheck
+    steps:
+      - docker compose up -d
+      - wait_healthcheck: 60s
+      - curl: "/health"
+      - expect_status: 200
+      - docker compose down
+    blocks_on: [boot_fail, healthcheck_timeout, http_error]
+
+  - id: G5
+    name: AC validation (mechanical)
+    required: true
+    description: "Run every Tier-1 verify: command from the story."
+    blocks_on: [verify_command_fail]
+
+  - id: G6
+    name: Story review (semantic AC↔code)
+    required: true
+    agent: code-reviewer
+    mode: story
+    blocks_on: [ac_tier23_not_implemented]
+
+  - id: G7
+    name: Code review (quality, scope)
+    required: true
+    agent: code-reviewer
+    mode: code
+    blocks_on: [scope_violation, console_error, stacktrace, solid_violation]
+
+  - id: G8
+    name: Integration tests cross-stories
+    required: false            # only if story touches a validated module
+    trigger: touches_validated_module
+    description: Real calls between modules, no inter-module mocks.
+    blocks_on: [contract_break_inter_module]
+
+  - id: G10
+    name: Performance (budget + regression)
+    required: true
+    metrics:
+      - p50_latency_ms
+      - p95_latency_ms
+      - p99_latency_ms
+      - memory_rss_mb
+      - throughput_rps
+    baseline: _work/perf-baseline/{story_id}.json
+    regression_threshold_pct: 5
+    blocks_on: [budget_exceeded, regression_above_threshold]
+
+  - id: G11
+    name: Observability
+    required: true
+    script: check_observability.py
+    min_ratio_per_loc:
+      logs: 0.02               # 1 structured log per 50 lines added
+      metrics: 0.01            # 1 metric per 100 lines added
+      traces: 0.005            # 1 span per 200 lines added
+    blocks_on: [ratio_below_min]
+
+  - id: G12
+    name: Runtime security / DAST-lite
+    required: true
+    description: Basic fuzz + OWASP ZAP lite scan against running service from G4.1.
+    tools:
+      - zap-baseline           # if available
+      - schemathesis           # OpenAPI-based fuzz
+    blocks_on: [dast_high_severity]
+
+  - id: G13
+    name: Migration safety
+    required: false
+    trigger: migration_present
+    script: check_migration_safety.py
+    seed_source: _work/data-fixtures/{story_id}/
+    steps:
+      - apply_prior_migrations
+      - apply_new_migration
+      - run_read_queries_on_seed
+      - apply_rollback
+      - verify_initial_state
+    blocks_on: [rollback_fail, data_loss, type_incompatible]
+
+  - id: G14
+    name: Release readiness
+    required: false
+    trigger: invoked_by_ship
+    script: check_release_artifacts.py
+    checks:
+      - CHANGELOG.md updated for this story
+      - VERSION file bumped (if this is a release story)
+      - git tags coherent
+      - release notes generated
+    blocks_on: [artifact_missing, version_inconsistent]
+
+# --- Escalation rules ---
+escalation:
+  max_cycles: 3
+  on_escalation:
+    - set feature_tracker status to "escalated"
+    - refuse subsequent /build until /resume invoked
+    - require reason argument to /resume
+
+# --- CI template ---
+ci:
+  github_actions_template: ci-templates/web-api.yml
+  gitlab_ci_template: ci-templates/web-api.gitlab-ci.yml
+
+# --- Smoke-boot adapters (declared per stack, not here) ---
+# A stack profile (stacks/python-fastapi/profile.yaml) may override the
+# default docker-compose strategy with a stack-specific one.

@@ -1,0 +1,7 @@
+version: 1
+features:
+  - id: sc-0001-minimal
+    title: Counter button increments on click
+    status: refined
+    stories:
+      - sc-0001-minimal

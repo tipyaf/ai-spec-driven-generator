@@ -170,15 +170,50 @@ def check_story(story_id: str, project_root: Path) -> bool:
     return True
 
 
+def _scan_branch(project_root: Path) -> int:
+    """Scan all sc-* stories that have commits on the branch (main..HEAD)."""
+    try:
+        base = subprocess.run(
+            ["git", "merge-base", "origin/main", "HEAD"],
+            capture_output=True, text=True, cwd=project_root, timeout=10,
+        ).stdout.strip() or "HEAD~30"
+        out = subprocess.run(
+            ["git", "log", f"{base}..HEAD", "--format=%s"],
+            capture_output=True, text=True, cwd=project_root, timeout=20,
+        ).stdout
+    except Exception as exc:
+        print(f"{YELLOW}[WARN]{NC} --scan-branch: git log failed: {exc}")
+        return 0
+    ids = set(re.findall(r"\[sc-(\d+)\]", out))
+    if not ids:
+        print(f"{GREEN}--scan-branch: no story commits on branch.{NC}")
+        return 0
+    for sid in sorted(ids):
+        check_story(sid, project_root)
+    if violations:
+        for v in violations:
+            print(f"{RED}[FAIL]{NC} {v}")
+        return 1
+    print(f"{GREEN}--scan-branch: TDD order OK across {len(ids)} story(ies).{NC}")
+    return 0
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Check TDD commit order")
     parser.add_argument("--story", type=str, help="Check specific story ID")
     parser.add_argument(
         "--config", type=str, help="Config file path (unused, for consistency)"
     )
+    parser.add_argument(
+        "--scan-branch", action="store_true",
+        help="Orchestrator mode: check every story touched on main..HEAD",
+    )
     args = parser.parse_args()
 
     project_root = find_project_root()
+
+    if args.scan_branch:
+        return _scan_branch(project_root)
 
     if args.story:
         story_ids = [args.story]

@@ -1,0 +1,72 @@
+# Stack profile: python-fastapi (v5 plugin format)
+#
+# Consumed by scripts/orchestrator.py via _work/stacks/registry.yaml.
+# See stacks/CUSTOM_STACK_GUIDE.md for authoring rules.
+
+name: python-fastapi
+version: 1.0
+languages: [python]
+min_version: "3.10"
+
+# --- Build & test commands ------------------------------------------------
+test_command: "pytest -xvs"
+test_coverage_command: "pytest --cov=app --cov-report=xml --cov-report=term"
+build_command: "pip install -e ."
+type_check_command: "mypy --strict app/"
+lint_command: "ruff check app/ tests/"
+format_command: "ruff format app/ tests/"
+
+# --- Coverage thresholds --------------------------------------------------
+coverage:
+  line_min: 80
+  branch_min: 70
+  mutation_min: 80   # G2.1 on changed modules only
+
+# --- Forbidden patterns (enforced by G1 / G3) -----------------------------
+forbidden_patterns:
+  - regex: "\\bprint\\("
+    reason: "use structured logger (logging / loguru / structlog) instead of print()"
+    severity: error
+    exclude: ["tests/", "scripts/"]
+  - regex: "os\\.system\\("
+    reason: "security: use subprocess.run with shell=False"
+    severity: error
+  - regex: "eval\\("
+    reason: "security: eval() enables arbitrary code execution"
+    severity: error
+  - regex: "pickle\\.loads?\\("
+    reason: "security: pickle is not safe on untrusted data"
+    severity: error
+  - regex: "session\\s*=\\s*SessionLocal\\("
+    reason: "bypasses dependency injection; inject via Depends()"
+    severity: error
+  - regex: "\\bf\"SELECT|f'SELECT|\\bf\"INSERT|f'INSERT|\\bf\"UPDATE|f'UPDATE|\\bf\"DELETE|f'DELETE"
+    reason: "SQL injection: use SQLAlchemy ORM or parameter binding"
+    severity: error
+  - regex: "except\\s+Exception\\s*:\\s*(?:pass|\\.\\.\\.)"
+    reason: "swallowing all exceptions hides real errors"
+    severity: error
+
+# --- Smoke boot (G4.1) ----------------------------------------------------
+smoke_boot:
+  strategy: uvicorn_healthcheck
+  start_command: "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  healthcheck_url: "http://localhost:8000/health"
+  timeout_s: 30
+  teardown_command: null  # process kill handled by orchestrator
+
+# --- Tools -----------------------------------------------------------------
+tools:
+  required: [pytest, ruff, mypy]
+  recommended: [bandit, pip-audit, mutmut]
+  optional: [sonarqube, semgrep]
+
+# --- Checks (stack-local enforcement scripts) -----------------------------
+checks: []  # python-fastapi has no stack-specific checks (all handled by framework core)
+
+# --- File conventions -----------------------------------------------------
+conventions:
+  source_dir: app/
+  test_dir: tests/
+  test_file_pattern: "test_*.py"
+  entrypoint: "app/main.py"

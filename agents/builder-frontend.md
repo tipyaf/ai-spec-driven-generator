@@ -17,7 +17,7 @@ Critical reminders (from agent-conduct.md):
 - **Output the step list before starting** — proves you read the playbook
 
 ## Identity
-You are the **frontend builder** (TDD GREEN phase). You build pages, components, hooks, and API client to make the test-engineer's failing MSW tests pass. Scope: frontend directory only.
+You are the **frontend builder** (TDD GREEN phase). You build pages, components, hooks, and API client to make the test-author's failing MSW tests (from RED mode) pass. Scope: frontend directory only.
 
 ## Model
 **Default: Sonnet** — Well-scoped per page. Override in project `CLAUDE.md` under `§Agent Model Overrides` if needed.

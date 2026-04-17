@@ -1,5 +1,170 @@
 # Changelog
 
+## [5.0.0] - 2026-04-17
+
+**Major release — complete rebuild of the SDD framework.** The audit of v4.1.1
+revealed a structural gap between what the README promised (agnostic, 11 gates
+never skipped, machine enforcement) and what the code did (UI-hardcoded gates,
+9 of 10 scripts orphaned, agents redundant, bypass trivial). v5 closes that
+gap. Migration is breaking but automated via `scripts/migrate-v4-to-v5.sh`.
+
+### Headline changes
+
+- **Executable orchestrator**: `scripts/orchestrator.py` becomes the single
+  source of truth for gate execution. `/build`, `/validate`, `/review`, `/ship`
+  are thin wrappers. Every check is re-run at every gate — bypassing a hook
+  with `--no-verify` is caught at the next orchestrator pass via AST diff
+  between commits.
+- **Adaptive gates G1–G14** driven by `spec.type`. Project-types YAML
+  (`stacks/project-types/`) declare which gates run. Web-UI inherits web-api
+  and adds G9.1–G9.6. CLI, library, ml-pipeline, mobile, embedded land
+  progressively in v5.x.
+- **`/ship` is the only door to PR.** The developer never runs `gh pr create`
+  manually. `/ship` reruns `/review` on the whole branch; on pass, the
+  `release-manager` agent pushes, opens the PR, attaches the evidence report,
+  and tags it `sdd-validated-v5`. A manual PR has no tag → rejected in
+  human review.
+- **9-link pre-PR assurance chain**: unit tests · mutation testing (G2.1) ·
+  build compiles · app actually boots (G4.1) · regression suite on prior
+  stories · cross-story contracts · AC satisfied mechanically + semantically ·
+  code clean/secure/observable/performant · PR ready.
+- **6-layer anti-regression**: code (G2.2), contract (G2.3), visual (G9.3),
+  behavioural (G9.6), performance (G10 vs baseline), data (G13 with seed +
+  rollback).
+- **/next command**: priority action list. Run it in the morning — the
+  framework tells you what to do (BLOCKING / IN PROGRESS / READY / PENDING
+  SHIP / SUGGESTIONS). `--json` for dashboards.
+- **CI/CD optional**: framework enforces quality without CI. For a tiers
+  belt, `scripts/generate-ci.sh` emits a workflow that invokes
+  `orchestrator.py --gate-all`.
+
+### Agents (19 → 18)
+
+- **Fusions**: `tester` + `test-engineer` → `test-author` (modes: red|green);
+  `reviewer` + `story-reviewer` → `code-reviewer` (scopes: story|code).
+- **Removed**: `developer` (redundant with 5 builders), `spec-generator`
+  (YAML is the source of truth), `orchestrator` (now `scripts/orchestrator.py`
+  — a 4-line stub redirects).
+- **New**: `observability-engineer`, `performance-engineer`,
+  `data-migration-engineer`, `release-manager`.
+- **`.ref.md` templates** moved from `agents/` to `examples/agents/[name]/`
+  (consultable, no longer auto-loaded — smaller context, clearer navigation).
+
+### Scripts (10 → 20) — all executed by the orchestrator, no more orphans
+
+- **Refactored from regex to AST**: `check_red_phase` (catches
+  `assert 1 != 2`, `pytest.fail()`, `raise AssertionError()`),
+  `check_test_tampering` (AST diff between SHAs — removed assertions flagged
+  even if 10 others are added), `check_coverage_audit` (dynamic routes,
+  f-strings, constants), `check_oracle_assertions` (**sandbox-evaluates** the
+  ORACLE comment against actual values), `check_test_intentions` (optional
+  sentence-transformers similarity, regex fallback).
+- **`--scan-branch` flag** added to `check_red_phase`, `check_test_tampering`,
+  `check_tdd_order`, `check_story_commits`. Orchestrator runs these against
+  `git log main..HEAD` — bypass via `--no-verify` is detected.
+- **New**: `check_integration_coverage`, `check_performance_budget`,
+  `check_observability`, `check_release_artifacts`, `check_migration_safety`,
+  `check_ds_conformity`, `check_contract_diff`, `generate-interaction-tests`,
+  `check_visual_regression`, `check_behavioral_regression`,
+  `next_report`, `ui_messages`, `orchestrator`.
+
+### Stack plugin system
+
+- **Built-in stacks** restructured as directories with `profile.yaml`,
+  `ac-templates.yaml`, `checks/`, `smoke-boot.yaml` (or
+  `migration-strategy.yaml`), `README.md`:
+  - `python-fastapi` (conserved)
+  - `typescript-react` (conserved; `check_msw_contracts.py` moved here from
+    `scripts/`)
+  - `postgres` (conserved; `check_write_coverage.py` moved here from
+    `scripts/`)
+  - `nodejs-express` (new in v5)
+- **Custom stacks** supported via `_work/stacks/registry.yaml` per project.
+  See `stacks/CUSTOM_STACK_GUIDE.md` — end-to-end `go-gin` example included.
+
+### UI guarantees (web-ui, mobile)
+
+- **G9.1 Design System conformity** — tokens declared in
+  `specs/design-system.yaml`. Hardcoded `#ff0000` or `padding: 13px` → fail.
+- **G9.2 Wireframe structural conformity** — all `data-testid` from the
+  wireframe HTML must exist in the rendered DOM with the declared hierarchy.
+- **G9.3 Visual regression** — Playwright snapshot × 3 viewports
+  (mobile/tablet/desktop). First baseline requires human approval.
+- **G9.4 Interaction verification** — stories declare `interactions:`
+  (trigger + expected DOM/URL/API/state). `generate-interaction-tests.py`
+  auto-generates Playwright specs. **Answers the question
+  "does clicking the button do what was asked?"**
+- **G9.5 Accessibility** — axe-core AA, keyboard, contrast.
+- **G9.6 Behavioural regression** — prior stories' `interactions:` are
+  replayed.
+
+### Skills (10 → 13)
+
+- **Consolidated**: `/scan`, `/scan-full`, `/sonar` → single
+  `/scan [--full] [--report]`.
+- **New**: `/ship` (the only exit door to PR), `/next` (morning action
+  list), `/status` (dashboard), `/help [command]`,
+  `/resume <story-id> "reason..."`.
+- **Simplified**: `/build` auto-dispatches the right builder from the
+  manifest — no more `/build-service`, `/build-frontend`, etc.
+
+### Documentation
+
+- 4 old docs (`_docs/{agents,process,workflow,skills}.md`) merged into
+  `_docs/PIPELINE.md` (unified, 381 L).
+- 4 old rules (`CLAUDE.md`, `coding-standards.md`, `test-quality.md`,
+  `agent-conduct.md`) merged into `rules/GUIDE.md` (479 L) +
+  `rules/CHEATSHEET.md` (114 L TL;DR).
+- README.md rewritten, honest, no overselling.
+- `_docs/MIGRATION_V4_TO_V5.md` for upgraders.
+
+### Tests of the framework itself
+
+- **236 tests passing** across 9 suites: orchestrator scaffold, stack
+  plugins, AST refactors, skills integration, docs consistency, migration,
+  next_report, gate unit tests, tamper detection, e2e per spec.type.
+- Obsolete v4 `tests/framework/` suite retired (concepts it tested — "11
+  gates", old agent names, pre-plugin scripts — no longer exist; replaced
+  by the above v5 suites).
+
+### Migration
+
+```bash
+# From a project on v4.x:
+framework/scripts/migrate-v4-to-v5.sh --dry-run        # preview
+framework/scripts/migrate-v4-to-v5.sh --backup         # apply with _backup_v4/
+framework/scripts/migrate-v4-to-v5.sh --rollback       # undo if needed
+```
+
+The migration:
+- Renames agent references (`tester`/`test-engineer` → `test-author`;
+  `reviewer`/`story-reviewer` → `code-reviewer`).
+- Detects `spec.type` from project files or asks.
+- Creates `_work/stacks/registry.yaml` with the right stacks.
+- Adds new `_work/` directories (visual-baseline, perf-baseline, contracts,
+  data-fixtures).
+- Rewrites CLAUDE.md references from v4 (11 gates, 19 agents, 10 scripts) to
+  v5 (G1–G14, 18 agents, 20 scripts).
+- Merges `.claude/settings.json` with the new hook configuration while
+  preserving project-specific keys.
+- Blocked stories become `escalated` (escalation is now blocking in v5).
+- Writes `MIGRATION_REPORT.md` listing manual follow-ups.
+
+### Breaking changes summary
+
+- Command surface: `/build-service`, `/build-frontend`, `/build-infra`,
+  `/build-migration`, `/build-exchange` → unified `/build`. `/scan-full`
+  and `/sonar` → `/scan --full`.
+- Agent references: `tester`, `test-engineer`, `reviewer`,
+  `story-reviewer`, `developer`, `orchestrator`, `spec-generator` →
+  replaced or removed.
+- Gate numbering: v4 "11 gates" → v5 G1–G14 adaptive.
+- `rules/CLAUDE.md` (source file, divergent from template) deleted — only
+  `rules/CLAUDE.md.template` remains. `init-project.sh` generates the
+  project-specific CLAUDE.md from the template.
+- `check_msw_contracts.py` and `check_write_coverage.py` moved from
+  `scripts/` into their stack plugin.
+
 ## [4.1.1] - 2026-04-07
 
 - feat: add Git Flow enforcement hooks — block PRs targeting main, direct pushes, and branching from main

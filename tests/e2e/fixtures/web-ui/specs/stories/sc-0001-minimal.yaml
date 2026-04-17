@@ -1,0 +1,27 @@
+id: sc-0001-minimal
+title: Counter increments on button click
+feature_id: sc-0001-minimal
+status: refined
+ux_ref: _work/wireframes/sc-0001-minimal/counter.html
+acceptance_criteria:
+  - id: ac-1
+    tier: 1
+    description: Counter starts at 0
+    verify: "npx vitest run tests/App.test.tsx -t 'initial'"
+  - id: ac-2
+    tier: 1
+    description: Button click increments counter by 1
+    verify: "npx vitest run tests/App.test.tsx -t 'increment'"
+interactions:
+  - action: increment_counter
+    trigger: "click data-action=increment"
+    expected:
+      - dom: "data-testid=counter is visible"
+      - url: "unchanged"
+      - api: "none"
+  - action: reset_counter
+    trigger: "click data-action=reset"
+    expected:
+      - dom: "data-testid=counter is visible"
+      - url: "unchanged"
+      - api: "none"

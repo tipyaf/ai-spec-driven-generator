@@ -1,0 +1,40 @@
+# Migration / smoke-boot strategy for postgres.
+#
+# Postgres is a data stack — "smoke boot" means the migrations apply cleanly
+# and a canary query returns an expected result. Uses migration-strategy.yaml
+# instead of smoke-boot.yaml because G13 (Migration safety) subsumes G4.1 here.
+
+strategy: migration_apply_then_query
+
+# --- Migration apply -------------------------------------------------------
+migration:
+  tool: alembic
+  apply_command: "alembic upgrade head"
+  rollback_command: "alembic downgrade -1"
+  dry_run_command: "alembic upgrade head --sql"  # produces SQL without executing
+
+# --- Canary query (confirms the DB is usable after migration) -------------
+canary:
+  query: "SELECT 1"
+  expect_rows: 1
+  timeout_s: 10
+
+# --- Zero-downtime policy (G13 Migration safety) --------------------------
+zero_downtime:
+  enabled: true
+  rules:
+    - "DROP COLUMN requires a two-phase migration: first stop writing, deploy, then drop."
+    - "ADD COLUMN NOT NULL DEFAULT requires backfill in a separate migration."
+    - "Any migration >30s estimated must be run as CREATE INDEX CONCURRENTLY."
+
+# --- Rollback safety ------------------------------------------------------
+rollback:
+  must_be_implemented: true     # empty downgrade() is rejected by forbidden_patterns
+  test_strategy: "apply all migrations → rollback last → re-apply → query canary"
+
+# --- Seed preservation ----------------------------------------------------
+seed:
+  fixture_dir: "tests/fixtures/seeds/"
+  # Before each new migration: load the last validated seed, apply the new migration,
+  # verify no row count changes in unrelated tables, run read-side queries.
+  preservation_check_command: "pytest tests/db/test_migration_seed_preservation.py"

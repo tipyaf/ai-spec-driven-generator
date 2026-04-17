@@ -1,0 +1,7 @@
+stacks:
+  - name: python-cli
+    source: _work/stacks/python-cli
+    profile: _work/stacks/python-cli/profile.yaml
+    enabled: true
+
+overrides: {}

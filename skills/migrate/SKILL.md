@@ -1,72 +1,57 @@
-# /migrate — Migrate project to latest framework version
+---
+name: migrate
+description: Migrate a project to a newer framework version. Supports v3→v4, v4.0→v4.1, and v4.x→v5.0 with dry-run, backup, and rollback.
+---
 
-## When to use
-Run this skill when upgrading a project to a newer framework version.
+# /migrate
 
-## Supported migrations
+## Usage
+/migrate [--to VERSION] [--dry-run] [--backup] [--rollback]
+
+## What it does
+
+Runs the migration script matching the current-to-target version jump. Always offers a dry-run first; always produces a `_backup_<from>/` directory unless `--no-backup` is passed; supports `--rollback` to restore the backup bit-exact.
 
 | From | To | Script |
-|------|-----|--------|
+|---|---|---|
 | v3.x | v4.0 | `scripts/migrate-v3-to-v4.sh` |
 | v4.0.x | v4.1.0 | `scripts/migrate-v4.0-to-v4.1.sh` |
+| v4.x | v5.0 | `scripts/migrate-v4-to-v5.sh` |
 
-## What it does (v4.0.x → v4.1.0)
-1. Backs up to `_backup_v4.0/`
-2. Updates `_work/build/` templates (11 gates, red_phase, green_phase)
-3. Creates `_work/ux/wireframes/` if absent
-4. Adds `check_story_commits.py` to pre-commit hook
-5. Updates `memory/SYNC.md` with v4.1.0 version
-6. Validates the result
+## How it works
 
-## What it does (v3.x → v4.0)
-1. Runs `scripts/migrate-v3-to-v4.sh --dry-run` first to show planned changes
-2. Asks for user confirmation
-3. Runs the actual migration
-4. Validates the result:
-   - All expected `_work/` directories exist
-   - Feature tracker is accessible
-   - Story/spec files are in the right place
-   - CLAUDE.md references updated correctly
-5. If validation fails, offers to restore from `_backup_v3/`
+1. Detect current project version from `memory/SYNC.md` or `CLAUDE.md`.
+2. If `--to` omitted, pick the latest supported target.
+3. Run `<script> --dry-run` first; present the diff to the user.
+4. On confirmation, run the script with `--backup` to create `_backup_<from>/`.
+5. Validate the result: required directories exist, feature tracker intact, CLAUDE.md references updated.
+6. On validation failure, offer `--rollback`.
 
-## Prerequisites
-- `framework/` submodule must be updated to the target version
+## Arguments
 
-## Instructions
+None positional.
 
-### Step 1: Pre-flight check
-Read `CLAUDE.md` and `specs/` directory to understand current project state.
-Identify which v3.x artifacts exist and need migration.
+## Flags
 
-### Step 2: Dry run
-Run: `bash framework/scripts/migrate-v3-to-v4.sh --dry-run`
-Show the output to the user.
+| Flag | Description |
+|---|---|
+| `--to VERSION` | Target framework version (default: latest). |
+| `--dry-run` | Show planned changes without applying them. |
+| `--backup` | Force backup creation (default: on). |
+| `--rollback` | Restore the previous backup. |
 
-### Step 3: Confirm
-Ask the user to confirm the migration plan.
+## Exit conditions
 
-### Step 4: Execute
-Run: `bash framework/scripts/migrate-v3-to-v4.sh`
-Show the output to the user.
+- **0**: migration applied and validated.
+- **1**: validation failed after apply.
+- **3**: missing target script or unsupported version jump.
 
-### Step 5: Validate
-After migration, verify:
-- `_work/spec/` exists and contains spec files
-- `_work/build/` exists (may be empty if no manifests existed)
-- `_work/stacks/` exists and contains stack profiles
-- `_work/feature-tracker.yaml` exists (if it existed before)
-- `CLAUDE.md` references `_work/` paths, not `specs/stories/`
-- No broken symlinks in `.claude/skills/`
+## Files read / written
 
-### Step 6: Report
-Show a structured report:
-- Files moved: N
-- Files updated: N
-- Backup location: _backup_v3/
-- Status: SUCCESS or PARTIAL (with details)
+- Reads: `memory/SYNC.md`, `CLAUDE.md`, `specs/` tree.
+- Writes: `_backup_<from>/`, updated project layout, updated `memory/SYNC.md`.
 
-### Step 7: Cleanup reminder
-Remind the user to:
-- Commit the migration: `git add -A && git commit -m "chore: migrate project structure v3 → v4"`
-- Test that their existing workflow still works
-- Remove `_backup_v3/` once satisfied
+## Related
+
+- `/status` — confirm current framework version.
+- `/help migrate` — detailed version history and migration notes.

@@ -1,0 +1,107 @@
+# Project type: web-ui
+# Applies to: Frontend web apps (React/Vue/Svelte/Angular) with or without backend.
+# Inherits the core gates from web-api and adds the G9.x UI gates.
+
+name: web-ui
+description: Frontend web application with UI (may include embedded backend).
+extends: web-api              # inherits G1-G8, G10-G14
+
+detection:
+  markers:
+    - src/App.tsx
+    - src/App.jsx
+    - src/App.vue
+    - src/main.ts              # Angular
+    - index.html
+  required_any:
+    - package.json             # must contain react/vue/svelte/angular in deps
+
+# Gates added on top of web-api's inherited set.
+# The inherited `extends: web-api` pulls all web-api gates (G1..G14) unless
+# overridden below. UI gates (G9.x) are added.
+gates_add:
+  - id: G9.1
+    name: Design System conformity
+    required: true
+    script: check_ds_conformity.py
+    config_source: specs/design-system.yaml
+    blocks_on: [hardcoded_token, unauthorized_component, missing_ds_extends]
+
+  - id: G9.2
+    name: Wireframe structural conformity
+    required: true
+    script: generate-interaction-tests.py   # also generates G9.4 tests
+    description: All data-testid from wireframe HTML must exist in rendered DOM.
+    blocks_on: [data_testid_missing, hierarchy_mismatch]
+
+  - id: G9.3
+    name: Visual regression
+    required: true
+    script: check_visual_regression.py
+    tool: playwright+pixelmatch
+    viewports:
+      - name: mobile
+        width: 375
+        height: 812
+      - name: tablet
+        width: 768
+        height: 1024
+      - name: desktop
+        width: 1440
+        height: 900
+    diff_threshold_pct: 0.1
+    baseline: _work/visual-baseline/{story_id}/
+    first_run_requires_human_approval: true
+    color_schemes:
+      - light
+      - dark                   # only if specs/design-system.yaml declares a dark mode
+    blocks_on: [pixel_diff_exceeds, baseline_not_approved]
+
+  - id: G9.4
+    name: Interaction verification
+    required: true
+    script: generate-interaction-tests.py
+    description: |
+      Story file declares `interactions:` block with trigger + expected.
+      Auto-generates Playwright tests that assert every expected outcome.
+    source: specs/stories/{story_id}.yaml#interactions
+    asserts_per_interaction:
+      - dom_visibility
+      - url_change
+      - api_call_intercepted
+      - state_mutation
+      - no_console_errors
+      - no_stacktrace
+    blocks_on: [expected_mismatch, console_error, stacktrace]
+
+  - id: G9.5
+    name: Accessibility (WCAG 2.1 AA)
+    required: true
+    tool: axe-core
+    additional_checks:
+      - keyboard_navigation    # tab order, focus trap, ESC, Enter
+      - screen_reader_landmarks
+      - contrast_ratio_4.5_1
+    blocks_on: [axe_violation_aa, keyboard_trap, contrast_fail]
+
+  - id: G9.6
+    name: Behavioral regression
+    required: true
+    script: check_behavioral_regression.py
+    description: Re-run all `interactions:` from previously validated stories.
+    source: _work/build/interactions-registry.yaml
+    runs: 3
+    blocks_on: [prior_interaction_fail]
+
+# Overrides for inherited gates
+gates_override:
+  G4.1:
+    # Web-UI smoke boot: start dev server, navigate to root, check no console errors
+    strategy: playwright_dev_server
+    steps:
+      - npm run build
+      - npm run preview -- --port 5173 &
+      - wait_port: 5173 timeout=30s
+      - playwright_navigate: "http://localhost:5173"
+      - expect_no_console_errors
+      - kill_preview_process

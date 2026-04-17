@@ -19,6 +19,9 @@ Usage:
 
 from __future__ import annotations
 
+import argparse
+import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -259,8 +262,48 @@ def check_tracker_consistency(staged_files: list[str]) -> None:
             )
 
 
+def _scan_branch() -> int:
+    """Scan every commit on main..HEAD — every prod-code commit must carry [sc-*]."""
+    root = find_root()
+    try:
+        base = subprocess.run(
+            ["git", "merge-base", "origin/main", "HEAD"],
+            capture_output=True, text=True, cwd=root, timeout=10,
+        ).stdout.strip() or "HEAD~30"
+        shas = subprocess.run(
+            ["git", "log", f"{base}..HEAD", "--format=%H|%s"],
+            capture_output=True, text=True, cwd=root, timeout=20,
+        ).stdout.strip().splitlines()
+    except Exception as exc:
+        print(f"{YELLOW}[WARN]{NC} --scan-branch failed: {exc}")
+        return 0
+    offenders = []
+    for line in shas:
+        if "|" not in line:
+            continue
+        sha, subject = line.split("|", 1)
+        # Determine if this commit touched production files.
+        files_out = subprocess.run(
+            ["git", "show", "--name-only", "--format=", sha],
+            capture_output=True, text=True, cwd=root, timeout=10,
+        ).stdout.strip().splitlines()
+        prod = [f for f in files_out if f and is_production_code(f)]
+        if prod and not re.search(r"\[sc-\d+\]", subject):
+            offenders.append(f"{sha[:8]} ({subject[:50]}): prod code without [sc-*]")
+    if offenders:
+        for o in offenders:
+            print(f"{RED}[FAIL]{NC} {o}")
+        return 1
+    print(f"{GREEN}--scan-branch: all prod commits carry a story tag.{NC}")
+    return 0
+
+
 def main() -> int:
     """Run all checks and report results."""
+    # Optional --scan-branch flag for orchestrator preflight.
+    if "--scan-branch" in sys.argv:
+        return _scan_branch()
+
     staged_files = get_staged_files()
 
     if not staged_files:

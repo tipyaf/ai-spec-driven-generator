@@ -1,0 +1,9 @@
+stacks:
+  - name: python-fastapi
+    source: framework
+    profile: stacks/templates/python-fastapi/profile.yaml
+    ac_templates: stacks/templates/python-fastapi/ac-templates.yaml
+    smoke_boot: stacks/templates/python-fastapi/smoke-boot.yaml
+    enabled: true
+
+overrides: {}

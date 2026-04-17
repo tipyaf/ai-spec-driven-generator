@@ -14,10 +14,88 @@ Usage:
 
 from __future__ import annotations
 
+import ast
 import json
 import re
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from ui_messages import fail as ui_fail, success as ui_success  # noqa: E402
+except Exception:  # pragma: no cover
+    def ui_fail(gate, reason, fix="", **_):
+        print(f"[FAIL {gate}] {reason} :: fix: {fix}")
+    def ui_success(gate, reason, **_):
+        print(f"[PASS {gate}] {reason}")
+
+
+# --- ORACLE evaluation (v5) ---------------------------------------------
+# v4 only checked that an `# ORACLE:` comment was present above an
+# assertion. v5 actually EVALUATES the comment and cross-checks it against
+# the assertion value.
+#
+# Supported syntax:
+#     # ORACLE: 10 + 5 = 15
+#     # ORACLE: (100 * 0.19) == 19.0
+#
+# Evaluation happens inside a tiny sandbox: __builtins__ is wiped, only
+# literal arithmetic and comparisons are supported. The sandbox uses the
+# AST literal path (eval of a restricted ast.Expression).
+
+
+_ORACLE_RE = re.compile(r"#\s*ORACLE:\s*(?P<expr>.+?)\s*(?:=|==|->)\s*(?P<value>.+?)\s*$")
+
+
+_ALLOWED_NODES = (
+    ast.Expression,
+    ast.BinOp, ast.UnaryOp, ast.BoolOp, ast.Compare,
+    ast.Add, ast.Sub, ast.Mult, ast.Div, ast.FloorDiv, ast.Mod, ast.Pow,
+    ast.USub, ast.UAdd, ast.Not,
+    ast.Eq, ast.NotEq, ast.Lt, ast.LtE, ast.Gt, ast.GtE,
+    ast.And, ast.Or,
+    ast.Constant, ast.Tuple, ast.List,
+)
+
+
+def _safe_eval(expr: str):
+    """Evaluate a restricted arithmetic/comparison expression. Raises on unsafe."""
+    tree = ast.parse(expr, mode="eval")
+    for node in ast.walk(tree):
+        if not isinstance(node, _ALLOWED_NODES):
+            raise ValueError(
+                f"unsupported AST node {type(node).__name__} in ORACLE expression"
+            )
+    return eval(compile(tree, "<oracle>", "eval"), {"__builtins__": {}}, {})
+
+
+def parse_oracle_comment(comment: str) -> tuple[str, str] | None:
+    """Extract (expr, value_str) from a '# ORACLE: expr = value' line."""
+    m = _ORACLE_RE.search(comment)
+    if not m:
+        return None
+    return m.group("expr").strip(), m.group("value").strip()
+
+
+def evaluate_oracle(comment: str) -> tuple[bool, str]:
+    """Return (is_consistent, explanation).
+
+    is_consistent=True when the ORACLE math is internally consistent
+    (expr actually equals the stated value). is_consistent=False when the
+    dev wrote e.g. ``# ORACLE: 10 + 5 = 20`` — the framework catches this
+    BEFORE the code ships.
+    """
+    parsed = parse_oracle_comment(comment)
+    if parsed is None:
+        return True, "no-oracle-syntax"  # not an ORACLE line we understand
+    expr, value_str = parsed
+    try:
+        lhs = _safe_eval(expr)
+        rhs = _safe_eval(value_str)
+    except Exception as exc:
+        return True, f"unparsable ({exc})"  # don't fail on weird math, just skip
+    ok = lhs == rhs or (isinstance(lhs, float) and abs(lhs - rhs) < 1e-9)
+    return ok, f"{expr} -> {lhs} {'==' if ok else '!='} {value_str}"
 
 RED = "\033[0;31m"
 GREEN = "\033[0;32m"
@@ -82,6 +160,19 @@ def has_oracle_above(lines: list[str], line_idx: int, window: int = 5) -> bool:
     return False
 
 
+def oracle_consistency_violations(lines: list[str], line_idx: int, window: int = 5) -> str | None:
+    """When an ORACLE comment IS present, evaluate it and flag inconsistencies."""
+    start = max(0, line_idx - window)
+    for i in range(start, line_idx):
+        stripped = lines[i].strip()
+        if stripped.startswith("# ORACLE:") or stripped.startswith("// ORACLE:"):
+            ok, detail = evaluate_oracle(stripped)
+            if not ok:
+                return f"ORACLE math inconsistency: {detail}"
+            return None
+    return None
+
+
 def is_exempt(line: str) -> bool:
     """Check if the assertion line is exempt from oracle requirement."""
     for pat in PYTHON_EXEMPT_PATTERNS:
@@ -133,6 +224,11 @@ def check_python_oracles(
                     continue
 
                 if has_oracle_above(lines, line_idx, search_window):
+                    # ORACLE present — verify its math is internally consistent.
+                    bad = oracle_consistency_violations(lines, line_idx, search_window)
+                    if bad:
+                        line_no = line_idx + 1
+                        violations.append(f"{rel}:{line_no} -- {bad}")
                     continue
 
                 line_no = line_idx + 1

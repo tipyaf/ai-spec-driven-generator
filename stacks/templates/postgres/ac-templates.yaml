@@ -1,0 +1,41 @@
+# AC templates for postgres (v5 plugin format)
+
+ac_sec:
+  - id: AC-SEC-NO-SQL-INTERPOLATION
+    applies_to: [migration, service, repository, query]
+    text: "No raw SQL string interpolation — use parameterized queries or ORM."
+    verify: "grep -rnE 'f\"SELECT|f.SELECT|f\"INSERT|f\"UPDATE|% \\(' app/services/ || exit 0 && exit 1"
+  - id: AC-SEC-NON-ENUMERABLE-IDS
+    applies_to: [migration, model]
+    text: "User-facing IDs are UUID or opaque tokens (no sequential integers exposing enumeration)."
+    verify: "static -- read new table migration, confirm primary key is UUID"
+  - id: AC-SEC-NO-SENSITIVE-IN-DEFAULT-SELECT
+    applies_to: [model]
+    text: "Sensitive columns (password_hash, api_key, secret) excluded from default response schemas."
+    verify: "static -- read ORM model, confirm sensitive columns not in default response"
+
+ac_bp:
+  - id: AC-BP-UPGRADE-DOWNGRADE
+    applies_to: [migration]
+    text: "Every migration has an implemented upgrade() AND downgrade() (downgrade must not be `pass`)."
+    verify: "static -- read migration file, confirm both functions implemented"
+  - id: AC-BP-INDEX-FK
+    applies_to: [migration]
+    text: "Indexes are added for all FK columns and frequently-queried columns."
+    verify: "grep -n 'op\\.create_index' alembic/versions/<migration>.py"
+  - id: AC-BP-CHECK-CONSTRAINTS
+    applies_to: [migration]
+    text: "CHECK constraints used for status/type enums at DB level, not application only."
+    verify: "grep -n 'sa\\.CheckConstraint' alembic/versions/<migration>.py"
+  - id: AC-BP-HYPERTABLE
+    applies_to: [migration]
+    text: "TimescaleDB hypertables created for time-series tables."
+    verify: "grep -n 'create_hypertable' alembic/versions/<migration>.py"
+  - id: AC-BP-TIMESTAMPTZ
+    applies_to: [migration]
+    text: "Event times use timestamp with time zone (timestamptz), not naive timestamps."
+    verify: "grep -n 'timestamp without time zone' alembic/versions/<migration>.py || exit 0 && exit 1"
+  - id: AC-BP-SCHEMA-ALIGNMENT-TEST
+    applies_to: [model, migration]
+    text: "Added/modified ORM model has a schema alignment test that verifies columns match DB."
+    verify: "grep -n 'test_.*_schema_matches_orm' tests/"

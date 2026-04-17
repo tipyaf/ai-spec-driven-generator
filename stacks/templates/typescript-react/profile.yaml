@@ -1,0 +1,74 @@
+# Stack profile: typescript-react (v5 plugin format)
+#
+# Targets Vite + React 18 + Vitest + MSW + Playwright.
+
+name: typescript-react
+version: 1.0
+languages: [typescript, javascript]
+min_version: "5.0"   # TypeScript major
+
+# --- Build & test commands ------------------------------------------------
+test_command: "vitest run"
+test_coverage_command: "vitest run --coverage"
+build_command: "vite build"
+type_check_command: "tsc --noEmit"
+lint_command: "eslint src/ --max-warnings 0"
+format_command: "prettier --check src/"
+e2e_command: "playwright test"
+
+# --- Coverage thresholds --------------------------------------------------
+coverage:
+  line_min: 80
+  branch_min: 70
+  mutation_min: 80   # stryker-mutator on changed modules
+
+# --- Forbidden patterns ---------------------------------------------------
+forbidden_patterns:
+  - regex: "localStorage\\.setItem\\([\"'](?:token|access_token|refresh_token|auth)"
+    reason: "auth tokens in localStorage are XSS-vulnerable; use HttpOnly cookies"
+    severity: error
+  - regex: "dangerouslySetInnerHTML"
+    reason: "XSS vector; always render via JSX"
+    severity: error
+  - regex: ":\\s*any\\b"
+    reason: "use a proper type or document with '// reason:' comment above"
+    severity: warning
+  - regex: "@ts-ignore(?!.*reason)"
+    reason: "@ts-ignore without an explanatory comment hides real type errors"
+    severity: error
+  - regex: "console\\.log\\("
+    reason: "use a scoped logger; console.log leaks into production"
+    severity: warning
+    exclude: ["tests/", "src/**/*.test.*", "src/**/*.spec.*"]
+  - regex: "document\\.getElementById\\("
+    reason: "bypasses React reconciler; use refs or ids via state"
+    severity: warning
+
+# --- Smoke boot (G4.1) ----------------------------------------------------
+smoke_boot:
+  strategy: vite_preview_healthcheck
+  start_command: "npm run preview -- --host 0.0.0.0 --port 4173"
+  healthcheck_url: "http://localhost:4173/"
+  timeout_s: 30
+  expect_status: 200
+
+# --- Tools -----------------------------------------------------------------
+tools:
+  required: [vitest, tsc, eslint]
+  recommended: [msw, playwright, stryker-mutator, prettier]
+  optional: [sonarqube, axe-core]
+
+# --- Checks (stack-local enforcement scripts) -----------------------------
+checks:
+  - id: msw-contracts
+    script: checks/check_msw_contracts.py
+    runs_on: [change]   # triggered when tests/*.test.tsx change
+    description: "Verifies MSW handlers use backend field names, not frontend-perspective mocks"
+
+# --- File conventions -----------------------------------------------------
+conventions:
+  source_dir: src/
+  test_glob: "src/**/*.test.{ts,tsx}"
+  e2e_dir: e2e/
+  entrypoint: "src/main.tsx"
+  build_output: dist/

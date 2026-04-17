@@ -1,0 +1,27 @@
+# G4.1 smoke-boot strategy for typescript-react.
+#
+# For SPAs, smoke-boot = the build produces a dist/ folder AND `vite preview`
+# serves index.html with HTTP 200. It is not a behavioral test — that's G9.4.
+
+strategy: vite_preview_healthcheck
+start_command: "npm run preview -- --host 0.0.0.0 --port 4173"
+working_dir: "."
+env:
+  NODE_ENV: "production"
+
+pre_boot_command: "npm run build"   # build must succeed before preview boots
+
+healthcheck:
+  url: "http://localhost:4173/"
+  expect_status: 200
+  expect_body_contains: "<div id=\"root\">"   # verify the SPA shell shipped
+  method: GET
+  poll_interval_s: 1
+  timeout_s: 30
+
+teardown:
+  signal: SIGTERM
+  grace_period_s: 5
+
+# If the project uses Next.js / Remix instead of vanilla Vite, override
+# start_command in _work/stacks/registry.yaml (e.g. `next start -p 3000`).

@@ -1,4 +1,4 @@
-# Bootstrap Guide
+# Bootstrap Guide (v5)
 
 Step-by-step checklist for setting up a new project with this framework.
 
@@ -6,6 +6,7 @@ Step-by-step checklist for setting up a new project with this framework.
 - [ ] Git installed
 - [ ] Claude Code or Cursor installed
 - [ ] Node.js (for JS/TS projects) or relevant language toolchain
+- [ ] Python 3.11+ (framework orchestrator + check scripts)
 
 ## Option A: Automated setup (recommended)
 
@@ -13,7 +14,9 @@ Step-by-step checklist for setting up a new project with this framework.
 ./scripts/init-project.sh <project-name> <workspace-path>
 ```
 
-This creates: submodule, CLAUDE.md, directories, memory files, LESSONS.md, SYNC.md.
+This creates: submodule, CLAUDE.md (from `rules/CLAUDE.md.template`),
+`specs/` + `memory/` + `_work/` directories, memory files, LESSONS.md,
+SYNC.md, skills symlinks, hook config.
 
 ## Option B: Manual setup
 
@@ -25,35 +28,53 @@ This creates: submodule, CLAUDE.md, directories, memory files, LESSONS.md, SYNC.
 ### Step 2: Copy framework files
 - [ ] Copy `framework/rules/CLAUDE.md.template` to `./CLAUDE.md`
 - [ ] Copy `framework/rules/.cursorrules` to `./.cursorrules` (if using Cursor)
-- [ ] Create `specs/` directory
-- [ ] Create `memory/` directory
+- [ ] Create `specs/`, `memory/`, `_work/stacks/`, `_work/build/`, `_work/spec/`
 - [ ] Copy `framework/memory/memory-template.md` to `memory/<project-name>.md`
 - [ ] Copy `framework/memory/LESSONS.md.template` to `memory/LESSONS.md`
-- [ ] Create `stacks/` directory
 
 ### Step 3: Configure CLAUDE.md
 - [ ] Update project name in CLAUDE.md
-- [ ] Update framework paths (replace `agents/` with `framework/agents/`)
-- [ ] Add project-specific agent instructions (if any)
-- [ ] Define epic priority table (if using Shortcut)
+- [ ] Fill in `§Workflow state IDs` and `§Epic priority table` (if using a PM tool)
+- [ ] Adjust `§Agent model overrides` if needed
 
-### Step 4: Write initial spec
+### Step 4: Pick and activate stacks
+- [ ] Decide which of the 4 built-in stacks apply: `python-fastapi`, `typescript-react`, `postgres`, `nodejs-express`
+- [ ] Copy the chosen stack(s) from `framework/stacks/templates/<stack>/` to `_work/stacks/<stack>/`
+- [ ] Create `_work/stacks/registry.yaml` listing active stacks
+- [ ] For custom stacks, see `framework/stacks/CUSTOM_STACK_GUIDE.md`
+
+### Step 5: Write initial spec
 - [ ] Copy `framework/specs/templates/spec-template.yaml` to `specs/<project-name>.yaml`
-- [ ] Fill in: name, type, description, target_users, problem_statement
-- [ ] Start Phase 0 (Scoping) with the PO agent
+- [ ] Fill in: name, type (`web-ui` / `web-api` / `cli`), description, target users, problem statement
+- [ ] Launch `/spec` to start the scoping + architecture phases with the PO, UX, and architect agents
 
-### Step 5: Configure hooks (optional)
-- [ ] Copy `framework/stacks/hooks/hook-config.json` to project root
-- [ ] Customize patterns for your tech stack
-- [ ] Generate Claude Code settings from hook config
+### Step 6: Install hooks (feedback loop)
+- [ ] Run `framework/scripts/setup-hooks.sh` to install pre-commit, pre-push, and PR guard hooks
+- [ ] Hooks are feedback-only — the orchestrator is the source of truth; `--no-verify` is caught at the next `/build`
 
-### Step 6: Verify setup
-- [ ] Run `/spec` skill to test PO agent
-- [ ] Run `/refine` skill to test refinement
+### Step 7: Verify setup
+- [ ] Run `/help` to list available commands
+- [ ] Run `/spec` to start the PO agent
 - [ ] Verify CLAUDE.md is picked up by your IDE
 - [ ] Verify memory file is readable
 
 ## Post-setup checklist
-- [ ] First commit with project structure
-- [ ] SYNC.md created with framework version
-- [ ] Team members onboarded (if applicable)
+- [ ] First commit with project structure (use `/ship` on the bootstrap story if there is one, otherwise a manual setup commit is fine)
+- [ ] SYNC.md created with framework v5 version
+- [ ] Team members onboarded
+
+## After daily resumption
+
+- [ ] `/next` — shows BLOCKING · IN-PROGRESS · READY · PENDING SHIP · SUGGESTIONS
+- [ ] `/status` — dashboard view
+
+## Optional: CI/CD belt
+
+The framework runs without CI — the orchestrator re-runs everything on every
+`/build` / `/ship`. If you want an independent CI witness:
+
+```bash
+framework/scripts/generate-ci.sh --github   # or --gitlab
+```
+
+This writes a workflow that invokes `orchestrator.py --gate-all` on push / PR.

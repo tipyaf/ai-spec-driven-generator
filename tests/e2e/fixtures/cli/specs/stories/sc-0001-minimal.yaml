@@ -1,0 +1,18 @@
+id: sc-0001-minimal
+title: CLI supports --help, --version, greet command
+feature_id: sc-0001-minimal
+status: refined
+smoke_command: "greet Alice"
+acceptance_criteria:
+  - id: ac-1
+    tier: 1
+    description: "--help prints Usage"
+    verify: "python -m app.cli --help"
+  - id: ac-2
+    tier: 1
+    description: "--version prints semver"
+    verify: "python -m app.cli --version"
+  - id: ac-3
+    tier: 1
+    description: "greet NAME prints Hello NAME!"
+    verify: "pytest tests/test_cli.py -x"

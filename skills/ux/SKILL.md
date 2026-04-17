@@ -1,83 +1,66 @@
 ---
 name: ux
-description: Design UX/UI for frontend stories. Produces a UX spec, YAML component definitions, and an HTML prototype. Use when starting UI work or when a story needs visual design before build.
+description: Design UX/UI for frontend stories. Produces a UX spec, YAML component definitions, and self-contained HTML wireframes that MUST carry data-testid, data-action, data-state, and data-role attributes on every interactive element (required by G9.x gates).
 ---
 
-## Phase guard — verify before proceeding
+# /ux
 
-**Prerequisites** (check filesystem):
-1. `specs/feature-tracker.yaml` must exist
-2. At least one feature with UI scope must exist in the tracker
-3. Stack profiles from `stacks/` must be readable (for design system constraints)
+## Usage
+/ux [all | feature-name | story-id]
 
-**If any prerequisite is missing** → Tell user: "Define the project first" → suggest `/spec`
+## What it does
 
-## Setup — Read these files before starting
+Produces the three mandatory UX artefacts (spec, components, HTML prototype) for a UI story. In v5 the HTML wireframes become a machine-readable contract: every interactive element must expose four `data-*` attributes consumed downstream by G9.1–G9.6 gates.
 
-1. Read `agents/ux-ui.md` (core instructions)
-2. Read `specs/feature-tracker.yaml` (current state)
-3. Read the relevant story file from `specs/stories/[feature-id].yaml`
-4. Read stack profiles from `stacks/` (design system rules, component library, CSS framework)
-5. Read `memory/LESSONS.md` (known UX pitfalls)
+## Required attributes on every interactive element
 
-## Invocation modes
-
-- `/ux` or `/ux all` — run UX design for all frontend stories in pending/refined state
-- `/ux [feature-name]` — run UX design for a specific feature
-- `/ux [story-ID]` — run UX design for a specific story by its ID (e.g., `/ux 124`)
-
-## Workflow
-
-### Step 1 — Information architecture
-1. Read the story ACs to understand what the user sees and does
-2. Map out the page/screen structure (sitemap fragment)
-3. Identify navigation flows and user journeys
-4. Define component hierarchy
-
-### Step 2 — Component design
-1. Define each UI component in YAML format:
-   - Component name, purpose, props/inputs
-   - States (default, loading, error, empty)
-   - Responsive behavior (mobile, tablet, desktop)
-   - Accessibility requirements (ARIA roles, keyboard navigation)
-2. Reference existing design system components where possible
-3. Flag new components that need creation
-
-### Step 3 — HTML prototype
-1. Create a static HTML prototype demonstrating the layout and interactions
-2. Use the project's CSS framework (from stack profile) for styling
-3. Include realistic sample data (not lorem ipsum)
-4. Prototype must be viewable by opening the HTML file directly in a browser
-
-### Step 4 — User validation
-1. Present the design to the user with:
-   - Component hierarchy diagram
-   - Key interaction flows
-   - Accessibility notes
-2. Wait for user approval before proceeding
-3. Iterate based on feedback
-
-## Output directory
-
-All UX artefacts are written to `_work/ux/`:
-- `_work/ux/[feature-id]-spec.md` — UX specification document
-- `_work/ux/[feature-id]-components.yaml` — component definitions in YAML
-- `_work/ux/[feature-id]-prototype.html` — static HTML prototype
-
-## 3 mandatory artefacts
-
-Every `/ux` invocation MUST produce all three:
-
-| Artefact | Format | Purpose |
+| Attribute | Used by | Example |
 |---|---|---|
-| **UX spec** | Markdown (`.md`) | Information architecture, flows, design rationale, accessibility notes |
-| **Component definitions** | YAML (`.yaml`) | Structured component tree with props, states, responsive rules |
-| **HTML prototype** | HTML (`.html`) | Visual, interactive prototype viewable in browser |
+| `data-testid` | G9.2 wireframe conformity, E2E selectors | `data-testid="login-form-email"` |
+| `data-action` | G9.4 interaction verification | `data-action="submit-login"` |
+| `data-state` | G9.3 visual regression per state | `data-state="default\|loading\|error\|disabled"` |
+| `data-role` | G9.5 accessibility (role + contrast) | `data-role="primary\|secondary\|destructive"` |
 
-If any artefact cannot be produced (e.g., no UI in the story), explain why and skip with justification.
+A wireframe missing any one of these on an interactive element is rejected — the skill loops with the UX agent until conformity. This contract is what lets the orchestrator auto-generate Playwright interaction tests.
 
-## Artefact checklist (must exist after /ux)
-- [ ] `_work/ux/[feature-id]-spec.md` — UX specification
-- [ ] `_work/ux/[feature-id]-components.yaml` — component definitions
-- [ ] `_work/ux/[feature-id]-prototype.html` — HTML prototype
-- [ ] Story file updated with UX references (if applicable)
+## How it works
+
+1. Load `agents/ux-ui.md` and the story file.
+2. Build information architecture, component hierarchy, and flows.
+3. Write component definitions in YAML (each component with states, props, accessibility notes).
+4. Render the HTML prototype using the project's design system tokens:
+   - Inline CSS with `--ds-*` custom properties referencing `specs/design-system.yaml`.
+   - Include all states (empty, loading, error, success).
+   - Include 3 viewports: 375px / 768px / 1440px.
+   - Add the four required `data-*` attributes to every interactive element.
+5. Run WCAG pre-check (axe-core if configured, manual checklist otherwise).
+6. Present to the user for approval; iterate on feedback.
+7. Persist to `_work/ux/wireframes/<story-id>/` and update `specs/<project>-ux.md`.
+
+## Arguments
+
+| Arg | Required | Description |
+|---|---|---|
+| `all` | No | Design every pending UI story. Default when no arg passed. |
+| `feature-name` | No | Design all UI stories under the named feature. |
+| `story-id` | No | Design a single story (e.g. `/ux sc-0014`). |
+
+## Flags
+
+None.
+
+## Exit conditions
+
+- **Success**: all three artefacts produced, wireframes pass the attribute contract and WCAG pre-check.
+- **Failure**: missing design-system file, story has no UI scope.
+- **Escalation**: user rejects wireframes after 3 iterations — user must validate manually.
+
+## Files read / written
+
+- Reads: `agents/ux-ui.md`, `specs/stories/<id>.yaml`, `specs/design-system.yaml`, `stacks/templates/<stack>/profile.yaml`.
+- Writes: `_work/ux/wireframes/<story-id>/*.html`, `_work/ux/<story-id>-spec.md`, `_work/ux/<story-id>-components.yaml`, `specs/<project>-ux.md`.
+
+## Related
+
+- `/refine` — calls `/ux` automatically for UI stories.
+- `/build` — consumes the wireframes for G9.2 / G9.4 test generation.

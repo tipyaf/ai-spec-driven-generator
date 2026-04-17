@@ -1,84 +1,70 @@
 ---
 name: scan
-description: Run SonarQube scanner on local changes only. Analyzes staged and modified files vs. the main branch, returns a concise quality report suitable for creating fix stories.
+description: Run the code-quality scanner (SonarQube or stack-declared tool). Default scans local diff vs main; --full scans the whole repository; --report fetches the latest status without launching a new scan. Replaces v4 /scan + /scan-full + /sonar.
 ---
 
-## Overview
+# /scan
 
-Run SonarQube analysis scoped to local changes only (staged + unstaged files in the current branch vs. main).
+## Usage
+/scan [--full] [--report]
 
-## Prerequisites
+## What it does
 
-- `sonar-scanner` or `npx sonar-scanner` must be available
-- SonarQube credentials configured via **one of**:
-  - `.env` file at project root (recommended — per-project)
-  - Shell environment variables (`~/.zshrc`, `~/.bashrc`, or Windows User env)
+Single entry point for code-quality scanning. The default is a fast scan of files changed vs `main`. Flags widen the scope:
 
-Required variables: `SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`
+| Invocation | Behaviour |
+|---|---|
+| `/scan` | Scan local diff only (staged + unstaged vs `origin/main`). |
+| `/scan --full` | Scan the entire repository. |
+| `/scan --report` | Read-only: fetch current quality gate + key metrics from the scanner API without relaunching a scan. |
 
-## Workflow
+`--full` and `--report` are mutually exclusive; `--report` wins if both are given (with a warning).
 
-1. **Get list of changed files**:
-   ```bash
-   git diff origin/main --name-only --diff-filter=ACMR
-   ```
+## How it works
 
-2. **Read SonarQube credentials** (`.env` first, then shell environment):
-   - Read `.env` file at project root if it exists — parse `KEY=value` lines
-   - Fall back to shell environment variables for any missing values
-   - If all three variables are missing, tell the user: "Copy `.env.example` to `.env` and fill in your SonarQube credentials" and stop
+1. Read SonarQube credentials from `.env` then shell env (`SONAR_TOKEN`, `SONAR_HOST_URL`, `SONAR_PROJECT_KEY`).
+2. Resolve the scope:
+   - Default: `git diff origin/main --name-only --diff-filter=ACMR`.
+   - `--full`: `sonar.sources=.`.
+   - `--report`: `GET /api/qualitygates/project_status` + `/api/measures/component`.
+3. Invoke `sonar-scanner` (or `npx sonar-scanner`) with the computed inclusions, or call the API directly for `--report`.
+4. Poll `/api/ce/activity` until analysis finishes (scan modes only).
+5. Parse results and render a concise markdown report via `ui_messages.py`.
+6. Suggest an actionable follow-up (e.g. "create a fix story for X critical issues") when non-zero.
 
-3. **Run sonar-scanner scoped to changed files**:
-   ```bash
-   CHANGED=$(git diff origin/main --name-only --diff-filter=ACMR | tr '\n' ',')
-   npx sonar-scanner \
-     -Dsonar.projectKey="$SONAR_PROJECT_KEY" \
-     -Dsonar.sources=. \
-     -Dsonar.inclusions="$CHANGED" \
-     -Dsonar.host.url="$SONAR_HOST_URL" \
-     -Dsonar.token="$SONAR_TOKEN" \
-     -Dsonar.exclusions="node_modules/**,dist/**,.git/**,**/*.md"
-   ```
-   If `$CHANGED` is empty (no local changes), report "no changes to analyze" and stop.
+## Arguments
 
-4. **Poll for analysis completion** and parse results (`GET /api/ce/activity`).
+None positional.
 
-5. **Output format** (concise, markdown):
-   ```
-   ## SonarQube Analysis: Local Changes
+## Flags
 
-   **Project:** ${PROJECT_KEY}
-   **Branch:** Current (vs main)
-   **Status:** PASS / WARN / FAIL
+| Flag | Description |
+|---|---|
+| `--full` | Scan the entire repository (heavier). |
+| `--report` | Fetch status without triggering a new scan. |
 
-   ### Summary
-   - **Quality Gate:** [status]
-   - **Files Analyzed:** N
-   - **New Issues:** N
+## Exit conditions
 
-   ### Issues Breakdown
-   | Severity | Count |
-   |----------|-------|
-   | Critical | N |
-   | Major | N |
-   | Minor | N |
-   | Info | N |
+- **0**: scan completed, quality gate PASS.
+- **1**: quality gate FAIL or scanner error.
+- **3**: credentials missing or scanner binary not installed.
 
-   ### Top Files (by issue count)
-   - path/to/file.ts (5 issues)
-   - path/to/file.py (3 issues)
+## Files read / written
 
-   **Dashboard:** ${SONAR_HOST_URL}/dashboard?id=${PROJECT_KEY}&branch=...
-   ```
+- Reads: `.env` (credentials), git state.
+- Writes: nothing (scanner server holds the results).
 
-6. **Make it actionable**: if issues found, suggest a story title like:
-   ```
-   Fix X critical/major issues in [files] (SonarQube)
-   ```
+## Migration from v4
 
-## Error handling
+| v4 command | v5 equivalent |
+|---|---|
+| `/scan` | `/scan` (unchanged) |
+| `/scan-full` | `/scan --full` |
+| `/sonar` | `/scan --report` |
 
-- If SonarQube is unreachable, show the connection error with URL
-- If auth fails, suggest token regeneration
-- If no changes detected, report "no changes to analyze"
-- If sonar-scanner not installed, guide: `npm install -g sonarqube-scanner`
+Old skill directories (`skills/scan-full/`, `skills/sonar/`) are removed. Historical references in docs should be updated. Users who still type `/scan-full` or `/sonar` will get an "unknown command — did you mean `/scan --full`?" suggestion from `/help`.
+
+## Related
+
+- `/build` — G3 Code quality gate uses the same tool.
+- `/status` — shows the latest scan result when available.

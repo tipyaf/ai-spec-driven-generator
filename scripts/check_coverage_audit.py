@@ -19,11 +19,99 @@ Exit code: 0 = all layers covered, 1 = missing coverage
 from __future__ import annotations
 
 import argparse
+import ast
 import json
 import re
 import subprocess
 import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+try:
+    from ui_messages import fail as ui_fail, success as ui_success, info as ui_info  # noqa: E402
+except Exception:  # pragma: no cover
+    def ui_fail(gate, reason, fix="", **_):
+        print(f"[FAIL {gate}] {reason} :: fix: {fix}")
+    def ui_success(gate, reason, **_):
+        print(f"[PASS {gate}] {reason}")
+    def ui_info(text, **_):
+        print(text)
+
+
+# --- AST-based route extraction (v5) -------------------------------------
+# The legacy regex missed:
+#   • route paths built from constants:  @router.get(API_PREFIX + "/users")
+#   • f-strings:                         f"/{API}/users"
+#   • paths assigned to a module variable then passed: ROUTE = "/x"; router.get(ROUTE)
+#
+# The AST-based extractor resolves module-level string constants and
+# concatenations. It does NOT try to be a full type checker — it tracks
+# string constants only. Anything it can't resolve is returned with a
+# wildcard marker so the caller can still produce useful output.
+
+
+def _resolve_str(node: ast.AST, const_table: dict[str, str]) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    if isinstance(node, ast.Name):
+        return const_table.get(node.id)
+    if isinstance(node, ast.BinOp) and isinstance(node.op, ast.Add):
+        left = _resolve_str(node.left, const_table)
+        right = _resolve_str(node.right, const_table)
+        if left is not None and right is not None:
+            return left + right
+    if isinstance(node, ast.JoinedStr):  # f-string
+        parts: list[str] = []
+        for value in node.values:
+            if isinstance(value, ast.Constant):
+                parts.append(str(value.value))
+            elif isinstance(value, ast.FormattedValue):
+                inner = _resolve_str(value.value, const_table)
+                parts.append(inner if inner is not None else "{?}")
+        return "".join(parts)
+    return None
+
+
+def extract_endpoints_ast(content: str, filepath: str) -> list[dict]:
+    """Find @router.METHOD(path) decorators; resolve constants/f-strings."""
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return []
+
+    # Collect module-level STRING constants.
+    const_table: dict[str, str] = {}
+    for node in tree.body:
+        if isinstance(node, ast.Assign):
+            if (
+                len(node.targets) == 1
+                and isinstance(node.targets[0], ast.Name)
+                and isinstance(node.value, ast.Constant)
+                and isinstance(node.value.value, str)
+            ):
+                const_table[node.targets[0].id] = node.value.value
+        if isinstance(node, ast.AnnAssign) and isinstance(node.target, ast.Name):
+            if isinstance(node.value, ast.Constant) and isinstance(node.value.value, str):
+                const_table[node.target.id] = node.value.value
+
+    endpoints: list[dict] = []
+    HTTP_METHODS = {"get", "post", "put", "delete", "patch", "options", "head"}
+
+    for node in ast.walk(tree):
+        decorators = getattr(node, "decorator_list", [])
+        for dec in decorators:
+            if not isinstance(dec, ast.Call):
+                continue
+            # Match .get("/path") / .post(...) — attribute on anything (router, app, bp, etc.)
+            func = dec.func
+            if isinstance(func, ast.Attribute) and func.attr.lower() in HTTP_METHODS:
+                method = func.attr.upper()
+                if dec.args:
+                    path = _resolve_str(dec.args[0], const_table)
+                    if path is None:
+                        path = "<dynamic>"
+                    endpoints.append({"method": method, "path": path, "file": filepath})
+    return endpoints
 
 RED = "\033[0;31m"
 GREEN = "\033[0;32m"
@@ -122,20 +210,31 @@ def categorize_files(
 
 
 def extract_endpoints(router_files: list[str], project_root: Path) -> list[dict]:
-    """Extract endpoint definitions from router files."""
-    endpoints = []
+    """Extract endpoint definitions from router files.
+
+    v5: uses AST walk + constant-resolution instead of regex, so routes like
+    ``@router.get(API_PREFIX + "/users")`` or ``@router.get(f"/{ver}/me")``
+    are resolved to concrete paths when the constants are available.
+    """
+    endpoints: list[dict] = []
     for rf in router_files:
         fpath = project_root / rf
         if not fpath.exists():
             continue
         content = fpath.read_text(errors="replace")
-        for m in re.finditer(
-            r'@router\.(get|post|put|delete|patch)\(\s*["\']([^"\']+)["\']',
-            content,
-        ):
-            method = m.group(1).upper()
-            path = m.group(2)
-            endpoints.append({"method": method, "path": path, "file": rf})
+        if fpath.suffix == ".py":
+            endpoints.extend(extract_endpoints_ast(content, rf))
+        else:
+            # Non-Python fallback: regex (legacy behaviour).
+            for m in re.finditer(
+                r'@router\.(get|post|put|delete|patch)\(\s*["\']([^"\']+)["\']',
+                content,
+            ):
+                endpoints.append({
+                    "method": m.group(1).upper(),
+                    "path": m.group(2),
+                    "file": rf,
+                })
     return endpoints
 
 

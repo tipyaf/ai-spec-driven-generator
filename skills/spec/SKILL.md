@@ -1,95 +1,81 @@
 ---
 name: spec
-description: Create or update a project specification. Guides the user through scoping with the Product Owner, then clarifies ambiguities, designs UX, then plans architecture. Use when starting a new project or defining a new feature.
+description: Create or update a project specification. Auto-detects spec.type from project files (package.json, pyproject.toml, Cargo.toml, go.mod, Gemfile); asks for confirmation when ambiguous.
 ---
 
-## Phase guard
+# /spec
 
-No prerequisites — `/spec` is the starting point.
+## Usage
+/spec [domain | sc-<id>]
 
-## Setup — Read the agent needed for the current step
+## What it does
 
-- **Phase 0 (Constitution)**: Define non-negotiable project principles
-- **Phase 0.1 (Scoping)**: Read `agents/product-owner.md`
-- **Phase 0.2 (Clarify)**: Resolve ambiguities in the spec before planning
-- **Phase 0.3 (Design)**: Read `agents/ux-ui.md`
-- **Phase 0.5 (Ordering)**: Read `agents/product-owner.md` + `agents/architect.md`
-- **Phase 1 (Plan)**: Read `agents/architect.md`
+Guides the user through scoping, clarification, UX design, feature ordering, and architecture planning, then produces the canonical `specs/` artefacts. The key v5 change: `spec.type` is **inferred from project files** instead of being asked cold.
 
-Read ONE agent at a time — load the next only when the current phase is validated.
-Only read `.ref.md` files when you need a specific template.
+## Auto-detection of spec.type
 
-## Workflow
+Before starting scoping, the skill scans the project root for signals:
 
-### Step 1 — Constitution
-Define non-negotiable project principles (quality standards, testing requirements, architectural constraints).
-→ Write to `specs/constitution.md`
-→ Present to user → wait for validation
+| File / pattern found | Candidate spec.type |
+|---|---|
+| `package.json` with `next`/`react`/`vue`/`svelte` deps | `web-ui` |
+| `package.json` with `express`/`fastify`/`koa`/`nestjs` | `web-api` |
+| `package.json` with `commander`/`yargs`/`oclif`, bin entry | `cli` |
+| `package.json` as library (no bin, has `main`/`exports`) | `library` |
+| `pyproject.toml` with `fastapi`/`flask`/`django`/`starlette` | `web-api` |
+| `pyproject.toml` with `torch`/`tensorflow`/`scikit-learn` | `ml-pipeline` |
+| `pyproject.toml` console_scripts only | `cli` |
+| `Cargo.toml` with `[[bin]]` | `cli` |
+| `Cargo.toml` as lib crate | `library` |
+| `go.mod` with `net/http`, `gin`, `echo` | `web-api` |
+| `go.mod` with `cobra`, `urfave/cli` | `cli` |
+| `Gemfile` with `rails`, `sinatra` | `web-api` |
+| `ios/`, `android/`, `App.tsx` with `react-native` | `mobile` |
+| `platformio.ini`, `Kconfig`, `.cargo/config.toml` with embedded target | `embedded` |
 
-### Step 2 — Scoping (PO)
-Gather requirements (one question at a time), challenge assumptions, write YAML spec.
-→ Write to `specs/[project-name].yaml`
-→ Present to user → wait for validation
+Rules:
+- **Single clear match** → propose `spec.type: <value>` and ask "confirm? (y/n)".
+- **Multiple matches** (e.g. Next.js + Express API in monorepo) → list candidates, ask user to pick.
+- **No match** → ask the user to pick from the 7 project types.
 
-### Step 3 — Clarify ambiguities
-Review the spec for ambiguities, contradictions, or missing information.
-Ask the user targeted questions to resolve each one. Document resolutions.
-→ Write to `specs/[project-name]-clarifications.md` (even if empty = "no ambiguities found")
-→ Present to user → wait for validation
+The detected type is persisted in `specs/<project>.yaml` as `spec.type`.
 
-### Step 4 — Design (if UI project)
-Check `spec.type` — skip this step for: api, cli, library, embedded, data-pipeline.
-Design information architecture, flows, design system, components.
-→ Write to `specs/[project-name]-ux.md`
-→ Present to user → wait for validation
+## How it works
 
-### Step 5 — Feature ordering
-Collaborate between PO (business value) and Architect (technical dependencies) to order features into epics.
-Each epic must deliver testable user value.
-→ Order features in the spec YAML or in `specs/[project-name]-arch.md`
-→ Present to user → wait for validation
+1. Run auto-detection; confirm `spec.type` with the user.
+2. Load appropriate project-type YAML from `stacks/project-types/<type>.yaml` (to know which gates will apply).
+3. Walk through phases:
+   1. Constitution — non-negotiable principles → `specs/constitution.md`.
+   2. Scoping (PO) — requirements gathering → `specs/<project>.yaml`.
+   3. Clarify — resolve ambiguities → `specs/<project>-clarifications.md`.
+   4. UX (if `type in {web-ui, mobile}`) — design system → `specs/<project>-ux.md`.
+   5. Feature ordering — PO + Architect → `specs/<project>-arch.md`.
+   6. Architecture plan → `specs/<project>-arch.md` (continued).
+   7. Initialize `specs/feature-tracker.yaml`.
+4. Present each phase artefact to the user before moving on.
 
-### Step 6 — Architecture plan
-Select stack (present options with trade-offs), plan architecture, create implementation manifest.
-→ Write to `specs/[project-name]-arch.md`
-→ Present to user → wait for validation
+## Arguments
 
-### Step 7 — Initialize tracking
-Create the feature tracker from `specs/templates/feature-tracker.yaml`.
-Populate with all features from the spec (status: pending).
-→ Write to `specs/feature-tracker.yaml`
+| Arg | Required | Description |
+|---|---|---|
+| `domain` | No | Regenerate only that domain's markdown (e.g. `/spec backend`). |
+| `sc-<id>` | No | Regenerate domains touched by a specific story overlay in `_work/spec/`. |
 
-## Spec regeneration from YAML overlays
+## Flags
 
-The `/spec` command also supports regenerating markdown specs from YAML overlays:
+None.
 
-### Directory convention
-- **Baseline spec**: `specs/[project-name].yaml` — the original spec
-- **Story overlays**: `_work/spec/sc-[ID].yaml` — per-story spec changes created during `/refine`
-- **Generated docs**: `specs/docs/*.md` — regenerated markdown (one per domain)
+## Exit conditions
 
-### Invocation modes
-- `/spec` (no args) — full regeneration: merge baseline + all overlays, regenerate all domain docs
-- `/spec [domain]` — regenerate only that domain (e.g., `/spec backend`)
-- `/spec sc-[ID]` — regenerate only domains touched by a specific story overlay
+- **Success**: all required spec artefacts written and confirmed.
+- **Failure**: user aborts during validation; no partial state.
 
-### Merge process
-1. Read the baseline spec YAML
-2. Read all overlay files from `_work/spec/`
-3. Deep-merge overlays onto baseline (overlays win on conflict)
-4. Dispatch `agents/spec-generator.md` (if it exists) to produce markdown from merged YAML
+## Files read / written
 
-### Artefact checklist (all must exist before /spec is "done")
-- [ ] `specs/constitution.md`
-- [ ] `specs/[project-name].yaml`
-- [ ] `specs/[project-name]-clarifications.md`
-- [ ] `specs/[project-name]-ux.md` (or skipped for non-UI)
-- [ ] `specs/[project-name]-arch.md`
-- [ ] `specs/feature-tracker.yaml`
-- [ ] `_work/spec/` directory created (even if empty — ready for overlays)
+- Reads: `package.json`, `pyproject.toml`, `Cargo.toml`, `go.mod`, `Gemfile` (auto-detection); `stacks/project-types/*.yaml`; `_work/spec/*.yaml` (overlays).
+- Writes: `specs/constitution.md`, `specs/<project>.yaml`, `specs/<project>-clarifications.md`, `specs/<project>-ux.md` (if UI), `specs/<project>-arch.md`, `specs/feature-tracker.yaml`.
 
-## Next step — ALWAYS tell the user
+## Related
 
-After `/spec` completes, ALWAYS end your response with:
-
-> **Next step:** Your project is fully specified. Run `/refine [feature-name]` to break the first feature into implementable stories. Features available: [list features from tracker with status `pending`].
+- `/refine` — consumes the spec.
+- `/ux` — design wireframes for UI project types.
