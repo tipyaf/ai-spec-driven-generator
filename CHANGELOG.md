@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.1] - 2026-04-17
+
+- feat: v5.0.0 — complete framework rebuild (breaking)
+
+
 ## [5.0.0] - 2026-04-17
 
 **Major release — complete rebuild of the SDD framework.** The audit of v4.1.1
