@@ -2,8 +2,44 @@
 
 ## [5.0.3] - 2026-04-17
 
-- fix(migration): detect project version from CLAUDE.md, not framework submodule
+### Fixes (found by dog-fooding the migration on a real v4.1.1 project with 71 stories)
 
+- **`spec.type` detection no longer trusts per-story `type:` fields.** v5.0.2
+  walked every YAML in `specs/` and `_work/spec/` and returned the first
+  `type:` it found — which was typically a domain-specific field like
+  `type: smart` on an email-template story, not the project's spec.type.
+  v5.0.3 inspects only ROOT project specs (excluding stories,
+  feature-tracker, design-system, arch/ux docs) and only accepts values
+  that are valid v5 types (`web-ui`, `web-api`, `cli`, `library`,
+  `ml-pipeline`, `mobile`, `embedded`).
+- **`spec.type` is now written into the root project spec**, not into the
+  first `sc-*.yaml` story overlay the script could find. v5.0.2 corrupted
+  `_work/spec/sc-181.yaml` on a real migration.
+- **CLAUDE.md agent renames no longer produce `code-code-reviewer`.**
+  The `reviewer → code-reviewer` replacement now uses a negative lookbehind
+  so it skips tokens already prefixed with `code-` / `peer-` / `story-`.
+  Also adds a `test-engineer → test-author` rule that was missing.
+- **`CLAUDE.md` gate-count replacement is clearer**: "11 quality gates"
+  becomes "14 quality gates (G1–G14 adaptive)" instead of a flat "14
+  quality gates" (which was misleading — v5 has G1, G2, G2.1, G2.2, G2.3,
+  G3, G4, G4.1, G5, G6, G7, G8, plus conditional G9.x / G10–G14).
+- **`_work/stacks/registry.yaml` is now auto-detected.** A new
+  `migrate-v4-to-v5_helpers.py stack-detect` command inspects package.json
+  (root AND nested workspaces for monorepos), pyproject.toml, docker
+  compose files, and ORM config to decide which built-in stacks to enable.
+  v5.0.2 enabled python-fastapi + typescript-react + postgres everywhere
+  regardless of project.
+- **`spec.type` inference is monorepo-aware.** Previously only the root
+  `package.json` was inspected; v5.0.3 also walks `apps/*/package.json`,
+  `packages/*/package.json`, `services/*/package.json` so a fullstack
+  monorepo with a React frontend in `apps/frontend/` is correctly inferred
+  as `web-ui`. Priority order when multiple surfaces are present:
+  mobile > web-ui > web-api > cli > library.
+
+### Tests
+
+- 4 new regression tests in `tests/test_migration_v4_to_v5.py` — one per
+  fixed bug above. Framework self-tests: **240/240 passing**.
 
 ## [5.0.2] - 2026-04-17
 

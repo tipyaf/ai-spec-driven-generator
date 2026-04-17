@@ -230,6 +230,81 @@ def test_rollback_restores_state(v4_project: Path):
         assert after[rel] == before[rel], f"{rel} not restored"
 
 
+def test_claude_md_does_not_double_prefix_code_reviewer(v4_project: Path):
+    """v5.0.2 regression: `reviewer` → `code-reviewer` produced
+    `code-code-reviewer` because the regex ran twice over the already-renamed
+    token. The negative lookbehind in v5.0.3+ must prevent this."""
+    r = _run_migration(v4_project)
+    assert r.returncode == 0, r.stderr
+    claude = (v4_project / "CLAUDE.md").read_text(encoding="utf-8")
+    assert "code-code-reviewer" not in claude, (
+        "Double-prefix bug: the replacement was applied more than once"
+    )
+    assert "code-reviewer" in claude
+
+
+def test_stack_registry_detects_project_stack(v4_project: Path, tmp_path: Path):
+    """registry.yaml must not enable every stack unconditionally.
+    Here the v4 fixture has NO package.json nor pyproject.toml, so every
+    built-in stack should be `enabled: false` — letting the dev opt in
+    rather than carrying dead config."""
+    r = _run_migration(v4_project)
+    assert r.returncode == 0, r.stderr
+    registry = (v4_project / "_work" / "stacks" / "registry.yaml").read_text()
+    # Every stack on the fixture should be disabled (no project deps to detect).
+    for stack in ("python-fastapi", "typescript-react", "postgres", "nodejs-express"):
+        # Accept either: absent, or `enabled: false` within the block.
+        assert stack in registry
+    # Parse structurally.
+    import yaml
+    data = yaml.safe_load(registry)
+    for stack, cfg in data.get("stacks", {}).items():
+        assert cfg["enabled"] is False, (
+            f"{stack} should be disabled on a fixture without any detectable deps, got enabled"
+        )
+
+
+def test_stack_registry_enables_detected_stack(tmp_path: Path):
+    """If the project has a React package.json, typescript-react must be
+    auto-enabled without manual intervention."""
+    root = tmp_path / "reacty"
+    _make_v4_project(root)
+    # Add a React-ish package.json at the root.
+    (root / "package.json").write_text(json.dumps({
+        "name": "reacty",
+        "dependencies": {"react": "^18.0.0", "next": "^14.0.0"},
+    }), encoding="utf-8")
+    r = _run_migration(root, "--force")
+    assert r.returncode == 0, r.stderr
+    import yaml
+    data = yaml.safe_load((root / "_work" / "stacks" / "registry.yaml").read_text())
+    assert data["stacks"]["typescript-react"]["enabled"] is True
+
+
+def test_spec_type_write_targets_root_spec_not_story(v4_project: Path):
+    """v5.0.2 regression: cmd_spec_type --write picked the first sc-*.yaml
+    it found and prepended `type:` to a per-story overlay. v5.0.3 must
+    write ONLY into a root project spec (or leave things alone)."""
+    # Seed a ROOT-looking spec the script can target.
+    (v4_project / "specs" / "myproj.yaml").write_text(
+        "project:\n  name: myproj\n",
+        encoding="utf-8",
+    )
+    # Seed a story overlay that must NOT be touched.
+    (v4_project / "_work" / "spec" / "sc-0042.yaml").write_text(
+        "# Story overlay — sc-0042\n"
+        "# No spec delta.\n",
+        encoding="utf-8",
+    )
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+    overlay = (v4_project / "_work" / "spec" / "sc-0042.yaml").read_text()
+    assert not overlay.startswith("type:"), (
+        "Story overlay must not be rewritten with type:, it's not a root spec"
+    )
+    assert "# Story overlay — sc-0042" in overlay
+
+
 def test_idempotent_second_run_is_noop_for_core_files(v4_project: Path):
     r1 = _run_migration(v4_project)
     assert r1.returncode == 0

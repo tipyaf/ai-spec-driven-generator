@@ -125,64 +125,135 @@ def cmd_agents(args: argparse.Namespace) -> int:
 
 # ── Subcommand: spec-type ──────────────────────────────────────────────────
 
-def _iter_spec_files(project: Path):
-    for sub in ("specs", "_work/spec"):
-        d = project / sub
-        if d.exists():
-            yield from d.rglob("*.yaml")
-            yield from d.rglob("*.yml")
+VALID_SPEC_TYPES = {
+    "web-ui", "web-api", "cli", "library", "lib",
+    "ml-pipeline", "mobile", "embedded",
+}
+
+
+def _iter_root_specs(project: Path):
+    """Yield only ROOT project spec YAMLs — NOT stories, NOT story overlays.
+
+    A root spec lives directly in specs/ (not specs/stories/), has a name that
+    is NOT feature-tracker, NOT design-system, NOT ending with -arch or -ux,
+    and is NOT an sc-XXXX story overlay in _work/spec/.
+    """
+    specs_dir = project / "specs"
+    if specs_dir.is_dir():
+        for p in sorted(specs_dir.glob("*.yaml")):
+            name = p.stem
+            if name in {"feature-tracker", "design-system"}:
+                continue
+            if name.endswith("-arch") or name.endswith("-ux"):
+                continue
+            # Skip anything that looks like a per-story file accidentally placed here.
+            if re.match(r"^sc-\d+", name):
+                continue
+            yield p
 
 
 def _detect_spec_type_from_files(project: Path) -> str | None:
-    # Look inside existing YAML specs.
-    for p in _iter_spec_files(project):
+    """Look inside ROOT project specs for a TOP-LEVEL `type:` that is a valid
+    v5 spec.type. Ignores nested `type:` fields (story-internal domain fields
+    like email-template `type: smart`, contact categories, etc.)."""
+    for p in _iter_root_specs(project):
         data = load_yaml(p)
         if isinstance(data, dict):
-            t = data.get("type") or (data.get("spec") or {}).get("type")
-            if t:
-                return str(t).strip()
+            candidates = [
+                data.get("type"),
+                (data.get("spec") or {}).get("type") if isinstance(data.get("spec"), dict) else None,
+                (data.get("project") or {}).get("type") if isinstance(data.get("project"), dict) else None,
+            ]
+            for t in candidates:
+                if t and str(t).strip() in VALID_SPEC_TYPES:
+                    return str(t).strip()
         elif isinstance(data, str):
-            m = re.search(r"^\s*type:\s*([\w\-]+)", data, re.MULTILINE)
-            if m:
+            # Text fallback: only accept top-level "^type: <valid>" at col 0.
+            m = re.search(r"^type:\s*([\w\-]+)\s*$", data, re.MULTILINE)
+            if m and m.group(1) in VALID_SPEC_TYPES:
                 return m.group(1)
     return None
 
 
 def _infer_spec_type_from_project(project: Path) -> str | None:
-    pkg = project / "package.json"
-    if pkg.exists():
+    """Infer v5 spec.type from project files. Monorepo-aware: inspects both
+    root and nested package.json (apps/*, packages/*) because fullstack
+    monorepos declare their UI in apps/frontend not at the root.
+
+    Priority: web-ui > mobile > web-api > cli > library.
+    (If a project has BOTH a UI and an API, web-ui wins because the UI gates
+    G9.x are strictly broader than the API gates.)
+    """
+    has_ui = False
+    has_mobile = False
+    has_api = False
+    has_cli = False
+
+    # --- Node family (root + monorepo workspaces) ---
+    pkgs = [project / "package.json"]
+    for sub in ("apps", "packages", "services", "frontend", "backend"):
+        pkgs.extend((project / sub).glob("*/package.json"))
+
+    for pkg in pkgs:
+        if not pkg.exists():
+            continue
         try:
             meta = json.loads(pkg.read_text(encoding="utf-8"))
-            deps = {**meta.get("dependencies", {}), **meta.get("devDependencies", {})}
-            if any(k in deps for k in ("react", "next", "vue", "svelte")):
-                return "web-ui"
-            if any(k in deps for k in ("express", "fastify", "koa", "hapi")):
-                return "web-api"
+            deps = {
+                **(meta.get("dependencies") or {}),
+                **(meta.get("devDependencies") or {}),
+            }
         except Exception:
-            pass
+            continue
+        if any(k in deps for k in ("react", "next", "vue", "svelte",
+                                    "@remix-run/react", "solid-js")):
+            has_ui = True
+        if any(k in deps for k in ("react-native", "expo")):
+            has_mobile = True
+        if any(k in deps for k in ("express", "fastify", "koa", "hapi",
+                                    "@nestjs/core", "@adonisjs/core", "hono")):
+            has_api = True
+        if isinstance(meta.get("bin"), (str, dict)):
+            has_cli = True
 
+    # --- Python family ---
     pyproj = project / "pyproject.toml"
-    if pyproj.exists():
+    reqs = list(project.glob("requirements*.txt"))
+    for p in ([pyproj] if pyproj.exists() else []) + reqs:
         try:
-            txt = pyproj.read_text(encoding="utf-8")
-            if re.search(r"fastapi|flask|django|starlette", txt, re.IGNORECASE):
-                return "web-api"
-            if re.search(r"typer|click|argparse", txt, re.IGNORECASE):
-                return "cli"
+            txt = p.read_text(encoding="utf-8")
         except Exception:
-            pass
+            continue
+        if re.search(r"fastapi|flask|django|starlette", txt, re.IGNORECASE):
+            has_api = True
+        if re.search(r"\btyper\b|\bclick\b|\[project\.scripts\]", txt, re.IGNORECASE):
+            has_cli = True
 
+    # --- Rust ---
     cargo = project / "Cargo.toml"
     if cargo.exists():
         try:
             txt = cargo.read_text(encoding="utf-8")
             if "[[bin]]" in txt or re.search(r"\[\[?bin", txt):
-                return "cli"
-            if "[lib]" in txt:
-                return "lib"
+                has_cli = True
+            if re.search(r"axum|actix-web|rocket|warp", txt):
+                has_api = True
         except Exception:
             pass
 
+    # --- Go ---
+    if (project / "go.mod").exists() and (project / "main.go").exists():
+        has_cli = True
+
+    # Decide winner by priority.
+    if has_mobile:
+        return "mobile"
+    if has_ui:
+        return "web-ui"
+    if has_api:
+        return "web-api"
+    if has_cli:
+        return "cli"
     return None
 
 
@@ -193,29 +264,28 @@ def cmd_spec_type(args: argparse.Namespace) -> int:
         print(t or "unknown")
         return 0
     if args.write:
-        # Persist into the main spec if we can.
-        # Prefer _work/spec/sc-0000*.yaml; otherwise the first non-tracker spec.
+        # Write into the ROOT project spec — NEVER into a per-story overlay.
+        # A root spec lives in specs/ (not specs/stories/, not _work/spec/),
+        # has a name not in {feature-tracker, design-system}, and doesn't
+        # end with -arch/-ux.
         target = None
-        for cand in (
-            project / "_work" / "spec",
-            project / "specs",
-        ):
-            if cand.exists():
-                for p in sorted(cand.glob("sc-0000*.yaml")):
+        # 1) Prefer the project-named root spec in specs/
+        for p in _iter_root_specs(project):
+            target = p
+            break
+        # 2) Fallback: sc-0000 seed in _work/spec/ (v4 convention for initial overlay)
+        if target is None:
+            seed_dir = project / "_work" / "spec"
+            if seed_dir.exists():
+                for p in sorted(seed_dir.glob("sc-0000*.yaml")):
                     target = p
                     break
-                if target is None:
-                    yamls = [
-                        p for p in sorted(cand.glob("*.yaml"))
-                        if p.name != "feature-tracker.yaml"
-                    ]
-                    if yamls:
-                        target = yamls[0]
-                if target:
-                    break
         if target is None:
-            print("[spec-type] no spec file to update (skipping)")
+            print("[spec-type] no root spec file to update (skipping)")
             return 0
+        if str(args.write) not in VALID_SPEC_TYPES:
+            print(f"[spec-type] WARN: '{args.write}' is not a valid v5 spec.type "
+                  f"({sorted(VALID_SPEC_TYPES)}) — writing anyway")
         if HAVE_YAML:
             data = load_yaml(target) or {}
             if isinstance(data, dict):
@@ -237,16 +307,31 @@ def cmd_spec_type(args: argparse.Namespace) -> int:
 
 # ── Subcommand: claude-md ──────────────────────────────────────────────────
 
+# Order matters. Tokens that already include "code-reviewer" must be protected
+# from later `reviewer → code-reviewer` rules. We use negative lookbehind to
+# avoid turning "code-reviewer" into "code-code-reviewer" (double prefix bug
+# reported in v5.0.2 migrations of mature v4 projects).
 CLAUDE_MD_REPLACEMENTS = [
+    # Framework version marker — keep early so later rules can safely change
+    # gate numbers without clobbering the SDD/framework prefix.
     (r"SDD\s+v4(\.\d+)*", "SDD v5.0"),
-    (r"framework v4(\.\d+)*", "framework v5.0"),
-    (r"11\s+gates?", "14 gates"),
-    (r"11\s+quality\s+gates?", "14 quality gates"),
-    (r"G1-G11", "G1-G14"),
+    (r"framework\s+v4(\.\d+)*", "framework v5.0"),
+    # Gate counts — replace most-specific phrasing first, then generic.
+    (r"11\s+quality\s+gates?", "14 quality gates (G1–G14 adaptive)"),
+    (r"(?<!\w)11\s+gates?(?!\w)", "14 gates (G1–G14 adaptive)"),
+    (r"G1-G11", "G1–G14"),
     (r"G1–G11", "G1–G14"),
+    # Agent renames — specific first, generic second, with lookbehind so we
+    # don't re-prefix already-renamed tokens.
+    (r"\btest-engineer\b", "test-author"),
     (r"\btester\b", "test-author"),
     (r"\bstory-reviewer\b", "code-reviewer"),
-    (r"\breviewer\b(?!-agent)", "code-reviewer"),
+    # `reviewer` → `code-reviewer` but NOT when the word is already part of
+    # "code-reviewer" (avoid "code-code-reviewer") or "peer-reviewer" etc.
+    (r"(?<!code-)(?<!peer-)(?<!story-)\breviewer\b(?!-agent)", "code-reviewer"),
+    # Removed agents — strip their references so nothing tries to dispatch them.
+    (r"\bdeveloper\b(?=\s*(?:agent|,|\.|\n))", "builder"),
+    (r"\bspec-generator\b", "refinement"),
 ]
 
 CLAUDE_MD_V5_NOTE = """
@@ -486,6 +571,129 @@ def _bullet_list(raw: str) -> str:
     return "\n".join(f"- `{x}`" for x in items)
 
 
+def cmd_stack_detect(args: argparse.Namespace) -> int:
+    """Detect which v5 built-in stacks are present in the project and print
+    a YAML fragment that can be embedded in _work/stacks/registry.yaml.
+
+    Detection rules (each returns enabled=true for the stack):
+      - python-fastapi: pyproject.toml or requirements*.txt contains fastapi/flask/django/starlette
+      - typescript-react: package.json deps contain react, next, vue, or svelte
+      - nodejs-express: package.json deps contain express, fastify, koa, nestjs, adonisjs, hono
+      - postgres: docker-compose.yml references postgres/postgresql, OR alembic/prisma/drizzle,
+                  OR any .env/.env.example mentions DATABASE_URL=postgres
+      - go-gin, rust-axum, etc.: not detected automatically (custom stacks)
+
+    Stacks not detected are written as `enabled: false` with a comment
+    pointing users to stacks/CUSTOM_STACK_GUIDE.md.
+    """
+    project = Path(args.project).resolve()
+
+    enabled: dict[str, bool] = {
+        "python-fastapi": False,
+        "typescript-react": False,
+        "postgres": False,
+        "nodejs-express": False,
+    }
+
+    # --- Node / TypeScript family ---
+    pkg = project / "package.json"
+    if pkg.exists():
+        try:
+            meta = json.loads(pkg.read_text(encoding="utf-8"))
+            deps = {
+                **(meta.get("dependencies") or {}),
+                **(meta.get("devDependencies") or {}),
+            }
+            if any(k in deps for k in ("react", "next", "vue", "svelte",
+                                        "@remix-run/react", "solid-js")):
+                enabled["typescript-react"] = True
+            if any(k in deps for k in ("express", "fastify", "koa", "hapi",
+                                        "@nestjs/core", "@adonisjs/core", "hono")):
+                enabled["nodejs-express"] = True
+        except Exception:
+            pass
+    # Also check nested package.json files in a monorepo (apps/, packages/).
+    for sub in ("apps", "packages"):
+        for subpkg in project.glob(f"{sub}/*/package.json"):
+            try:
+                meta = json.loads(subpkg.read_text(encoding="utf-8"))
+                deps = {
+                    **(meta.get("dependencies") or {}),
+                    **(meta.get("devDependencies") or {}),
+                }
+                if any(k in deps for k in ("react", "next", "vue", "svelte")):
+                    enabled["typescript-react"] = True
+                if any(k in deps for k in ("express", "fastify", "koa",
+                                            "@nestjs/core", "@adonisjs/core")):
+                    enabled["nodejs-express"] = True
+            except Exception:
+                continue
+
+    # --- Python family ---
+    pyproj = project / "pyproject.toml"
+    reqs = list(project.glob("requirements*.txt"))
+    py_sources = ([pyproj] if pyproj.exists() else []) + reqs
+    for p in py_sources:
+        try:
+            txt = p.read_text(encoding="utf-8")
+            if re.search(r"fastapi|flask|django|starlette", txt, re.IGNORECASE):
+                enabled["python-fastapi"] = True
+        except Exception:
+            continue
+
+    # --- Postgres detection ---
+    compose_files = [
+        project / "docker-compose.yml",
+        project / "docker-compose.yaml",
+        project / ".devtools" / "docker-compose.yml",
+    ]
+    for cf in compose_files:
+        if cf.exists():
+            try:
+                if re.search(r"\b(postgres|postgresql|pg_)",
+                             cf.read_text(encoding="utf-8"), re.IGNORECASE):
+                    enabled["postgres"] = True
+                    break
+            except Exception:
+                continue
+    if not enabled["postgres"]:
+        # Migrations / ORM markers
+        for marker in ("alembic.ini", "prisma/schema.prisma",
+                       "drizzle.config.ts", "drizzle.config.js",
+                       "knexfile.js", "knexfile.ts"):
+            if (project / marker).exists():
+                enabled["postgres"] = True
+                break
+    if not enabled["postgres"]:
+        for envfile in (project / ".env", project / ".env.example",
+                        project / ".env.local"):
+            if envfile.exists():
+                try:
+                    if re.search(r"DATABASE_URL\s*=\s*postgres",
+                                 envfile.read_text(encoding="utf-8"),
+                                 re.IGNORECASE):
+                        enabled["postgres"] = True
+                        break
+                except Exception:
+                    continue
+
+    # --- Emit YAML fragment ---
+    lines = ["# SDD v5 stack registry — generated by migrate-v4-to-v5.sh",
+             "# Stacks are auto-detected from the project's package.json / "
+             "pyproject.toml / docker-compose / migrations.",
+             "# Flip `enabled: false → true` to activate a stack the detector missed.",
+             "# For custom stacks (go-gin, rust-axum, etc.) see "
+             "stacks/CUSTOM_STACK_GUIDE.md",
+             "version: 1",
+             "stacks:"]
+    for stack, is_on in enabled.items():
+        lines.append(f"  {stack}:")
+        lines.append(f"    enabled: {'true' if is_on else 'false'}")
+        lines.append(f"    path: framework/stacks/templates/{stack}")
+    print("\n".join(lines))
+    return 0
+
+
 def cmd_report(args: argparse.Namespace) -> int:
     report = Path(args.report)
     report.parent.mkdir(parents=True, exist_ok=True)
@@ -539,6 +747,10 @@ def build_parser() -> argparse.ArgumentParser:
     sr.add_argument("--project", required=True)
     sr.add_argument("--spec-type", required=True)
     sr.set_defaults(func=cmd_stories)
+
+    sd = sub.add_parser("stack-detect")
+    sd.add_argument("--project", required=True)
+    sd.set_defaults(func=cmd_stack_detect)
 
     rp = sub.add_parser("report")
     rp.add_argument("--project", required=True)
