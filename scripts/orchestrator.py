@@ -174,8 +174,29 @@ def load_yaml(path: Path) -> dict[str, Any]:
     return data
 
 
+def _declares_spec_type(path: Path) -> bool:
+    """True iff `path` declares a top-level `type:` — the root-spec hallmark.
+
+    Tolerant: a malformed ancillary YAML must not kill the orchestrator, so
+    parse errors just return False and let a well-formed typed candidate win.
+    """
+    if yaml is None:
+        return False
+    try:
+        with path.open("r", encoding="utf-8") as f:
+            data = yaml.safe_load(f)
+    except (yaml.YAMLError, OSError):
+        return False
+    if not isinstance(data, dict):
+        return False
+    if data.get("type"):
+        return True
+    nested = data.get("spec")
+    return isinstance(nested, dict) and bool(nested.get("type"))
+
+
 def find_project_spec() -> Path:
-    """Locate the root project YAML spec (specs/*.yaml excluding feature-tracker)."""
+    """Locate the root project YAML spec (specs/*.yaml excluding ancillary files)."""
     root = project_root()
     specs_dir = root / "specs"
     if not specs_dir.is_dir():
@@ -185,12 +206,13 @@ def find_project_spec() -> Path:
             fix="run /spec first or check you are at the project root",
         )
         exit_with(EXIT_CONFIG_ERROR)
-    # Convention: the top-level spec is the only *.yaml in specs/
-    # that is not feature-tracker.yaml, design-system.yaml, or *-arch.yaml.
+    # First cut: exclude files known NOT to be root specs by name or suffix.
     excluded = {"feature-tracker.yaml", "design-system.yaml"}
     candidates = [
-        p for p in specs_dir.glob("*.yaml")
-        if p.name not in excluded and not p.stem.endswith("-arch")
+        p for p in sorted(specs_dir.glob("*.yaml"))
+        if p.name not in excluded
+        and not p.stem.endswith("-arch")
+        and not p.stem.endswith("-ux")
     ]
     if not candidates:
         fail(
@@ -199,12 +221,18 @@ def find_project_spec() -> Path:
             fix="run /spec to create the initial project spec",
         )
         exit_with(EXIT_CONFIG_ERROR)
-    if len(candidates) > 1:
+    # Second cut: when several YAMLs share specs/ (config files, strategy
+    # docs, manifests), the root spec is the one that actually declares a
+    # top-level `type:`. Fall back to the alphabetical first candidate if
+    # none match — `load_spec_type()` then surfaces the existing clear error.
+    typed = [p for p in candidates if _declares_spec_type(p)]
+    picked = typed or candidates
+    if len(picked) > 1:
         warn(
-            f"multiple root specs found in {specs_dir} — using {candidates[0].name}",
-            candidates=[p.name for p in candidates],
+            f"multiple root specs found in {specs_dir} — using {picked[0].name}",
+            candidates=[p.name for p in picked],
         )
-    return candidates[0]
+    return picked[0]
 
 
 def load_spec_type() -> str:
