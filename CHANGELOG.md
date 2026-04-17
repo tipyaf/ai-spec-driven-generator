@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.4] - 2026-04-17
+
+- fix(migration): 5 bugs found dog-fooding v5.0.2 on a 71-story v4 project
+
+
 ## [5.0.3] - 2026-04-17
 
 ### Fixes (found by dog-fooding the migration on a real v4.1.1 project with 71 stories)
