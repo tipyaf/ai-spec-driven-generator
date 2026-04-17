@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.6] - 2026-04-17
+
+- fix(migration): handle Title-Case agent names in CLAUDE.md tables
+
+
 ## [5.0.5] - 2026-04-17
 
 ### Fixes (third dog-fooding pass — one more bug on the 71-story monorepo)
