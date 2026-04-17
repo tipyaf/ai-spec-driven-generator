@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.5] - 2026-04-17
+
+- fix(migration): surgical agent renames + project-named spec targeting
+
+
 ## [5.0.4] - 2026-04-17
 
 ### Fixes (second dog-fooding pass — two more bugs on the 71-story monorepo)
