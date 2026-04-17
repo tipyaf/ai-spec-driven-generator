@@ -2,8 +2,41 @@
 
 ## [5.0.4] - 2026-04-17
 
-- fix(migration): 5 bugs found dog-fooding v5.0.2 on a 71-story v4 project
+### Fixes (second dog-fooding pass — two more bugs on the 71-story monorepo)
 
+- **Agent renames no longer clobber arbitrary prose.** v5.0.3 used word
+  boundaries (`\btester\b`) for every rename, which meant the French
+  verb `tester` (infinitive, "to test") in a migration doc was rewritten
+  to `test-author` — e.g. `tester la connexion` → `test-author la
+  connexion`. v5.0.4 only rewrites when the token is clearly a framework
+  agent reference:
+    * file-path references (`agents/tester.md`, `agents/tester/`)
+    * YAML values of agent-ish keys (`agent:`, `agents:`, `dispatch:`,
+      `loaded_by:`, `role:`, `runner:`, `invokes:`, `responsibility:`,
+      `handled_by:`)
+    * bare YAML list items (`  - tester` under an `agents:` key)
+    * explicit noun phrases (`tester agent`)
+    * Markdown emphasis (`**tester**`), inline code (`` `tester` ``)
+    * whole-cell markdown table rows (`| tester | ... |`)
+  Everything else — including `owner: tester` (person's name) and French
+  infinitive verbs — is left alone.
+
+- **`spec.type` auto-write targets `specs/<project-name>.yaml` specifically.**
+  v5.0.3 wrote `type:` into the first root spec alphabetically, which on
+  expat-hunter turned out to be `contact-sourcing-strategy.yaml` (a
+  sub-epic), not the main `expat-hunter.yaml`. v5.0.4 looks for
+  `specs/<directory-name>.yaml` first; if that's missing and there's
+  exactly one root spec, uses that; if there are multiple ambiguous
+  candidates, skips with a clear log asking the dev to add `type:`
+  manually.
+
+### Tests
+
+- 2 new regression tests (French `tester` verb; multi-root-spec
+  disambiguation). One existing test updated to reflect the new, more
+  conservative rewrite semantics (an `owner: tester` story field is no
+  longer auto-renamed — that's the correct behaviour).
+- Framework self-tests: **242/242 passing**.
 
 ## [5.0.3] - 2026-04-17
 

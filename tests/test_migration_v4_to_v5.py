@@ -55,12 +55,20 @@ def _make_v4_project(root: Path) -> None:
         encoding="utf-8",
     )
 
-    # A story file with some v4-era content
+    # A story file with some v4-era content.
+    # `owner: tester` is ambiguous (could be a person's name or a role);
+    # v5.0.4+ does NOT auto-rename that — only clear framework-agent
+    # references get rewritten. See `agents:` list below which IS explicit.
     (root / "specs" / "stories" / "sc-0001.yaml").write_text(
         "id: sc-0001\n"
         "type: web-ui\n"
         "title: Login flow\n"
-        "owner: tester\n",
+        "owner: alice\n"
+        "agents:\n"
+        "  - tester\n"
+        "  - reviewer\n"
+        "dispatch: test-engineer\n"
+        "# See agents/story-reviewer.md for context.\n",
         encoding="utf-8",
     )
 
@@ -207,11 +215,23 @@ def test_feature_tracker_upgrade_marks_blocked_as_escalated(v4_project: Path):
 
 
 def test_agent_rename_on_story_files(v4_project: Path):
+    """Agent references in well-known keys (`agents:`, `dispatch:`) and in
+    file paths (`agents/story-reviewer.md`) must be renamed. Ambiguous
+    prose/names (e.g. `owner: alice` — a person) is left alone."""
     result = _run_migration(v4_project)
     assert result.returncode == 0
     story = (v4_project / "specs" / "stories" / "sc-0001.yaml").read_text()
-    assert "tester" not in story
-    assert "test-author" in story
+
+    # Explicit agent references renamed:
+    assert "- test-author" in story, "YAML list item `- tester` → `- test-author`"
+    assert "- code-reviewer" in story, "YAML list item `- reviewer` → `- code-reviewer`"
+    assert "dispatch: test-author" in story, "`dispatch: test-engineer` → `dispatch: test-author`"
+    assert "agents/code-reviewer.md" in story, (
+        "Path reference `agents/story-reviewer.md` → `agents/code-reviewer.md`"
+    )
+
+    # Ambiguous prose NOT touched:
+    assert "owner: alice" in story, "Person's name must be preserved"
 
 
 def test_rollback_restores_state(v4_project: Path):
@@ -228,6 +248,71 @@ def test_rollback_restores_state(v4_project: Path):
     # Critical files restored byte-for-byte
     for rel in ("CLAUDE.md", "specs/feature-tracker.yaml", "specs/stories/sc-0001.yaml"):
         assert after[rel] == before[rel], f"{rel} not restored"
+
+
+def test_agent_rename_does_not_rewrite_arbitrary_prose(v4_project: Path):
+    """v5.0.3 regression: `\\btester\\b` matched the French verb `tester`
+    (infinitive, "to test") in docs, producing absurdities like
+    "test-author la connexion" (was "tester la connexion").
+    v5.0.4 restricts rewrites to contexts that clearly reference a
+    framework agent."""
+    doc = v4_project / "specs" / "redesign-doc.md"
+    doc.write_text(
+        "## API\n"
+        "- `POST /api/settings/email/test` — tester la connexion email\n"
+        "- `POST /api/auth/login` — login utilisateur, review par le reviewer interne\n"
+        "- Voir `agents/tester.md` pour le rôle officiel.\n",
+        encoding="utf-8",
+    )
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+    content = doc.read_text(encoding="utf-8")
+
+    # French verb "tester la connexion" must be UNTOUCHED.
+    assert "tester la connexion" in content, (
+        "French infinitive 'tester' must not be rewritten"
+    )
+    # "reviewer interne" in French prose must also be untouched.
+    assert "le reviewer interne" in content, (
+        "Generic noun 'reviewer' in prose must not be rewritten"
+    )
+    # But the explicit path reference MUST be renamed.
+    assert "agents/test-author.md" in content, (
+        "Explicit agents/... path reference must be renamed"
+    )
+
+
+def test_spec_type_write_targets_project_named_spec(tmp_path: Path):
+    """v5.0.3 regression: when `specs/` contains multiple root specs
+    (e.g. main project + sub-epic), the script wrote `type:` to the first
+    one alphabetically. v5.0.4 targets ONLY `specs/<project-dir-name>.yaml`
+    and skips cleanly if that file doesn't exist or if there are multiple
+    ambiguous candidates."""
+    root = tmp_path / "my-app"
+    root.mkdir()
+    _make_v4_project(root)
+    # Main project spec, matching the directory name.
+    (root / "specs" / "my-app.yaml").write_text(
+        "project:\n  name: my-app\n", encoding="utf-8"
+    )
+    # Sub-epic spec — MUST NOT receive the type: line.
+    (root / "specs" / "sub-epic.yaml").write_text(
+        "project:\n  name: my-app-sub-epic\n", encoding="utf-8"
+    )
+    # Fake dependency so inference finds a type.
+    (root / "package.json").write_text(
+        json.dumps({"name": "my-app", "dependencies": {"react": "^18"}}),
+        encoding="utf-8",
+    )
+
+    r = _run_migration(root, "--force")
+    assert r.returncode == 0, r.stderr
+
+    main_txt = (root / "specs" / "my-app.yaml").read_text()
+    sub_txt = (root / "specs" / "sub-epic.yaml").read_text()
+
+    assert "type: web-ui" in main_txt, "Project-named spec must receive type:"
+    assert "type:" not in sub_txt, "Sub-epic spec must NOT receive type:"
 
 
 def test_claude_md_does_not_double_prefix_code_reviewer(v4_project: Path):

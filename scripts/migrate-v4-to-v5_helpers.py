@@ -73,13 +73,80 @@ def dump_yaml(data, path: Path) -> None:
 # ── Subcommand: agents ─────────────────────────────────────────────────────
 
 def _rewrite_agent_text(text: str) -> tuple[str, int]:
+    """Rename framework agent tokens — but ONLY in contexts where they clearly
+    refer to the framework agent, not to arbitrary prose.
+
+    Contexts that count (in English AND multilingual docs):
+      - File path references:      agents/tester.md, agents/tester.ref.md
+      - YAML value of known keys:  agent: tester, agents: [tester], dispatch: tester,
+                                   loaded_by: tester, role: tester, runner: tester,
+                                   dispatched_by: tester, invokes: tester
+      - Explicit noun phrase:      "tester agent", "the tester agent"
+      - Markdown emphasis/code:    **tester**, `tester`
+      - Markdown table row:        | tester | ... |
+
+    Everything else is left alone. This prevents accidentally rewriting the
+    French verb "tester" ("tester la connexion" → "test-author la connexion"
+    was a v5.0.2 bug on expat-hunter).
+    """
     hits = 0
     new = text
-    # Rename with word boundaries.
+
     for old, new_name in AGENT_RENAMES.items():
-        pattern = re.compile(rf"\b{re.escape(old)}\b")
-        new, n = pattern.subn(new_name, new)
+        esc = re.escape(old)
+
+        # 1) File path: agents/<old>.md, agents/<old>.ref.md, agents/<old>/…
+        path_pat = re.compile(rf"(agents/){esc}(\.md|\.ref\.md|/|\b)")
+        new, n = path_pat.subn(rf"\1{new_name}\2", new)
         hits += n
+
+        # 2) YAML/JSON value after a known agent-ish key.
+        #    Match on a single line: "  key: <old>"  or  "  key: [<old>, ...]"
+        yaml_key_pat = re.compile(
+            rf"(^\s*(?:-\s+)?"
+            rf"(?:agent|agents|dispatch|dispatched_by|loaded_by|role|runner|invokes|"
+            rf"responsibility|handled_by)\s*:\s*\[?\s*[\"']?){esc}([\"']?\s*[\],]?)",
+            re.MULTILINE,
+        )
+        new, n = yaml_key_pat.subn(rf"\1{new_name}\2", new)
+        hits += n
+
+        # 2b) YAML list item whose full line is "  - <old>". Multi-line agents:
+        #       agents:
+        #         - tester
+        #         - reviewer
+        #     We only match when the line IS a bare list item (no trailing key).
+        #     This is conservative: a story with `owner: alice` is untouched,
+        #     but a story with `agents:\n  - tester` is renamed.
+        yaml_list_pat = re.compile(
+            rf"(^\s*-\s+){esc}(\s*$)", re.MULTILINE
+        )
+        new, n = yaml_list_pat.subn(rf"\1{new_name}\2", new)
+        hits += n
+
+        # 3) Explicit noun phrase: "<old> agent"
+        noun_pat = re.compile(rf"\b{esc}(\s+agent\b)")
+        new, n = noun_pat.subn(rf"{new_name}\1", new)
+        hits += n
+
+        # 4) Markdown strong emphasis: **<old>** (common in agent catalogue tables).
+        md_strong_pat = re.compile(rf"\*\*{esc}\*\*")
+        new, n = md_strong_pat.subn(f"**{new_name}**", new)
+        hits += n
+
+        # 5) Markdown inline code: `<old>` — almost always an agent reference when
+        #    the token exactly matches a known agent name.
+        md_code_pat = re.compile(rf"`{esc}`")
+        new, n = md_code_pat.subn(f"`{new_name}`", new)
+        hits += n
+
+        # 6) Markdown table row starting with | <old> | — whole-cell token.
+        md_cell_pat = re.compile(
+            rf"(^|\n)(\|\s*){esc}(\s*\|)", re.MULTILINE
+        )
+        new, n = md_cell_pat.subn(rf"\1\2{new_name}\3", new)
+        hits += n
+
     # Flag removed agents with a TODO comment; leave the reference so humans can remove.
     for removed in AGENT_REMOVE:
         pat = re.compile(rf"\b{re.escape(removed)}\b")
@@ -264,15 +331,29 @@ def cmd_spec_type(args: argparse.Namespace) -> int:
         print(t or "unknown")
         return 0
     if args.write:
-        # Write into the ROOT project spec — NEVER into a per-story overlay.
-        # A root spec lives in specs/ (not specs/stories/, not _work/spec/),
-        # has a name not in {feature-tracker, design-system}, and doesn't
-        # end with -arch/-ux.
+        # Write into the ROOT project spec — NEVER into a per-story overlay
+        # and NEVER into a sub-epic spec (those exist in larger projects
+        # alongside the main one).
+        #
+        # Selection order:
+        #   1) specs/<project-name>.yaml where <project-name> = directory name
+        #      (e.g. expat-hunter/ → specs/expat-hunter.yaml)
+        #   2) the single root-spec if there's exactly one (_iter_root_specs)
+        #   3) fallback to sc-0000 seed in _work/spec/
         target = None
-        # 1) Prefer the project-named root spec in specs/
-        for p in _iter_root_specs(project):
-            target = p
-            break
+        project_named = project / "specs" / f"{project.name}.yaml"
+        if project_named.exists():
+            target = project_named
+        else:
+            roots = list(_iter_root_specs(project))
+            if len(roots) == 1:
+                target = roots[0]
+            elif len(roots) > 1:
+                # Multiple candidates — don't guess. Explicitly skip with a log.
+                names = ", ".join(p.name for p in roots)
+                print(f"[spec-type] multiple root specs found ({names}); "
+                      f"skipping auto-write. Add `type:` manually to the project root spec.")
+                return 0
         # 2) Fallback: sc-0000 seed in _work/spec/ (v4 convention for initial overlay)
         if target is None:
             seed_dir = project / "_work" / "spec"
