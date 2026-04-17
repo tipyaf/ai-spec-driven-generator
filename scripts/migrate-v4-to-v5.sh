@@ -187,24 +187,30 @@ fi
 
 cd "$PROJECT_ROOT"
 
-# Must be a v4.x SDD project
+# Must be a v4.x SDD project.
+# Detection strategy: the PROJECT's own state (CLAUDE.md) is the source of
+# truth for "what version is this project on". The framework/VERSION only
+# tells us which framework release is pinned — but that release can be v5
+# while the project content is still v4 (submodule bumped before migration).
 HAS_FRAMEWORK_SUBMODULE=false
 HAS_CLAUDE_MD=false
-SOURCE_VERSION="unknown"
+FRAMEWORK_VERSION="unknown"
+PROJECT_VERSION="unknown"
 
 if [[ -d "$PROJECT_ROOT/framework" ]]; then
   HAS_FRAMEWORK_SUBMODULE=true
   if [[ -f "$PROJECT_ROOT/framework/VERSION" ]]; then
-    SOURCE_VERSION=$(cat "$PROJECT_ROOT/framework/VERSION" | tr -d '[:space:]')
+    FRAMEWORK_VERSION=$(cat "$PROJECT_ROOT/framework/VERSION" | tr -d '[:space:]')
   fi
 fi
 
 if [[ -f "$PROJECT_ROOT/CLAUDE.md" ]]; then
   HAS_CLAUDE_MD=true
-  if [[ "$SOURCE_VERSION" = "unknown" ]]; then
-    if grep -qE "v4\\.|version.*4\\." "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
-      SOURCE_VERSION="4.x (CLAUDE.md)"
-    fi
+  # Look for explicit version markers in the project's CLAUDE.md.
+  if grep -qE "framework v5|v5\\.0|G1-G14|G1\\u2013G14|18 agents|20 enforcement scripts" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
+    PROJECT_VERSION="5.x"
+  elif grep -qE "framework v4|v4\\.[01]|11 quality gates|11 gates|19 specialized agents|10 enforcement scripts" "$PROJECT_ROOT/CLAUDE.md" 2>/dev/null; then
+    PROJECT_VERSION="4.x"
   fi
 fi
 
@@ -213,21 +219,52 @@ if ! $HAS_FRAMEWORK_SUBMODULE && ! $HAS_CLAUDE_MD; then
   exit 5
 fi
 
-info "Source version detected: $SOURCE_VERSION"
+# SOURCE_VERSION is kept for downstream use; it reflects what we're migrating FROM.
+# When the project's CLAUDE.md still says v4 but framework was bumped to v5,
+# the project is mid-migration — we must proceed.
+if [[ "$PROJECT_VERSION" = "4.x" ]]; then
+  SOURCE_VERSION="4.x (detected in project CLAUDE.md)"
+elif [[ "$PROJECT_VERSION" = "5.x" ]]; then
+  SOURCE_VERSION="5.x (project already migrated)"
+elif [[ "$FRAMEWORK_VERSION" =~ ^4 ]]; then
+  SOURCE_VERSION="$FRAMEWORK_VERSION"
+elif [[ "$FRAMEWORK_VERSION" =~ ^5 ]]; then
+  # Framework is v5 but project's CLAUDE.md has neither v4 nor v5 markers —
+  # likely an init-from-scratch v5 project or a very old/minimal CLAUDE.md.
+  SOURCE_VERSION="5.x (framework pinned, project state unclear)"
+else
+  SOURCE_VERSION="$FRAMEWORK_VERSION"
+fi
 
-case "$SOURCE_VERSION" in
-  4.*|"4.x (CLAUDE.md)") ;;
-  5.*)
-    info "Project already on v5.x — nothing to do."
+info "Framework pinned at: $FRAMEWORK_VERSION"
+info "Project CLAUDE.md state: $PROJECT_VERSION"
+info "Migration source: $SOURCE_VERSION"
+
+case "$PROJECT_VERSION" in
+  4.x)
+    # Clear v4 project — proceed.
+    ;;
+  5.x)
+    info "Project already on v5.x (detected in CLAUDE.md) — nothing to do."
     exit 0
     ;;
   unknown)
-    warn "Could not detect v4.x version — continuing anyway."
-    ;;
-  *)
-    err "Unexpected version '$SOURCE_VERSION'. Expected v4.x."
-    err "Use --force to override."
-    $FORCE || exit 6
+    # No clear version marker. Fall back to framework version.
+    case "$FRAMEWORK_VERSION" in
+      4.*) ;;
+      5.*)
+        warn "Framework is v5 but no v4/v5 markers found in CLAUDE.md."
+        warn "Assuming project needs v5 scaffolding — proceeding."
+        ;;
+      unknown)
+        warn "Could not detect version — continuing anyway."
+        ;;
+      *)
+        err "Unexpected framework version '$FRAMEWORK_VERSION'."
+        err "Use --force to override."
+        $FORCE || exit 6
+        ;;
+    esac
     ;;
 esac
 

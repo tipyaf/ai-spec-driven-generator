@@ -1,9 +1,23 @@
 # Changelog
 
-## [5.0.1] - 2026-04-17
+## [5.0.2] - 2026-04-17
 
-- feat: v5.0.0 — complete framework rebuild (breaking)
+### Fixes
 
+- **`migrate-v4-to-v5.sh`**: the script no longer treats a project as
+  "already migrated" when the framework submodule is on v5 but the
+  project's own `CLAUDE.md` is still v4. The version check now inspects
+  the project state (CLAUDE.md markers) first, and only falls back to
+  `framework/VERSION` when no project markers are found. This matters
+  for users who update the submodule before running the migration —
+  which is the most natural flow.
+- Clearer diagnostic output: the script now reports both "Framework
+  pinned at:" and "Project CLAUDE.md state:" so the user sees exactly
+  why the script decided to proceed or skip.
+
+### Note on 5.0.1
+
+v5.0.1 was a CI-only version bump (no code or doc changes).
 
 ## [5.0.0] - 2026-04-17
 
