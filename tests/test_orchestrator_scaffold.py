@@ -161,6 +161,60 @@ def test_filter_gates_includes_ship_only_gates_in_ship_mode(orchestrator):
     assert [g["id"] for g in filtered] == ["G14"]
 
 
+# --- find_project_spec -------------------------------------------------
+
+def _write(path: Path, body: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(body, encoding="utf-8")
+
+
+def test_find_project_spec_prefers_candidate_with_top_level_type(
+    tmp_path, monkeypatch, orchestrator
+):
+    """Regression: when specs/ holds config-only YAMLs (code-quality.yaml,
+    manifests, strategy docs) alongside the real root spec, alphabetical
+    picking selects a file without `type:` and trips load_spec_type().
+    The root spec is the one that declares `type:` — pick that one."""
+    specs = tmp_path / "specs"
+    _write(specs / "code-quality.yaml", "sonar:\n  enabled: true\n")
+    _write(specs / "contact-strategy.yaml", "summary: doc snapshot\n")
+    _write(specs / "expat-hunter-manifest.yaml", "manifest:\n  files: []\n")
+    _write(specs / "expat-hunter.yaml", "type: web-ui\nproject:\n  name: expat-hunter\n")
+    _write(specs / "feature-tracker.yaml", "features: []\n")
+
+    monkeypatch.setenv("SDD_PROJECT_ROOT", str(tmp_path))
+    picked = orchestrator.find_project_spec()
+    assert picked.name == "expat-hunter.yaml"
+
+
+def test_find_project_spec_falls_back_to_alphabetical_when_none_typed(
+    tmp_path, monkeypatch, orchestrator
+):
+    """If nothing declares `type:`, behavior matches the pre-fix path —
+    alphabetical first, so load_spec_type() surfaces its existing error."""
+    specs = tmp_path / "specs"
+    _write(specs / "beta.yaml", "project:\n  name: b\n")
+    _write(specs / "alpha.yaml", "project:\n  name: a\n")
+    _write(specs / "feature-tracker.yaml", "features: []\n")
+
+    monkeypatch.setenv("SDD_PROJECT_ROOT", str(tmp_path))
+    assert orchestrator.find_project_spec().name == "alpha.yaml"
+
+
+def test_find_project_spec_ignores_malformed_ancillary_yaml(
+    tmp_path, monkeypatch, orchestrator
+):
+    """A broken ancillary YAML must not crash the orchestrator — the typed
+    root spec should still win."""
+    specs = tmp_path / "specs"
+    _write(specs / "broken.yaml", "key: [unterminated\n")
+    _write(specs / "myproj.yaml", "type: web-api\n")
+    _write(specs / "feature-tracker.yaml", "features: []\n")
+
+    monkeypatch.setenv("SDD_PROJECT_ROOT", str(tmp_path))
+    assert orchestrator.find_project_spec().name == "myproj.yaml"
+
+
 # --- CLI smoke ----------------------------------------------------------
 
 def test_orchestrator_cli_requires_mode():
