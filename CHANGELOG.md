@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.9] - 2026-04-17
+
+- docs(changelog): enrich v5.0.8 entry with context, tests, and upgrade path
+
+
 ## [5.0.8] - 2026-04-17
 
 ### Fixes (another dog-fooding find on a real project's `specs/`)
