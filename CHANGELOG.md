@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.8] - 2026-04-17
+
+- fix(orchestrator): pick root spec by top-level `type:`, not alphabetical order
+
+
 ## [5.0.7] - 2026-04-17
 
 ### Fixes (another dog-fooding find on the 71-story monorepo)
