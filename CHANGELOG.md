@@ -1,5 +1,10 @@
 # Changelog
 
+## [5.0.3] - 2026-04-17
+
+- fix(migration): detect project version from CLAUDE.md, not framework submodule
+
+
 ## [5.0.2] - 2026-04-17
 
 ### Fixes
