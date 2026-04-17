@@ -2,7 +2,55 @@
 
 ## [5.0.8] - 2026-04-17
 
-- fix(orchestrator): pick root spec by top-level `type:`, not alphabetical order
+### Fixes (another dog-fooding find on a real project's `specs/`)
+
+- **Orchestrator now picks the root spec by its top-level `type:`, not
+  alphabetical order.** On real projects, `specs/` often holds ancillary
+  YAMLs alongside the root spec — G3 tool config (`code-quality.yaml`),
+  implementation manifests (`*-manifest.yaml`), strategy docs, one-off
+  refinement notes. The pre-v5.0.8 picker globbed `specs/*.yaml`,
+  excluded only `feature-tracker.yaml`, `design-system.yaml`, and
+  `*-arch.yaml`, and returned the alphabetical first survivor. On a
+  project where `code-quality.yaml` sorted ahead of the actual root
+  spec, every orchestrator invocation (`/build`, `/validate`, `/review`,
+  `/ship`) exited with:
+
+  ```
+  root spec YAML does not declare `type:` (web-ui | web-api | cli | ...)
+  ```
+
+  v5.0.8 changes `find_project_spec()`:
+
+  - Prefer candidates that declare a top-level `type:` — the root-spec
+    hallmark. Alphabetical order is only used to break ties among
+    typed candidates.
+  - Fall back to the alphabetical first candidate when **no** YAML
+    declares `type:`, so the existing clear error still surfaces when
+    the user genuinely forgot to add it.
+  - Extend the suffix pre-filter with `-ux`, matching
+    `migrate-v4-to-v5_helpers._iter_root_specs`.
+  - Tolerate malformed ancillary YAMLs: a broken `strategy.yaml` next
+    to a well-formed root spec no longer crashes the orchestrator — the
+    typed candidate wins.
+
+### Tests
+
+- 3 new regression tests in `tests/test_orchestrator_scaffold.py`:
+  - `test_find_project_spec_prefers_candidate_with_top_level_type` —
+    the scenario reported against the real project.
+  - `test_find_project_spec_falls_back_to_alphabetical_when_none_typed` —
+    preserves the existing "forgot `type:`" error path.
+  - `test_find_project_spec_ignores_malformed_ancillary_yaml` —
+    robustness against broken neighbor files.
+
+### Upgrade path
+
+Nothing required. Bump the `framework/` submodule to `v5.0.8`:
+
+```bash
+cd framework && git fetch --tags origin && git checkout v5.0.8 && cd ..
+git add framework && git commit -m "chore: bump framework to v5.0.8"
+```
 
 
 ## [5.0.7] - 2026-04-17
