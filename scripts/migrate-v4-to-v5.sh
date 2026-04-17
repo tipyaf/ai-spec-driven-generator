@@ -480,6 +480,27 @@ else
   warn "No hooks template found — skipping settings merge."
 fi
 
+# ── Step 8b: .claude/commands/ wrappers for v5 skills ──────────────────────
+# Claude Code discovers slash commands via .claude/commands/*.md. The v5
+# framework ships 13 skills (spec/refine/ux/build/validate/review/ship/next/
+# status/resume/scan/help/migrate) but only their SKILL.md lives under
+# framework/skills/ — each project needs a thin wrapper under
+# .claude/commands/<name>.md pointing at it. v5.0.7+ generates these
+# automatically. v5 projects created from v4 before v5.0.7 need to rerun
+# this step (idempotent) to pick up the wrappers.
+
+banner "Step 8b — Generate .claude/commands/ wrappers for v5 skills"
+
+if $DRY_RUN; then
+  py claude-commands --project "$PROJECT_ROOT" --dry-run \
+    || warn "claude-commands dry-run reported issues"
+  info "(dry-run) Would generate .claude/commands/*.md for every v5 skill present in framework/skills/"
+else
+  py claude-commands --project "$PROJECT_ROOT" \
+    && { info "Wrapped v5 skills under .claude/commands/"; FILES_MODIFIED=$((FILES_MODIFIED+1)); } \
+    || warn "claude-commands reported issues"
+fi
+
 # ── Step 9: feature-tracker.yaml validation ────────────────────────────────
 
 banner "Step 9 — feature-tracker.yaml"

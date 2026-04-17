@@ -2,8 +2,58 @@
 
 ## [5.0.7] - 2026-04-17
 
-- fix(migration): rename space-separated agent names (Story Reviewer, Test Engineer)
+### Fixes (another dog-fooding find on the 71-story monorepo)
 
+- **Migration now generates `.claude/commands/*.md` wrappers for every
+  v5 skill.** Previously, migrating a v4 project left Claude Code unable
+  to discover the 7 new v5 commands (`/next`, `/ship`, `/status`,
+  `/help`, `/resume`, `/scan`, `/migrate`) because the framework ships
+  their `SKILL.md` under `framework/skills/*/` but Claude Code looks up
+  slash-commands in `<project>/.claude/commands/*.md`. Migrated projects
+  also kept stale v4 wrappers advertising "SDD framework v2.1.0" and
+  describing the old agent roster.
+
+  v5.0.7 adds **Step 8b** to `migrate-v4-to-v5.sh`:
+
+  - For every v5 skill present under `framework/skills/`, generate a
+    thin wrapper at `.claude/commands/<name>.md` carrying the
+    `<!-- sdd-v5-wrapper: managed by migrate-v4-to-v5.sh -->` marker.
+  - Refresh any existing wrapper whose content still references v2 /
+    v3 / v4 (the whole point of the migration is to update those).
+  - Leave user-customised wrappers alone: if the user removed the
+    marker, they opted out of auto-refresh.
+  - Project-specific commands with no matching SKILL.md (e.g.
+    `dev.md`, `<project>-tooling.md`) are never touched.
+
+- **Idempotent**: re-running the migration on an already-migrated
+  project is safe — re-emits the wrappers only if their content
+  drifted.
+
+### Tests
+
+- 3 new regression tests (`test_claude_commands_wrappers_generated`,
+  `test_claude_commands_respects_user_opt_out`,
+  `test_claude_commands_refreshes_v4_stale_wrappers`). Framework
+  self-tests: **246/246 passing**.
+
+### Upgrade path for projects already on v5.0.x
+
+If you migrated to v5 BEFORE v5.0.7, your `.claude/commands/` still
+misses the 7 new commands or has stale v4 content. Re-run the
+migration (idempotent by design):
+
+```bash
+cd framework && git fetch --tags origin && git checkout v5.0.7 && cd ..
+./framework/scripts/migrate-v4-to-v5.sh --force
+git diff .claude/commands/   # review
+```
+
+Or create the wrappers directly via:
+
+```bash
+python3 framework/scripts/migrate-v4-to-v5_helpers.py \
+  claude-commands --project .
+```
 
 ## [5.0.6] - 2026-04-17
 

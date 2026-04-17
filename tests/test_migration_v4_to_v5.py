@@ -423,6 +423,96 @@ def test_spec_type_write_targets_root_spec_not_story(v4_project: Path):
     assert "# Story overlay — sc-0042" in overlay
 
 
+def test_claude_commands_wrappers_generated_for_every_v5_skill(v4_project: Path):
+    """v5.0.7 regression: `.claude/commands/*.md` wrappers weren't generated
+    by the migration, so new v5 skills (/next, /ship, /status, /help,
+    /resume, /scan, /migrate) were unreachable after migrating a v4
+    project. v5.0.7 adds Step 8b which emits them from the SKILL.md
+    frontmatter of framework/skills/."""
+    # Seed a fake framework/skills/ tree with a few representative skills.
+    fw_skills = v4_project / "framework" / "skills"
+    for name, desc in [
+        ("next", "Morning action list"),
+        ("ship", "The only door to PR"),
+        ("build", "Implement a refined story"),
+    ]:
+        d = fw_skills / name
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "SKILL.md").write_text(
+            f"---\nname: {name}\ndescription: {desc}\n---\n\n# /{name}\n",
+            encoding="utf-8",
+        )
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+    commands = v4_project / ".claude" / "commands"
+    for name in ("next", "ship", "build"):
+        p = commands / f"{name}.md"
+        assert p.exists(), f"v5 wrapper `.claude/commands/{name}.md` must be generated"
+        txt = p.read_text(encoding="utf-8")
+        assert "sdd-v5-wrapper: managed" in txt, (
+            "wrapper must carry the management marker so future refreshes are opt-in"
+        )
+        assert f"/{name}" in txt
+        assert "framework/skills/" in txt, "wrapper must point at the framework skill"
+
+
+def test_claude_commands_respects_user_opt_out(v4_project: Path):
+    """If the user removed the `sdd-v5-wrapper` marker from an existing
+    command file, they opted out of auto-refresh. The migration must NOT
+    overwrite their customised wrapper."""
+    # Seed framework/skills/next with a SKILL.md.
+    d = v4_project / "framework" / "skills" / "next"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: next\ndescription: Morning action list\n---\n",
+        encoding="utf-8",
+    )
+    # Seed a user-customised wrapper WITHOUT the marker.
+    user_wrapper = v4_project / ".claude" / "commands"
+    user_wrapper.mkdir(parents=True, exist_ok=True)
+    custom = (
+        "---\nname: next\ndescription: OVERRIDDEN BY USER\n---\n\n"
+        "# Totally custom content — framework should leave this alone\n"
+    )
+    (user_wrapper / "next.md").write_text(custom, encoding="utf-8")
+
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+
+    after = (user_wrapper / "next.md").read_text(encoding="utf-8")
+    assert "OVERRIDDEN BY USER" in after, (
+        "user-customised wrapper (no v5 marker) must be preserved"
+    )
+    assert "sdd-v5-wrapper" not in after
+
+
+def test_claude_commands_refreshes_v4_stale_wrappers(v4_project: Path):
+    """A wrapper that still references 'SDD framework v2.1.0' is stale v4
+    content and MUST be refreshed by the migration (the whole point of
+    this step)."""
+    d = v4_project / "framework" / "skills" / "build"
+    d.mkdir(parents=True, exist_ok=True)
+    (d / "SKILL.md").write_text(
+        "---\nname: build\ndescription: Implement a refined story\n---\n",
+        encoding="utf-8",
+    )
+    commands = v4_project / ".claude" / "commands"
+    commands.mkdir(parents=True, exist_ok=True)
+    (commands / "build.md").write_text(
+        "---\nname: build\ndescription: old\n---\n\n"
+        "You are executing the `/build` skill from the SDD framework v2.1.0.\n",
+        encoding="utf-8",
+    )
+
+    r = _run_migration(v4_project, "--force")
+    assert r.returncode == 0, r.stderr
+
+    refreshed = (commands / "build.md").read_text(encoding="utf-8")
+    assert "SDD framework v2" not in refreshed, "v4 marker must be gone"
+    assert "SDD framework v5" in refreshed, "v5 marker must be present"
+    assert "sdd-v5-wrapper: managed" in refreshed
+
+
 def test_idempotent_second_run_is_noop_for_core_files(v4_project: Path):
     r1 = _run_migration(v4_project)
     assert r1.returncode == 0
